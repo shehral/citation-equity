@@ -1,6 +1,10 @@
 """Tests for draw.py: query admission and the sha256 target/donor/competitor rules."""
 
+import contextlib
+import io
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -94,6 +98,55 @@ class AdmissionTest(unittest.TestCase):
         self.assertEqual(set(out[0]), {"page_id", "query_id", "set", "query", "url", "source", "title", "text",
                                        "words", "tokens_max", "cut", "sha256", "role"})
         self.assertEqual(out[0]["page_id"], "q0-p1")
+
+
+class TimingTest(unittest.TestCase):
+    """PREREG_E1 r3 amendment 8: the timing smoke uses the last qualifying five-page query in
+    dataset order, held out of the main set; its outcomes are discarded."""
+
+    def rows(self, five):
+        out = []
+        for k in range(8):
+            out += query(f"q{k}", n_usable=5 if k in five else 4, order=k)
+        return out
+
+    def test_timing_is_the_last_five_page_query_in_dataset_order(self):
+        qid, pages = draw.draw_timing(self.rows({0, 2, 5}))
+        self.assertEqual(qid, "q5")
+        self.assertEqual(len(pages), 5)
+
+    def test_no_five_page_query_means_no_timing_query(self):
+        self.assertIsNone(draw.draw_timing(self.rows(set())))
+
+    def test_the_timing_query_is_held_out_of_main_even_when_main_has_room(self):
+        out, summary = draw.admit_main(self.rows({0, 2, 5}), target=80, floor=2, hold_out={"q5"})
+        self.assertEqual([qid for qid, _ in out], ["q0", "q2"])
+        # It was still found: the fallback rule counts every five-page query fetched.
+        self.assertEqual(summary["five_page"], 3)
+        self.assertEqual(summary["held_out"], ["q5"])
+
+    def test_the_timing_query_is_held_out_of_the_four_page_fallback_too(self):
+        out, summary = draw.admit_main(self.rows({7}), target=80, floor=60, hold_out={"q7"})
+        self.assertTrue(summary["fallback"])
+        self.assertNotIn("q7", [qid for qid, _ in out])
+        self.assertEqual(len(out), 7)
+
+    def test_cli_writes_the_timing_set_and_records_its_id(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cand, out, summ = Path(tmp) / "c.jsonl", Path(tmp) / "pages.jsonl", Path(tmp) / "admission.json"
+            common.write_jsonl(cand, self.rows({0, 2, 5}))
+            with contextlib.redirect_stdout(io.StringIO()):
+                draw.main(["--candidates", str(cand), "--out", str(out), "--summary", str(summ), "--target", "2",
+                           "--floor", "1"])
+            pages = common.read_jsonl(out)
+            summary = json.loads(summ.read_text())
+        timing = [p for p in pages if p["set"] == "timing"]
+        self.assertEqual({p["query_id"] for p in timing}, {"q5"})
+        self.assertEqual(sorted(p["role"] for p in timing), ["competitor"] * 3 + ["donor", "target"])
+        self.assertEqual(timing, draw.page_rows("q5", draw._usable(query("q5", order=5)), set_="timing"))
+        self.assertEqual({p["query_id"] for p in pages if p["set"] == "main"}, {"q0", "q2"})
+        self.assertEqual(summary["timing"], {"query_id": "q5", "query": "what is q5", "pages": 5})
+        self.assertEqual(summary["main"]["held_out"], ["q5"])
 
 
 if __name__ == "__main__":

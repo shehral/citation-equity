@@ -6,7 +6,7 @@
 # (experiments/e1/README.md). Submit from $CE_ROOT/code/e1 on the cluster:
 #   . ./local.env && sbatch --gres=gpu:h200:1 edit.sbatch                                          # one H200
 #   . ./local.env && TP=2 sbatch --partition=gpu-short --time=02:00:00 --gres=gpu:a100:2 edit.sbatch  # 2x A100
-# Optional: SETS="--set main" (default all sets), EXTRA="--arms 9,5,6,7" (tier order cuts),
+# Optional: SETS="--set main" (default all sets but timing; the timing smoke: SETS="--set timing"), EXTRA="--arms 9,5,6,7" (tier order cuts),
 # DATA=<folder> (default $CE_ROOT/data/e1). Check the settings first with CE_DRY_RUN=1 bash edit.sbatch
 #SBATCH --job-name=ce-e1-edit
 #SBATCH --partition=gpu
@@ -56,12 +56,12 @@ if [ -n "${CE_DRY_RUN:-}" ]; then
   echo "  CE_MODULES=$MODULES"
   echo "  E1=$E1"
   echo "  DATA=$DATA"
-  echo "  MODEL=$MODEL tp=${TP:-1} sets=${SETS:-all} extra=${EXTRA:-}"
+  echo "  MODEL=$MODEL tp=${TP:-1} sets=${SETS:-all but timing} extra=${EXTRA:-}"
   echo "  logs=${SBATCH_OUTPUT:-%x-%j.out in the submit folder}"
   exit 0
 fi
 
-echo "=== ce-e1-edit start: $(date) on $(hostname) model=$MODEL tp=${TP:-1} sets=${SETS:-all} extra=$EXTRA ==="
+echo "=== ce-e1-edit start: $(date) on $(hostname) model=$MODEL tp=${TP:-1} sets=${SETS:-all but timing} extra=$EXTRA ==="
 source /etc/profile
 module purge
 for m in $MODULES; do module load "$m"; done

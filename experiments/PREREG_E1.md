@@ -200,7 +200,7 @@ A failing edit is regenerated once, with the validator's message appended to the
 - **Day 1:**
   - Fetch, normalize and draw (CPU).
   - Build the applicability table, editor prompts, validators and analysis script, plus the null simulation.
-  - Run the timing smoke on one held-out `val` query: all versions, 8 seeds, both judges.
+  - Run the timing smoke on the held-out timing query (amendment 8: the last qualifying `test` query): all versions, 8 seeds, both judges.
   - Freeze the commit.
   - Start edits and generation in tier order. Within each tier, Gemma runs before Qwen.
 - **Day 2:** finish generation, then retrieval, replication and analysis, then the editor-family check if time allows.

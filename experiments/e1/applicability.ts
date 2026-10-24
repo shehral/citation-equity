@@ -3,6 +3,8 @@
 // would, in-process), writes the result to engine_original.jsonl, takes the arm 11-14 feature rows
 // from deterministic_arms.py, and writes applicability.jsonl: {query_id, arm, applicable, reason}
 // for arms 1-14 and ALL. Placebos follow their arm (P_A is built only when A's edit is valid).
+// The timing-smoke target (set "timing", PREREG_E1 r3 amendment 8) gets the main set's rules and
+// is counted as its own set in the printed summary.
 //
 // Run from the repository root:
 //   pnpm --filter @citation-equity/bench exec tsx "$PWD/experiments/e1/applicability.ts" [--data <dir>]
@@ -10,7 +12,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { allApplicability } from './e1_lib';
+import { allApplicability, applicableCounts } from './e1_lib';
 import { engineJson } from './engine_json';
 
 const here = import.meta.dirname;
@@ -73,22 +75,24 @@ for (const line of featureOut.split('\n')) {
   features.set(row.query_id, [...(features.get(row.query_id) ?? []), row]);
 }
 
-const rows = targets.flatMap((t) => {
+const perTarget = targets.map((t) => {
   const eng = engines.get(t.query_id);
   if (!eng) throw new Error(`no engine result for ${t.query_id}`);
-  return allApplicability(
-    t.query_id,
-    t.set,
-    eng,
-    donors.has(t.query_id),
-    features.get(t.query_id) ?? [],
-  );
+  return {
+    set: t.set,
+    rows: allApplicability(
+      t.query_id,
+      t.set,
+      eng,
+      donors.has(t.query_id),
+      features.get(t.query_id) ?? [],
+    ),
+  };
 });
+const rows = perTarget.flatMap((t) => t.rows);
 writeFileSync(
   join(data, 'applicability.jsonl'),
   `${rows.map((r) => JSON.stringify(r)).join('\n')}\n`,
 );
 
-const counts: Record<string, number> = {};
-for (const r of rows) if (r.applicable) counts[r.arm] = (counts[r.arm] ?? 0) + 1;
-console.log(JSON.stringify({ targets: targets.length, applicable: counts }, null, 1));
+console.log(JSON.stringify(applicableCounts(perTarget), null, 1));

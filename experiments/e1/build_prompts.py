@@ -55,6 +55,8 @@ from e1_common import (  # noqa: E402
     write_jsonl,
 )
 
+DEFAULT_SETS = "main,replication"
+
 QUERY_PROMPT = """Write an accurate and concise answer for the given user question, using _only_ the provided summarized web search results. The answer should be correct, high-quality, and written by an expert using an unbiased and journalistic tone. The user's language of choice such as English, Français, Español, Deutsch, or 日本語 should be used. The answer should be informative, interesting, and engaging. The answer's logic and reasoning should be rigorous and defensible. Every sentence in the answer should be _immediately followed_ by an in-line citation to the search result(s). The cited search result(s) should fully support _all_ the information in the sentence. Search results need to be cited using [index]. When citing several search results, use [1][2][3] format rather than [1, 2, 3]. You can use multiple search results to respond comprehensively while avoiding irrelevant search results.
 
 Question: {query}
@@ -175,7 +177,8 @@ def hf_counter(judges: list[str]):
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data", default=str(Path(__file__).resolve().parent / "data"))
-    ap.add_argument("--sets", default="main,replication")
+    ap.add_argument("--sets", default=DEFAULT_SETS,
+                    help="comma-separated sets (the timing smoke: --sets timing, in its own data folder)")
     ap.add_argument("--judges", default=",".join(JUDGE_ORDER))
     ap.add_argument("--tokens", choices=["hf", "utf8"], default="hf")
     ap.add_argument("--twin", help="JSON list of {query, sources: [{title, text}]}: print their prompts")

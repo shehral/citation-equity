@@ -12,7 +12,7 @@ Nothing fetched or derived from GEO-bench or C-SEO Bench is committed: `data/` a
 | `data/applicability.jsonl`| (query, arm), arms 1-14 and ALL  | `query_id, arm, applicable, reason`                                                                                                                         |
 | `data/versions.jsonl`     | version of a target              | `version_id, query_id, set, arm, text, title, valid, attempts, excluded_reason, edit_distance, length_ratio, key_terms_delta, added_words`                   |
 
-- `set` is `main`, `replication` or `smoke`; `source` is `live`, `wayback`, `cseo` or `sample`; `role` is `target`, `competitor` or `donor`.
+- `set` is `main`, `replication`, `smoke` or `timing` (the held-out timing-smoke query, never analyzed); `source` is `live`, `wayback`, `cseo` or `sample`; `role` is `target`, `competitor` or `donor`.
 - `arm` in versions is `original`, `1`-`14`, `P2`, `P3`, `P5`, `P6`, `P7`, `P8`, `P10`, `P12`, `ALL` or `P_ALL`. `version_id` is `<query_id>:<arm>`.
 - A version is used only when `valid` is true. `excluded_reason` starting `not applicable` (arm 7 whose editor answered NONE) is not a validity exclusion; every other reason starts `invalid:` and counts as one.
 - A placebo `P_A` exists only when arm A's edit is valid. A version is written only for pairs the applicability table marks applicable.
@@ -25,12 +25,13 @@ Nothing fetched or derived from GEO-bench or C-SEO Bench is committed: `data/` a
 | `fetch_geobench.ts` | GEO-bench rows (datasets-server API, cached in `.cache/geobench`), the query filter, live fetch through the bench's `packFromUrls` (robots.txt respected), and the Wayback `2023id_` fallback. Appends to `data/raw/live.jsonl` or `data/raw/wayback.jsonl` and resumes. |
 | `cseo_replication.ts` | C-SEO Bench `web` rows (shares `.cache/cseo` with `ce pack cseo`) to `data/raw/cseo.jsonl`. |
 | `normalize.py` | Removes images, footnote markers and definitions, turns own-site links into text; usable-page rules; the 3,000-token cap at the last heading (larger of the two judge tokenizers, or `--approx`). Writes `candidates.jsonl`, `fetch_log.jsonl`, `wayback_needed.jsonl`. |
-| `draw.py` | Query admission (target 80, floor 60, the four-page fallback; replication: first 60 with 5 usable pages; smoke: all 8) and the sha256 target, donor and competitor draw. Writes `pages.jsonl` and `admission.json`. |
+| `draw.py` | Query admission (target 80, floor 60, the four-page fallback; replication: first 60 with 5 usable pages; smoke: all 8; timing: the last five-page main candidate, held out of main) and the sha256 target, donor and competitor draw. Writes `pages.jsonl` and `admission.json`. |
 | `engine_json.ts`, `engine_cli.ts` | The engine's checks and artifacts as JSON, offsets converted from UTF-16 to code points. The CLI reads JSONL on stdin; it is bundled into one file, `out/bundle/engine_cli.js`, so Python (here and on the cluster) can call it. |
 | `applicability.ts` | Runs the engine on every target with the query as the target question, writes `engine_original.jsonl` and the frozen `applicability.jsonl`. |
 | `deterministic_arms.py` | Arms 4, 9, 11, 13, 14 and the arm 11-14 "feature already present" rules. |
 | `editor.py`, `prompts/*.txt` | Spans, one strict prompt per LLM arm and placebo (committed verbatim), JSON span replacements, splicing, ALL step by step, P_ALL, regenerate once. `--backend vllm` on Explorer, `--backend fake` locally. |
 | `validate.py` | The six validity checks. |
+| `timing_report.py` | Reads the timing-smoke job logs and projects GPU-hours and shards for the main and replication sets (see Timing smoke). |
 | `edit.sbatch`, `normalize.sbatch`, `generate.sbatch` | Explorer jobs: the editor (Gemma-4-31B-it, one H200 or 2x A100), the tokenizer cap (CPU) and the judges' answers (measurement). |
 | `local.env.example` | The cluster settings the three jobs read: copy it to `local.env` (gitignored) next to them on the cluster and fill it in. |
 | `smoke.sh` | The whole pipeline on the 8 sample questions with the fake editor (no reported results). |
@@ -45,7 +46,7 @@ Commands run from the repository root. TypeScript steps use the bench's `tsx`.
 pnpm exec tsup experiments/e1/engine_cli.ts --format esm --target node22 -d experiments/e1/out/bundle
 
 # 1. Fetch (live), in dataset order; rerun to resume. --hours caps the fetch at 6 hours.
-pnpm --filter @citation-equity/bench exec tsx "$PWD/experiments/e1/fetch_geobench.ts" --splits test,val
+pnpm --filter @citation-equity/bench exec tsx "$PWD/experiments/e1/fetch_geobench.ts" --splits test
 pnpm --filter @citation-equity/bench exec tsx "$PWD/experiments/e1/cseo_replication.ts"
 
 # 2. Normalize. On Explorer with the real tokenizers (normalize.sbatch), or locally with --approx.
@@ -62,7 +63,7 @@ pnpm --filter @citation-equity/bench exec tsx "$PWD/experiments/e1/applicability
 # 5. Edit on Explorer (edit.sbatch), copy versions.jsonl back to experiments/e1/data/.
 ```
 
-If `draw.py` reports fewer than 60 five-page queries and the fetch has not reached the end of the `val` split or 6 hours, fetch more queries before admitting four-page ones: the fallback rule looks only at what was fetched.
+If `draw.py` reports fewer than 60 five-page queries and the fetch has not reached the end of the `test` split or 6 hours, fetch more queries before admitting four-page ones: the fallback rule looks only at what was fetched.
 
 ## On Explorer
 
@@ -82,6 +83,49 @@ The sbatch files hold no account or path of their own. They read site settings f
    ```
 
    `DATA=<folder>` overrides `$CE_ROOT/data/e1` for the editor and normalization. Logs go to `<job name>-<job id>.out` and `.err` in the submit folder, or under `$CE_ROOT/logs` when `local.env` sets `SBATCH_OUTPUT` and `SBATCH_ERROR` there (create the folder first; Slurm does not).
+
+## Timing smoke
+
+PREREG_E1.md (r3, amendment 8) times the run on one query held out of both sets: the **last** qualifying `test` query in dataset order with five usable pages. `draw.py` picks it from the main candidates, gives it the same target, donor and competitor draw, writes its pages to `pages.jsonl` with `set: "timing"` and names it in `admission.json` (`timing.query_id`, and `main.held_out`); it is never admitted to main, the four-page fallback included. With the current fetch it is `geo-test-939` ("how much do car salesman make"). `applicability.ts` treats it as a main-set target and counts it as its own set.
+
+Its outcomes are discarded. The editor edits it only under `--set timing`, `score.py` scores it only under `--sets timing`, and `analyze.py` refuses `--set timing` and drops timing rows from every index. Keep its files in their own folder so the main `versions.jsonl` and `prompts.jsonl` are never overwritten.
+
+On Explorer, after `pages.jsonl` and `applicability.jsonl` are in `$CE_ROOT/data/e1` and the code (including `timing_report.py`) is in `$CE_ROOT/code/e1`:
+
+```sh
+cd $CE_ROOT/code/e1
+T=$CE_ROOT/data/e1/timing
+mkdir -p $T $CE_ROOT/e1/batches
+cp $CE_ROOT/data/e1/pages.jsonl $CE_ROOT/data/e1/applicability.jsonl $T/
+
+# 1. Edit the timing query: every version, written to $T/versions.jsonl.
+. ./local.env && DATA=$T SETS="--set timing" sbatch --gres=gpu:h200:1 edit.sbatch
+
+# 2. When it is done: its prompts for both judges, counted with their tokenizers (HF cache, offline).
+#    This loads only tokenizers; use an interactive job if your site limits login-node memory.
+. ./local.env && HF_HOME=$HF_HOME HF_HUB_OFFLINE=1 $CE_PYTHON -I build_prompts.py --data $T --sets timing
+
+# 3. One generation job per judge, all tiers in one batch file (all versions, seeds 1-8).
+for j in gemma-4-12b qwen3.8-27b; do
+  cat $T/batches/timing.$j.tier*.prompts.jsonl > $CE_ROOT/e1/batches/timing.$j.tierall.prompts.jsonl
+done
+. ./local.env && JUDGE=gemma-4-12b BATCH=timing.gemma-4-12b.tierall sbatch --gres=gpu:a100:1 generate.sbatch
+. ./local.env && JUDGE=qwen3.8-27b BATCH=timing.qwen3.8-27b.tierall sbatch --gres=gpu:h200:1 generate.sbatch
+
+# 4. Project GPU-hours for main and replication from the three job logs (stdlib only).
+python3 -I timing_report.py --data $CE_ROOT/data/e1 --edit-log ce-e1-edit-<id>.out \
+  --gen-log ce-e1-gen-<gemma id>.out --gen-log ce-e1-gen-<qwen id>.out --json $T/timing_report.json
+```
+
+Submit each job with the GPUs you will use for the real run: the report scales by the `tp` in each log's start line. The logs are in the submit folder, or under `$CE_ROOT/logs` when `local.env` sets `SBATCH_OUTPUT`. The answers land in `$CE_ROOT/e1/answers/timing.*.jsonl`; leave them there, since nothing reads them and they never go to `data/answers/`.
+
+`timing_report.py` reads only the jobs' summary lines (prompts, seconds, model load, `tp`). Per judge it takes seconds per prompt from the timing batch, then projects each (set, judge, tier) generation job as model load + versions x 8 seeds x seconds per prompt, where versions per query are the original plus every applicable arm and its placebo (an upper bound: every edit counted as valid). It prints, for the freeze commit:
+
+- per job: versions, prompts, hours, GPU-hours, and the shards for any job over 6 hours (amendment 6, split in file order);
+- the editor's projected hours per set, from its seconds per version (model load not included);
+- GPU-hours per set and judge, the editor's, and the total, which decide the cut order if the budget is exceeded.
+
+The timing batch is small, so vLLM batches less than on a full set and the projection errs on the high side.
 
 ## Choices the pre-registration leaves open
 

@@ -578,13 +578,23 @@ def run_all(queries, eng0, app, ok, backend, engine, log, row, llm_task, placebo
     return rows
 
 
-def main(argv: list[str] | None = None) -> None:
+SETS = ["main", "replication", "smoke", "timing"]
+
+
+def select_pages(pages: list[dict], sets: list[str] | None) -> list[dict]:
+    """The pages of the named sets; by default every set except the timing smoke (r3 amendment 8),
+    which is edited only when named, so its versions never mix into a main run's versions.jsonl."""
+    return [p for p in pages if (p["set"] in sets if sets else p["set"] != "timing")]
+
+
+def parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--pages", default=str(common.DATA / "pages.jsonl"))
     ap.add_argument("--applicability", default=str(common.DATA / "applicability.jsonl"))
     ap.add_argument("--out", default=str(common.DATA / "versions.jsonl"))
     ap.add_argument("--log", default=str(common.DATA / "editor_log.jsonl"), help="every prompt and answer (local only)")
-    ap.add_argument("--set", action="append", choices=["main", "replication", "smoke"], help="sets to edit (default all)")
+    ap.add_argument("--set", action="append", choices=SETS,
+                    help="sets to edit (repeatable; default all but timing, which runs only when named)")
     ap.add_argument("--arms", help="comma-separated arms to run (default all); placebos follow their arm")
     ap.add_argument("--no-placebos", action="store_true")
     ap.add_argument("--no-all", action="store_true", help="skip ALL and P_ALL")
@@ -593,9 +603,12 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--tp", type=int, default=1)
     ap.add_argument("--max-model-len", type=int, default=20480)
     ap.add_argument("--thinking", action="store_true", help="leave the chat template's thinking mode on")
-    args = ap.parse_args(argv)
+    return ap
 
-    pages = [p for p in common.read_jsonl(args.pages) if not args.set or p["set"] in args.set]
+
+def main(argv: list[str] | None = None) -> None:
+    args = parser().parse_args(argv)
+    pages = select_pages(common.read_jsonl(args.pages), args.set)
     applicability = common.read_jsonl(args.applicability)
     backend = FakeBackend() if args.backend == "fake" else VllmBackend(
         args.model, args.tp, args.max_model_len, no_thinking=not args.thinking)

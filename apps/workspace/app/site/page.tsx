@@ -4,7 +4,8 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { PageShell, textLink } from '@/components/page-shell';
 import { Command } from '@/components/panel/ollama-help';
-import { CE_SITE_EXAMPLE, ReadinessReport } from '@/components/readiness-report';
+import { ReadinessReport } from '@/components/readiness-report';
+import { CE_SITE_EXAMPLE } from '@/lib/cli-examples';
 import { REPO_URL } from '@/lib/evidence-doc';
 
 export const metadata: Metadata = {

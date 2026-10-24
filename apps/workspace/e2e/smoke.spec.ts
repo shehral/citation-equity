@@ -104,6 +104,9 @@ test('/site renders the seven readiness items and reads pasted HTML in the page'
   page,
 }) => {
   await page.goto('/site');
+  // The command-line block is real text, not a client reference rendered as a function.
+  await expect(page.locator('main')).toContainText('ce site https://example.com/your-page --json');
+  await expect(page.locator('body')).not.toContainText('Attempted to call');
   const titles = [
     'Byline',
     'Publication dates',

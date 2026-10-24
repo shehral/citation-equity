@@ -11,6 +11,7 @@ import { useDeferredValue, useId, useMemo, useState } from 'react';
 import { textLink } from '@/components/page-shell';
 import { GRADE_CLASS } from '@/components/panel/evidence-badge';
 import { Command } from '@/components/panel/ollama-help';
+import { CE_SITE_EXAMPLE } from '@/lib/cli-examples';
 import { cn } from '@/lib/utils';
 
 /** What each item is, in plain words, shown above its result. */
@@ -31,7 +32,6 @@ const WHAT: Record<ReadinessId, string> = {
 
 /** The two items that need a fetch of the live site, which this page cannot make. */
 const NEEDS_CLI: ReadinessId[] = ['crawler-access', 'renders-without-js'];
-export const CE_SITE_EXAMPLE = 'ce site https://example.com/your-page';
 
 const STATUS: Record<ReadinessStatus, { label: string; icon: LucideIcon; className: string }> = {
   pass: { label: 'Pass', icon: CircleCheck, className: 'border-grade-strong/50 text-grade-strong' },

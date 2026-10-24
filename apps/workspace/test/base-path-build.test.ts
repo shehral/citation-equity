@@ -79,3 +79,24 @@ describe(`static export with NEXT_PUBLIC_BASE_PATH=${BASE}`, () => {
     }
   });
 });
+
+// A Server Component that imports a plain value from a 'use client' module gets
+// a client reference, not the value, and renders it as the source of a function
+// that throws "Attempted to call ... from the server". Such values live in lib/.
+describe('values shared between server and client components', () => {
+  it('renders no client reference as text on any page', () => {
+    for (const page of [...PAGES, '404.html']) {
+      expect(readFileSync(join(OUT, page), 'utf8'), page).not.toContain('Attempted to call');
+    }
+  });
+
+  it('shows the real ce site command on /site', () => {
+    const html = readFileSync(join(OUT, 'site/index.html'), 'utf8');
+    expect(html).toContain('ce site https://example.com/your-page --json');
+  });
+
+  it('inlines the theme script itself in <head>', () => {
+    const html = readFileSync(join(OUT, 'index.html'), 'utf8');
+    expect(html).toContain("<script>(function(){try{var t=localStorage.getItem('ce:v1:theme')");
+  });
+});

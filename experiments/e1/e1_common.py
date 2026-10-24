@@ -9,6 +9,10 @@ from pathlib import Path
 JUDGES = {"gemma-4-12b": "google/gemma-4-12B-it", "qwen3.8-27b": "Qwen/Qwen3.8-27B"}
 JUDGE_ORDER = ["gemma-4-12b", "qwen3.8-27b"]  # the first is the primary judge
 SEEDS = range(1, 9)
+
+# Page sets. The timing smoke (r3 amendment 8) is held out of main and is never analyzed.
+SETS = ["main", "replication", "smoke", "timing"]
+TIMING = "timing"
 N_SOURCES = 4
 
 # Generation settings, fixed by the pre-registration.

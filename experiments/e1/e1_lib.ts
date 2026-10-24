@@ -168,3 +168,22 @@ export function allApplicability(
   });
   return rows;
 }
+
+/**
+ * Targets and applicable (query, arm) pairs per set. The timing-smoke query (PREREG_E1 r3
+ * amendment 8) is a set of its own, so it never adds to the main set's counts.
+ */
+export function applicableCounts(targets: { set: string; rows: ApplicabilityRow[] }[]): {
+  targets: Record<string, number>;
+  applicable: Record<string, Record<string, number>>;
+} {
+  const counts: Record<string, number> = {};
+  const applicable: Record<string, Record<string, number>> = {};
+  for (const { set, rows } of targets) {
+    counts[set] = (counts[set] ?? 0) + 1;
+    const perArm = applicable[set] ?? {};
+    applicable[set] = perArm;
+    for (const r of rows) if (r.applicable) perArm[r.arm] = (perArm[r.arm] ?? 0) + 1;
+  }
+  return { targets: counts, applicable };
+}

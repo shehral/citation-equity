@@ -3,14 +3,7 @@
 import { Moon, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-
-export const THEME_KEY = 'ce:v1:theme';
-
-/**
- * Runs in <head> before the first paint: the saved choice, else the system
- * setting. Kept as a string so the layout can inline it.
- */
-export const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem('${THEME_KEY}');var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.classList.toggle('dark',d)}catch(e){}})()`;
+import { THEME_KEY } from '@/lib/theme';
 
 export function ThemeToggle() {
   const [dark, setDark] = useState<boolean | null>(null);

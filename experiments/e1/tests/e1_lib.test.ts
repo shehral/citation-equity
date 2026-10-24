@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   allApplicability,
+  applicableCounts,
   engineArmApplicability,
   keepQuery,
   normalizeSources,
@@ -204,6 +205,29 @@ describe('allApplicability', () => {
       arm: 'ALL',
       applicable: false,
       reason: 'no applicable step',
+    });
+  });
+});
+
+describe('the timing-smoke set (PREREG_E1 r3 amendment 8)', () => {
+  const e = eng({ statistics: check(0, { findings: [{ start: 0, end: 4, message: 'm' }] }) });
+  const features = ['11', '12', '13', '14'].map((arm) => ({ arm, applicable: false, reason: 'x' }));
+  it('gets the same applicability rows as a main-set target', () => {
+    expect(allApplicability('q', 'timing', e, true, features)).toEqual(
+      allApplicability('q', 'main', e, true, features),
+    );
+  });
+  it('is counted apart from main, so the applicable counts per arm stay main-only', () => {
+    const rows = (set: string) => allApplicability(set, set, e, true, features);
+    expect(
+      applicableCounts([
+        { set: 'main', rows: rows('main') },
+        { set: 'timing', rows: rows('timing') },
+        { set: 'main', rows: rows('main') },
+      ]),
+    ).toEqual({
+      targets: { main: 2, timing: 1 },
+      applicable: { main: { '5': 2, ALL: 2 }, timing: { '5': 1, ALL: 1 } },
     });
   });
 });

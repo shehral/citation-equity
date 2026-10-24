@@ -19,7 +19,8 @@
 
 Inputs: data/pages.jsonl, data/versions.jsonl, data/applicability.jsonl, data/prompt_build.json,
 out/cells.jsonl, out/scores.jsonl, out/score_summary.json and (optional) out/retrieval.jsonl.
-Output: out/analysis.json, {set: result}.
+Output: out/analysis.json, {set: result}. The timing-smoke set (r3 amendment 8) is never analyzed:
+its rows are dropped from every index and `--set timing` is refused.
 
 Usage: python3 -I experiments/e1/analyze.py [--data DIR] [--out DIR] [--set main,replication]
 """
@@ -56,6 +57,7 @@ from e1_common import (  # noqa: E402
     PLACEBOS,
     REF,
     REPLICATION_ARMS,
+    TIMING,
     parent_arm,
     read_jsonl,
     write_json,
@@ -257,10 +259,12 @@ class Inputs:
 
 
 class Index:
-    """Lookups over one set's inputs."""
+    """Lookups over one set's inputs (every set when set_name is None), never the timing set's."""
 
     def __init__(self, inp: Inputs, set_name: str | None = None):
-        pages = [p for p in inp.pages if set_name is None or p["set"] == set_name]
+        if set_name == TIMING:
+            raise ValueError("the timing-smoke set is never analyzed (PREREG_E1.md r3 amendment 8)")
+        pages = [p for p in inp.pages if p["set"] != TIMING and (set_name is None or p["set"] == set_name)]
         refused = set(inp.refused)
         self.queries = sorted({p["query_id"] for p in pages} - refused)
         qs = set(self.queries)
@@ -281,7 +285,7 @@ class Index:
                 self.completion[(judge, arm)] = (1, 0)
         else:
             for row in inp.completion:
-                if set_name is None or row["set"] == set_name:
+                if row["set"] != TIMING and (set_name is None or row["set"] == set_name):
                     prompts, missing = self.completion.get((row["judge"], row["arm"]), (0, 0))
                     self.completion[(row["judge"], row["arm"])] = (prompts + row["prompts"], missing + row["missing"])
         self.judges = sorted({j for (j, _) in self.completion})
@@ -606,6 +610,8 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--draws", type=int, default=DRAWS, help=argparse.SUPPRESS)
     ap.add_argument("--resamples", type=int, default=RESAMPLES, help=argparse.SUPPRESS)
     args = ap.parse_args(argv)
+    if TIMING in args.set.split(","):
+        ap.error("the timing-smoke set is never analyzed (PREREG_E1.md r3 amendment 8)")
     data, out = Path(args.data), Path(args.out)
     inp = load_inputs(data, out)
     present = {p["set"] for p in inp.pages}
