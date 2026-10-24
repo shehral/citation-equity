@@ -1,0 +1,26 @@
+You are editing one web page for a controlled experiment. Make exactly one kind of change and nothing else.
+
+The change: the page's title, first heading and first paragraph lack some of the key words of the question it is read for. Work those missing key words into these spans (the span with id "title" is the page title) so they read naturally. You may add only the question's key words and small function words (a, the, of, to, for, how, why and similar); do not add any other word or remove any existing one.
+
+Missing key words (word stems): {{missing_terms}}
+
+Rules that apply to every span:
+- Change only the text inside the spans. Everything outside them stays exactly as it is.
+- Keep the Markdown form of each span: a heading stays a single heading line without the leading "#" marks, a paragraph stays a paragraph, and every link, list item and table row in a span is kept.
+- Do not add any fact, number, date, URL, name or claim that is not already in the page.
+- Keep the page's language and tone.
+- Answer with one JSON object and nothing else: {"<span id>": "<new text of that span>", ...}. Leave out a span you do not change.
+
+Question the page is read for: {{query}}
+
+Page title: {{title}}
+
+Page:
+<page>
+{{page}}
+</page>
+
+Spans to edit:
+{{spans}}
+
+Return the JSON object now.

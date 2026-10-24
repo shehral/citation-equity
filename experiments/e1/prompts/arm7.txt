@@ -1,0 +1,28 @@
+You are editing one web page for a controlled experiment. Make exactly one kind of change and nothing else.
+
+The change: each span below is a sentence that gives a figure or a research claim with no source. For each span whose claim the source document below supports, attribute the claim to the source inside that sentence, before its final punctuation, with {{donor_attribution}}. Do not change any other word. Skip spans the source does not support. If the source supports none of the spans, answer with the single word NONE.
+
+Rules:
+- Only insert. Every character of the original span stays where it is; you add new text between, before or after its sentences.
+- The new material comes only from the source document below, copied faithfully. Do not add any other fact, number, date, URL or name.
+- Keep the Markdown form of each span.
+- Answer with one JSON object and nothing else: {"<span id>": "<span text with your insertion>", ...}. Leave out a span you do not change.
+
+Question the page is read for: {{query}}
+
+Page title: {{title}}
+
+Page:
+<page>
+{{page}}
+</page>
+
+Source document (the only allowed link target):
+<source title="{{donor_title}}" url="{{donor_url}}">
+{{donor_text}}
+</source>
+
+Spans to edit:
+{{spans}}
+
+Return the JSON object (or NONE) now.

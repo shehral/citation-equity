@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "packId": "tiny-espresso",
+  "title": "Tiny espresso pack",
+  "source": "Written for the Citation Equity tests",
+  "license": "MIT",
+  "synthetic": true,
+  "queries": [
+    {
+      "queryId": "q1",
+      "query": "why does espresso taste bitter",
+      "documents": [
+        {
+          "docId": "c1",
+          "title": "Espresso basics",
+          "text": "Espresso tastes bitter when water stays in contact with the coffee too long.",
+          "synthetic": true
+        },
+        {
+          "docId": "c2",
+          "title": "Grinder notes",
+          "text": "A finer grind slows the shot, and a slow shot can taste bitter.",
+          "synthetic": true
+        }
+      ]
+    },
+    {
+      "queryId": "q2",
+      "query": "how do I fix bitter espresso",
+      "documents": [
+        {
+          "docId": "c3",
+          "title": "Dialing in",
+          "text": "To fix bitter espresso, grind coarser and shorten the shot.",
+          "synthetic": true
+        }
+      ]
+    }
+  ]
+}

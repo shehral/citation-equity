@@ -1,0 +1,8 @@
+203.0.113.5 - - [22/Oct/2026:10:00:00 +0000] "GET /espresso/bitterness HTTP/1.1" 200 5120 "-" "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)"
+203.0.113.5 - - [22/Oct/2026:10:00:04 +0000] "GET /espresso/grind?ref=sitemap HTTP/1.1" 200 4096 "-" "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)"
+203.0.113.5 - - [22/Oct/2026:10:00:09 +0000] "GET /espresso/bitterness HTTP/1.1" 200 5120 "-" "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)"
+198.51.100.7 - - [22/Oct/2026:11:15:30 +0000] "GET /espresso/bitterness HTTP/1.1" 200 5120 "-" "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)"
+192.0.2.44 - - [22/Oct/2026:12:02:11 +0000] "GET /espresso/bitterness?utm_source=chatgpt.com HTTP/2.0" 200 5120 "https://chatgpt.com/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+192.0.2.90 - - [22/Oct/2026:12:30:00 +0000] "GET /about HTTP/2.0" 200 2048 "https://www.google.com/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+this line is not in combined log format
+

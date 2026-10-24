@@ -1,0 +1,24 @@
+You are editing one web page for a controlled experiment. Make exactly one kind of change and nothing else.
+
+The change: each span below is a paragraph that opens with a word pointing back to earlier text ("This", "It", "These", "They", "Such", "The above", "As mentioned"). Rewrite only the opening of each paragraph so that it names its subject in words taken from the page, for example "This" becomes "Over-extraction". Keep the rest of the paragraph word for word.
+
+Rules that apply to every span:
+- Change only the text inside the spans. Everything outside them stays exactly as it is.
+- Keep the Markdown form of each span: a heading stays a single heading line without the leading "#" marks, a paragraph stays a paragraph, and every link, list item and table row in a span is kept.
+- Do not add any fact, number, date, URL, name or claim that is not already in the page.
+- Keep the page's language and tone.
+- Answer with one JSON object and nothing else: {"<span id>": "<new text of that span>", ...}. Leave out a span you do not change.
+
+Question the page is read for: {{query}}
+
+Page title: {{title}}
+
+Page:
+<page>
+{{page}}
+</page>
+
+Spans to edit:
+{{spans}}
+
+Return the JSON object now.

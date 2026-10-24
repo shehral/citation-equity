@@ -1,0 +1,107 @@
+# Nightly citation test bench (template). Module B of the original design runs
+# every night; this workflow is that schedule, switched off. Run it by hand from
+# the Actions tab (workflow_dispatch), or uncomment the schedule below.
+#
+# It starts a local Ollama in a service container, pulls the bench's default
+# model, and runs `ce bench` on every sample in samples/ (before against after),
+# or, when the repository has bench/*.json files, on each of those instead:
+#
+#   { "draft": "drafts/my-post.md", "after": "drafts/my-post-v2.md",
+#     "pack": "packs/my-topic.json", "runs": 8 }
+#
+# Paths are relative to the repository root; "after" and "runs" are optional.
+# The reports are uploaded as the run's `bench-results` artifact.
+#
+# Content check on a local model over a fixed page set. It does not predict
+# live AI engines. GitHub's runners have no GPU, so a full run of both samples
+# (128 answers at 8 runs) takes a while on CPU; lower `runs` for a quick look.
+name: Bench (nightly template)
+
+on:
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: Runs per question
+        default: "8"
+      model:
+        description: Ollama model
+        default: llama3.2:3b
+  # 2 AM Pacific, as in the original design; uncomment to enable
+  # (09:00 UTC is 2 AM during daylight time and 1 AM in winter).
+  # schedule:
+  #   - cron: '0 9 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      # Scheduled runs have no inputs, so they fall back to the bench defaults.
+      RUNS: ${{ inputs.runs || '8' }}
+      MODEL: ${{ inputs.model || 'llama3.2:3b' }}
+    services:
+      ollama:
+        # The Ollama version the committed sample recordings were made with.
+        image: ollama/ollama:0.40.9
+        ports:
+          - 127.0.0.1:11434:11434
+        options: >-
+          --health-cmd "ollama list"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v7
+      # pnpm version comes from the packageManager field in package.json.
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the bench CLI
+        run: pnpm --filter "@citation-equity/bench..." build
+      - name: Pull the model
+        run: |
+          jq -n --arg model "$MODEL" '{model: $model, stream: false}' |
+            curl -fsS http://127.0.0.1:11434/api/pull -d @-
+      - name: Run the bench
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p bench-results
+          bench() { # name draft after pack runs
+            local args=(bench --draft "$2" --pack "$4" --runs "$5" --model "$MODEL"
+              --out "bench-results/$1")
+            if [ -n "$3" ]; then args+=(--after "$3"); fi
+            echo "::group::$1"
+            node packages/bench/bin/ce.js "${args[@]}" | tee "bench-results/$1.txt"
+            echo "::endgroup::"
+          }
+          shopt -s nullglob
+          configs=(bench/*.json)
+          if [ ${#configs[@]} -gt 0 ]; then
+            for c in "${configs[@]}"; do
+              bench "$(basename "$c" .json)" "$(jq -r '.draft' "$c")" \
+                "$(jq -r '.after // empty' "$c")" "$(jq -r '.pack' "$c")" \
+                "$(jq -r --arg runs "$RUNS" '.runs // $runs' "$c")"
+            done
+          else
+            for dir in samples/*/; do
+              dir=${dir%/}
+              name=$(basename "$dir")
+              [ -f "$dir/pack.json" ] && [ -f "$dir/before.md" ] || continue
+              after=""
+              if [ -f "$dir/after.md" ]; then after="$dir/after.md"; fi
+              bench "$name" "$dir/before.md" "$after" "$dir/pack.json" "$RUNS"
+            done
+          fi
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: bench-results
+          path: bench-results/
+          if-no-files-found: warn

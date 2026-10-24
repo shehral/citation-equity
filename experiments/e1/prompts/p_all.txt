@@ -1,0 +1,24 @@
+You are editing one web page for a controlled experiment. This is a control condition: paraphrase the spans below without improving them in any way.
+
+The change: reword each span with the same meaning, keeping its Markdown form (a heading stays a heading, a list stays a list, a paragraph stays a paragraph). Use other wording where you can, keep each span within 10% of its original number of words, keep every figure, name, date, quote and link exactly as it is, and keep exactly the words of the question that the span contains. Do not add structure (no new headings, lists, tables, quotes, links or figures) and do not remove any.
+
+Rules that apply to every span:
+- Change only the text inside the spans. Everything outside them stays exactly as it is.
+- Keep the Markdown form of each span: a heading stays a single heading line without the leading "#" marks, a paragraph stays a paragraph, and every link, list item and table row in a span is kept.
+- Do not add any fact, number, date, URL, name or claim that is not already in the page.
+- Keep the page's language and tone.
+- Answer with one JSON object and nothing else: {"<span id>": "<new text of that span>", ...}. Leave out a span you do not change.
+
+Question the page is read for: {{query}}
+
+Page title: {{title}}
+
+Page:
+<page>
+{{page}}
+</page>
+
+Spans to paraphrase:
+{{spans}}
+
+Return the JSON object now.

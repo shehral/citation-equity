@@ -1,0 +1,46 @@
+{
+  "name": "@citation-equity/bench",
+  "version": "0.0.0",
+  "description": "Offline citation test bench: runs a draft against a fixed page set on a local model.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "@citation-equity/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./node": {
+      "@citation-equity/source": "./src/node/index.ts",
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/node/index.js"
+    }
+  },
+  "bin": {
+    "ce": "./bin/ce.js"
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "ce": "tsx --conditions=@citation-equity/source src/node/cli.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@citation-equity/engine": "workspace:*",
+    "commander": "^15.0.0",
+    "defuddle": "^0.19.5",
+    "linkedom": "^0.18.14",
+    "minisearch": "^7.2.0",
+    "ollama": "^0.6.4",
+    "robots-parser": "^3.0.1"
+  },
+  "devDependencies": {
+    "execa": "^10.2.1",
+    "tsx": "^4.23.15"
+  }
+}

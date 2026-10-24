@@ -1,0 +1,123 @@
+/*
+ * Adapted from shadcn-ui/ui (https://github.com/shadcn-ui/ui): the Tailwind v4 theme that
+ * `shadcn init` writes (style new-york, base color neutral; shadcn CLI 4.22.1, 2026-10-23).
+ * Copyright (c) 2023 shadcn, licensed MIT (see NOTICE).
+ * Changes: the unused chart and sidebar tokens trimmed. The highlight, warning and grade-*
+ * tokens, the font stacks and the .cm-ce-* editor classes are this project's own.
+ */
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-highlight: var(--highlight);
+  --color-highlight-strong: var(--highlight-strong);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-grade-mixed: var(--grade-mixed);
+  --color-grade-moderate: var(--grade-moderate);
+  --color-grade-strong: var(--grade-strong);
+  --color-grade-untested: var(--grade-untested);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.45 0 0);
+  --highlight: oklch(0.93 0.08 90);
+  --highlight-strong: oklch(0.86 0.15 85);
+  --warning: oklch(0.95 0.06 85);
+  --warning-foreground: oklch(0.38 0.09 60);
+  --grade-strong: oklch(0.55 0.14 150);
+  --grade-moderate: oklch(0.55 0.12 230);
+  --grade-mixed: oklch(0.6 0.13 70);
+  --grade-untested: oklch(0.556 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.75 0 0);
+  --highlight: oklch(0.42 0.08 85 / 55%);
+  --highlight-strong: oklch(0.55 0.13 85 / 70%);
+  --warning: oklch(0.32 0.07 60);
+  --warning-foreground: oklch(0.93 0.07 90);
+  --grade-strong: oklch(0.72 0.14 150);
+  --grade-moderate: oklch(0.72 0.11 230);
+  --grade-mixed: oklch(0.78 0.13 80);
+  --grade-untested: oklch(0.708 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Editor anchors: suggestion ranges underlined in the draft. */
+.cm-ce-highlight {
+  background-color: var(--highlight);
+  border-bottom: 2px solid var(--highlight-strong);
+}
+.cm-ce-highlight-active {
+  background-color: var(--highlight-strong);
+}

@@ -1,0 +1,83 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!docs",
+      "!pnpm-lock.yaml",
+      "!**/test/fixtures",
+      "!experiments/results",
+      "!experiments/**/*.md"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended"
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["packages/bench/src/**", "!packages/bench/src/node/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "fs": "Node-only module: the bench root entry is bundled for the browser (Ruling R5). Put this code under packages/bench/src/node.",
+                  "path": "Node-only module: the bench root entry is bundled for the browser (Ruling R5). Put this code under packages/bench/src/node.",
+                  "linkedom": "Node-only module: the bench root entry is bundled for the browser (Ruling R5). Put this code under packages/bench/src/node.",
+                  "defuddle": "Node-only module: the bench root entry is bundled for the browser (Ruling R5). Put this code under packages/bench/src/node.",
+                  "commander": "Node-only module: the bench root entry is bundled for the browser (Ruling R5). Put this code under packages/bench/src/node.",
+                  "robots-parser": "Node-only module: the bench root entry is bundled for the browser (Ruling R5). Put this code under packages/bench/src/node.",
+                  "execa": "Node-only module: the bench root entry is bundled for the browser (Ruling R5). Put this code under packages/bench/src/node."
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "node:*",
+                      "fs/*",
+                      "path/*",
+                      "linkedom/*",
+                      "defuddle/*",
+                      "commander/*",
+                      "robots-parser/*",
+                      "execa/*"
+                    ],
+                    "message": "Node-only module: the bench root entry is bundled for the browser (Ruling R5). Put this code under packages/bench/src/node."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

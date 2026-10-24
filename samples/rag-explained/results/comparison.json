@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 2,
+  "packId": "rag-explained",
+  "beforeId": "before",
+  "afterId": "after",
+  "delta": {
+    "retrieved": 0,
+    "citedAmongValid": -0.03125,
+    "pawcAmongValid": 0.009231039589953319,
+    "formatFailures": 0
+  },
+  "pValue": {
+    "citedAmongValid": 1,
+    "pawcAmongValid": 0.75
+  },
+  "nQueries": 4,
+  "excludedQueries": [],
+  "caveat": "Content check on a local model over a fixed page set. It does not predict live AI engines."
+}

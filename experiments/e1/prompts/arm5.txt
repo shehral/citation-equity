@@ -1,0 +1,28 @@
+You are editing one web page for a controlled experiment. Make exactly one kind of change and nothing else.
+
+The change: each span below is a section that makes claims without a statistic. Into one or more of these spans, insert one concrete figure (a percentage, amount, duration or count with its unit) that the source document states and that fits what the span says, attributed to the source with {{donor_attribution}}. Insert at most two figures in total, and only figures the source document really states.
+
+Rules:
+- Only insert. Every character of the original span stays where it is; you add new text between, before or after its sentences.
+- The new material comes only from the source document below, copied faithfully. Do not add any other fact, number, date, URL or name.
+- Keep the Markdown form of each span.
+- Answer with one JSON object and nothing else: {"<span id>": "<span text with your insertion>", ...}. Leave out a span you do not change.
+
+Question the page is read for: {{query}}
+
+Page title: {{title}}
+
+Page:
+<page>
+{{page}}
+</page>
+
+Source document (the only allowed origin of new material):
+<source title="{{donor_title}}" url="{{donor_url}}">
+{{donor_text}}
+</source>
+
+Spans to edit:
+{{spans}}
+
+Return the JSON object now.

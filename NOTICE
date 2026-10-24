@@ -1,0 +1,159 @@
+Citation Equity
+Copyright (c) 2026 Mohammad Ali Shehral and Ishan Gupta
+Licensed under the MIT License (see LICENSE).
+
+This product includes code adapted from the third-party projects listed below.
+Each adapted file starts with a comment naming its source, commit and license,
+and describes what was changed.
+
+------------------------------------------------------------------------------
+GEO-optim/GEO (Generative Engine Optimization, Aggarwal et al., KDD 2024)
+https://github.com/GEO-optim/GEO
+Commit c9e985f2bc4b539a01e8e9d226ff2a3d8d29a888
+Licensed under the Apache License, Version 2.0
+https://www.apache.org/licenses/LICENSE-2.0
+
+Adapted (modified) in:
+- packages/bench/src/prompt.ts: the answer prompt (`query_prompt`) and source
+  layout of `generate_answer` in src/generative_le.py; the citation marker
+  pattern of `extract_citations_new` in src/utils.py.
+- packages/bench/src/metrics.ts: the position-adjusted word count
+  (`impression_wordpos_count_simple` and `get_num_words`) in src/utils.py.
+- experiments/explorer/sensitivity.py: the answer prompt (`query_prompt`) and
+  source layout of `generate_answer` in src/generative_le.py, and the citation
+  marker pattern of `extract_citations_new` in src/utils.py (a Python port of
+  packages/bench/src/prompt.ts).
+- experiments/explorer/smoke_vllm.py: the answer prompt (`query_prompt`) and
+  source layout of `generate_answer` in src/generative_le.py.
+------------------------------------------------------------------------------
+aiseo-audit
+https://github.com/agencyenterprise/aiseo-audit
+Version 2.1.2, commit 6c888aa54856d543409d24a1befe226fe1e0f5a9
+Copyright (c) 2026 aiseo-audit contributors
+Licensed under the MIT License
+https://opensource.org/license/mit
+
+Adapted (modified) in:
+- packages/engine/src/checks/standalone-paragraphs.ts: the pronoun-opener test
+  of `measurePronounAmbiguity` in src/modules/entity-clarity/pronouns.ts.
+- packages/engine/src/checks/question-headings.ts: the `INTERROGATIVES` word
+  list in src/modules/answerability/questions.ts.
+- packages/engine/src/checks/statistics.ts: `NUMERIC_CLAIM_PATTERNS` in
+  src/modules/grounding-signals/patterns.ts.
+- packages/engine/src/checks/tables.ts: `COMPARISON_LANGUAGE` and the labeled
+  bullet idea of `SPEC_LABEL_LINE` in src/modules/product-fit/index.ts.
+- packages/engine/src/checks/comparison-language.ts: `COMPARISON_LANGUAGE` in
+  src/modules/product-fit/index.ts (shared by the tables and comparisons checks).
+- packages/engine/src/checks/expert-quotes.ts: `QUOTED_ATTRIBUTION_PATTERNS` in
+  src/modules/grounding-signals/patterns.ts.
+------------------------------------------------------------------------------
+geo-lint (@ijonis/geo-lint)
+https://github.com/IJONIS/geo-lint
+Version 0.2.1, commit b2d79319d1d0d4d4fc5d6abbc4ce5156afc5d14b
+Copyright (c) 2026 IJONIS
+Licensed under the MIT License
+https://opensource.org/license/mit
+
+Adapted (modified) in:
+- packages/engine/src/checks/question-headings.ts: `countQuestionHeadings` and
+  `QUESTION_WORDS` in src/utils/geo-analyzer.ts.
+- packages/engine/src/checks/direct-answer-lead.ts: `analyzeLeadSentences` and
+  the English `WEAK_LEAD_STARTS` in src/utils/geo-analyzer.ts.
+- packages/engine/src/checks/statistics.ts: the statistic patterns of
+  `countStatistics` in src/utils/geo-analyzer.ts.
+- packages/engine/src/checks/tables.ts: `COMPARISON_PATTERNS` and rule
+  `geo-comparison-table` in src/rules/geo-freshness-rules.ts; `hasMarkdownTable`
+  in src/utils/geo-analyzer.ts.
+- packages/engine/src/checks/comparison-language.ts: `COMPARISON_PATTERNS` and
+  rule `geo-comparison-table` in src/rules/geo-freshness-rules.ts (shared by the
+  tables and comparisons checks).
+- packages/engine/src/checks/expert-quotes.ts: the blockquote dash attribution
+  and "said/says Name" rules of `hasExpertQuote` in src/utils/geo-analyzer.ts.
+- packages/engine/src/checks/cited-sources.ts: `CITATION_PHRASES`, the http(s)
+  link and footnote patterns of `countSourceCitations` in src/utils/geo-analyzer.ts.
+Only GEO analyzers were used; nothing from its Yoast-derived readability or
+transition-word data.
+------------------------------------------------------------------------------
+aeo-linter (@drowlink/aeo-linter-core)
+https://github.com/DrowLink/aeo-audit-linter
+Version 0.3.0, commit b10ebb89a98dd1ccd102bdb9733b2ca2630f7a42
+Copyright (c) 2026 AEO Linter Contributors
+Licensed under the MIT License
+https://opensource.org/license/mit
+
+Adapted (modified) in:
+- packages/engine/src/checks/lists.ts: the word-count floor and stepped score
+  of `TableListScannabilityAudit` in
+  core/src/audits/content-chunking/table-list-scannability.ts.
+- packages/engine/src/checks/statistics.ts: the percentage and numerical-metric
+  patterns in src/gather/gatherers/direct-answers-gatherer.ts.
+- packages/engine/src/checks/cited-sources.ts: the citation-phrase pattern in
+  src/gather/gatherers/direct-answers-gatherer.ts and the statistics-plus-sources
+  idea of src/audits/direct-answer-density/fact-citation-density.ts.
+------------------------------------------------------------------------------
+shadcn/ui
+https://github.com/shadcn-ui/ui
+Added with the shadcn CLI 4.22.1 (registry style new-york, Tailwind v4) on 2026-10-23
+Licensed under the MIT License:
+
+  MIT License
+
+  Copyright (c) 2023 shadcn
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+Adapted (modified) in:
+- apps/workspace/components/ui/button.tsx: registry item `button`
+  (apps/v4/registry/new-york-v4/ui/button.tsx); `destructive` variant removed.
+- apps/workspace/components/ui/dialog.tsx: registry item `dialog`; overlay
+  colors changed to semantic tokens.
+- apps/workspace/components/ui/popover.tsx: registry item `popover`.
+- apps/workspace/lib/utils.ts: the `cn` helper written by `shadcn init`.
+- apps/workspace/app/globals.css: the neutral Tailwind v4 theme tokens written
+  by `shadcn init`; unused tokens trimmed, project tokens added.
+------------------------------------------------------------------------------
+
+Data used at run time (not redistributed)
+------------------------------------------------------------------------------
+C-SEO Bench (Puerto et al., NeurIPS 2025 Datasets and Benchmarks)
+https://huggingface.co/datasets/cseo/cseo-bench
+License: the dataset card's metadata says `license: cc` and names no specific
+Creative Commons license (checked 2026-10-23, card revision
+78c3a94143476b6252e5df63d5f16e2d8debf797). See the card for the current terms.
+
+`ce pack cseo` (packages/bench/src/node/cseo.ts) downloads a question-answering
+subset at run time into a gitignored local cache. No C-SEO Bench text is
+committed to this repository or shipped in the workspace. The sample packs in
+samples/ are synthetic, written for this project.
+------------------------------------------------------------------------------
+
+Transitive dependencies of Next.js that are not shipped in the site
+------------------------------------------------------------------------------
+The workspace is built with Next.js (MIT) as a static export. Two packages that
+Next.js installs carry licenses other than MIT, Apache-2.0, BSD or ISC. Neither
+is part of the built site (apps/workspace/out/).
+
+- @img/sharp-libvips-* (LGPL-3.0-or-later): the libvips binaries of sharp
+  (Apache-2.0), an optional dependency of Next.js for image optimization. Unused:
+  next.config.ts sets `images.unoptimized`, so sharp never runs.
+  https://github.com/lovell/sharp-libvips
+- caniuse-lite (CC-BY-4.0): browser support data, read at build time by
+  Browserslist and Next.js. Data from caniuse.com by Alexis Deveria.
+  https://github.com/browserslist/caniuse-lite
+------------------------------------------------------------------------------

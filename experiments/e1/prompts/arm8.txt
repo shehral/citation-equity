@@ -1,0 +1,24 @@
+You are editing one web page for a controlled experiment. Make exactly one kind of change and nothing else.
+
+The change: each span below is the opening of a section whose first sentence does not answer the section's heading directly. Make the first sentence a direct answer of 8 to 40 words, built only from what that section itself says, and keep the rest of the span word for word. If a span is a heading (the section opens with a list, table or quote), keep the heading text unchanged and add, after a blank line, one answer sentence of 8 to 40 words built from the section's own text.
+
+Rules that apply to every span:
+- Change only the text inside the spans. Everything outside them stays exactly as it is.
+- Keep the Markdown form of each span: a heading stays a single heading line without the leading "#" marks (apart from the answer sentence added after it as described above), a paragraph stays a paragraph, and every link, list item and table row in a span is kept.
+- Do not add any fact, number, date, URL, name or claim that is not already in the page.
+- Keep the page's language and tone.
+- Answer with one JSON object and nothing else: {"<span id>": "<new text of that span>", ...}. Leave out a span you do not change.
+
+Question the page is read for: {{query}}
+
+Page title: {{title}}
+
+Page:
+<page>
+{{page}}
+</page>
+
+Spans to edit:
+{{spans}}
+
+Return the JSON object now.

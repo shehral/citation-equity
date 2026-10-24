@@ -1,0 +1,112 @@
+{
+ "summary": {
+  "model": "google/gemma-4-12B-it",
+  "load_seconds": 1109.3,
+  "generate_seconds": 13.2,
+  "valid_answers": "8/8",
+  "planted_cited": "8/8",
+  "mean_planted_share_of_citations": 0.9688,
+  "chance_share": 0.125,
+  "mean_sources_cited": 1.12,
+  "pass": true
+ },
+ "rows": [
+  {
+   "seed": 1,
+   "sentences": 3,
+   "sentences_with_citation": 3,
+   "cited_sources": [
+    5
+   ],
+   "valid": true,
+   "planted_cited": true,
+   "planted_share_of_citations": 1.0,
+   "answer": "A standard espresso shot should take between 25 and 30 seconds from the moment the pump starts until it is stopped [5]. During this timeframe, the process should produce approximately 36 grams of liquid from 18 grams of ground coffee [5]. It is important to maintain this timing because shots that flow too quickly tend to taste sour, while shots that flow too slowly can taste bitter [5]."
+  },
+  {
+   "seed": 2,
+   "sentences": 3,
+   "sentences_with_citation": 3,
+   "cited_sources": [
+    5
+   ],
+   "valid": true,
+   "planted_cited": true,
+   "planted_share_of_citations": 1.0,
+   "answer": "A standard espresso shot should take between 25 and 30 seconds from the moment the pump starts until it is stopped [5]. During this timeframe, the process should produce approximately 36 grams of liquid from 18 grams of ground coffee [5]. It is important to monitor this timing because shots that flow too quickly tend to taste sour, while shots that flow too slowly can taste bitter [5]."
+  },
+  {
+   "seed": 3,
+   "sentences": 3,
+   "sentences_with_citation": 3,
+   "cited_sources": [
+    5
+   ],
+   "valid": true,
+   "planted_cited": true,
+   "planted_share_of_citations": 1.0,
+   "answer": "A standard espresso shot should take between 25 and 30 seconds from the moment the pump starts until it is stopped [5]. During this timeframe, the process should produce approximately 36 grams of liquid from 18 grams of ground coffee [5]. It is important to monitor this timing because shots that brew too quickly tend to taste sour, while shots that brew too slowly result in a bitter taste [5]."
+  },
+  {
+   "seed": 4,
+   "sentences": 3,
+   "sentences_with_citation": 3,
+   "cited_sources": [
+    5
+   ],
+   "valid": true,
+   "planted_cited": true,
+   "planted_share_of_citations": 1.0,
+   "answer": "A standard espresso shot should take between 25 and 30 seconds from the moment the pump starts until it is stopped [5]. During this timeframe, the process should produce approximately 36 grams of liquid from 18 grams of ground coffee [5]. It is important to maintain this timing because shots that flow too quickly tend to taste sour, while shots that flow too slowly taste bitter [5]."
+  },
+  {
+   "seed": 5,
+   "sentences": 3,
+   "sentences_with_citation": 3,
+   "cited_sources": [
+    5
+   ],
+   "valid": true,
+   "planted_cited": true,
+   "planted_share_of_citations": 1.0,
+   "answer": "A standard espresso shot should take between 25 and 30 seconds from the moment the pump starts until it is stopped [5]. During this timeframe, the process should produce approximately 36 grams of liquid from 18 grams of ground coffee [5]. If the shot flows too quickly, the resulting coffee will taste sour, whereas a shot that takes too long will taste bitter [5]."
+  },
+  {
+   "seed": 6,
+   "sentences": 3,
+   "sentences_with_citation": 3,
+   "cited_sources": [
+    5
+   ],
+   "valid": true,
+   "planted_cited": true,
+   "planted_share_of_citations": 1.0,
+   "answer": "A standard espresso shot should take between 25 and 30 seconds from the moment the pump starts until it is stopped [5]. During this timeframe, the process should produce approximately 36 grams of liquid from 18 grams of ground coffee [5]. It is important to monitor this duration because shots that flow too quickly tend to taste sour, while shots that flow too slowly result in a bitter taste [5]."
+  },
+  {
+   "seed": 7,
+   "sentences": 4,
+   "sentences_with_citation": 4,
+   "cited_sources": [
+    2,
+    5
+   ],
+   "valid": true,
+   "planted_cited": true,
+   "planted_share_of_citations": 0.75,
+   "answer": "A standard espresso shot should take between 25 and 30 seconds from the moment the pump starts until it is stopped [5]. During this timeframe, the process should produce approximately 36 grams of liquid from 18 grams of ground coffee [5]. The speed of the shot is influenced by the grind size, as a finer grind slows the water down while a coarser grind allows it to run faster [2]. It is important to maintain the correct timing because shots that flow too quickly tend to taste sour, whereas shots that flow too slowly taste bitter [5]."
+  },
+  {
+   "seed": 8,
+   "sentences": 3,
+   "sentences_with_citation": 3,
+   "cited_sources": [
+    5
+   ],
+   "valid": true,
+   "planted_cited": true,
+   "planted_share_of_citations": 1.0,
+   "answer": "A standard espresso shot should take between 25 and 30 seconds from the moment the pump starts until it is stopped [5]. During this timeframe, the process should produce approximately 36 grams of liquid from 18 grams of ground coffee [5]. It is important to monitor this timing because shots that flow too quickly tend to taste sour, while shots that take too long can taste bitter [5]."
+  }
+ ]
+}

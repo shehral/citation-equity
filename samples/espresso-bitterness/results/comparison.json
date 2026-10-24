@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 2,
+  "packId": "espresso-bitterness",
+  "beforeId": "before",
+  "afterId": "after",
+  "delta": {
+    "retrieved": 0.25,
+    "citedAmongValid": 0.09375,
+    "pawcAmongValid": 0.04978676562082132,
+    "formatFailures": 0
+  },
+  "pValue": {
+    "citedAmongValid": 1,
+    "pawcAmongValid": 0.25
+  },
+  "nQueries": 4,
+  "excludedQueries": [],
+  "caveat": "Content check on a local model over a fixed page set. It does not predict live AI engines."
+}

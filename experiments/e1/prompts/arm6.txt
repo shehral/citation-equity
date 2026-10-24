@@ -1,0 +1,27 @@
+You are editing one web page for a controlled experiment. Make exactly one kind of change and nothing else.
+
+The change: add one short quotation to the page. Pick one passage of 40 words or fewer from the source document that is worth quoting and fits one of the spans below, and copy it exactly, character for character, with no double quote marks inside it. Name who said it: the person the source document gives as its speaker, with their name as the source writes it; if the source names no speaker, use the source's own name: {{donor_name}}. A script adds the quotation after the span you pick, as a new line: According to <speaker>, "<quote>".
+
+Rules:
+- Pick exactly one span and one quotation.
+- Copy the quotation verbatim from the source document. Do not shorten, fix or join passages.
+- Answer with one JSON object and nothing else: {"<span id>": {"quote": "<exact passage>", "speaker": "<name>"}}.
+
+Question the page is read for: {{query}}
+
+Page title: {{title}}
+
+Page:
+<page>
+{{page}}
+</page>
+
+Source document (the only allowed origin of the quotation):
+<source title="{{donor_title}}" url="{{donor_url}}">
+{{donor_text}}
+</source>
+
+Spans you may attach the quotation to:
+{{spans}}
+
+Return the JSON object now.

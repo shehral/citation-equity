@@ -1,0 +1,14 @@
+[
+  {
+    "slug": "espresso-bitterness",
+    "title": "Why does my espresso taste bitter?",
+    "topic": "coffee",
+    "packId": "espresso-bitterness"
+  },
+  {
+    "slug": "rag-explained",
+    "title": "Retrieval-augmented generation, explained",
+    "topic": "machine learning",
+    "packId": "rag-explained"
+  }
+]

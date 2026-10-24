@@ -1,0 +1,5 @@
+{"time":"2026-10-22T10:00:00Z","remote_addr":"203.0.113.5","request_uri":"/espresso/bitterness","status":200,"http_referer":"","http_user_agent":"Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)"}
+{"time":"2026-10-22T11:15:30Z","path":"/espresso/bitterness","referrer":"","userAgent":"Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)"}
+{"time":"2026-10-22T12:02:11Z","url":"https://example.com/espresso/bitterness?utm_source=chatgpt.com","referer":"https://chatgpt.com/","user_agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"}
+{"level":"info","request":{"uri":"/about","headers":{"User-Agent":["Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/141.0.0.0 Safari/537.36"],"Referer":["https://www.perplexity.ai/search/espresso"]}}}
+{"not json
