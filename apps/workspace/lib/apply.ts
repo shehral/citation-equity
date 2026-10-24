@@ -6,7 +6,7 @@ export type ApplyOutcome = { ok: true; markdown: string } | { ok: false; reason:
  * Replaces the suggestion's range with its `after` text, but only when the
  * range still holds exactly `before`. Anything else (the author edited inside
  * the range, text before it moved it, or there is no `after`) is `stale`, and
- * the draft is left as it is (Review Focus 3).
+ * the draft is left as it is.
  */
 export function applySuggestion(markdown: string, s: Suggestion): ApplyOutcome {
   const { start, end } = s.range;

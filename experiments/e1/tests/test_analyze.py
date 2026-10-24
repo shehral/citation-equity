@@ -320,6 +320,51 @@ class Exclusions(unittest.TestCase):
         self.assertEqual((ex["applicable"], ex["validity_exclusions"], ex["flagged"]), (10, 3, True))
         self.assertFalse(result["exclusions"]["9"]["flagged"])
 
+    @staticmethod
+    def _mark(inp, arm, reasons):
+        for v in inp.versions:
+            if v["arm"] == arm and v["query_id"] in reasons:
+                v["valid"], v["excluded_reason"] = False, reasons[v["query_id"]]
+
+    def test_not_applicable_rows_are_neither_exclusions_nor_applicable(self):
+        # r3 amendments 5 and 9: "not applicable: ..." is not a validity exclusion.
+        inp = sn.synthetic_inputs(n_queries=10, seed=4)
+        self._mark(inp, "7", {"q000": "not applicable: the editor returned NONE",
+                              "q001": "not applicable: the editor returned NONE"})
+        self._mark(inp, "ALL", {"q000": "not applicable: no step applied"})
+        ex = an.analyze_set(inp, "main", **FAST)["exclusions"]
+        self.assertEqual((ex["7"]["applicable"], ex["7"]["valid"], ex["7"]["validity_exclusions"]), (8, 8, 0))
+        self.assertEqual(ex["7"]["exclusion_rate"], 0.0)
+        self.assertEqual((ex["ALL"]["applicable"], ex["ALL"]["valid"], ex["ALL"]["validity_exclusions"]), (9, 9, 0))
+        self.assertFalse(ex["7"]["flagged"] or ex["ALL"]["flagged"])
+
+    def test_invalid_rows_still_count_as_exclusions(self):
+        inp = sn.synthetic_inputs(n_queries=10, seed=4)
+        self._mark(inp, "ALL", {"q000": "invalid: every step failed", "q001": "invalid: check 3"})
+        ex = an.analyze_set(inp, "main", **FAST)["exclusions"]["ALL"]
+        self.assertEqual((ex["applicable"], ex["valid"], ex["validity_exclusions"]), (10, 8, 2))
+        self.assertAlmostEqual(ex["exclusion_rate"], 0.2)
+        self.assertFalse(ex["flagged"])
+
+    def test_the_20_percent_flag_uses_invalid_rows_over_applicable_rows(self):
+        # 2 invalid and 2 not-applicable rows of 10: the rate is 2 / 8 = 25% (flagged), not 4 / 10.
+        inp = sn.synthetic_inputs(n_queries=10, seed=4)
+        self._mark(inp, "7", {"q000": "invalid: check 1", "q001": "invalid: check 4",
+                              "q002": "not applicable: the editor returned NONE",
+                              "q003": "not applicable: the editor returned NONE"})
+        ex = an.analyze_set(inp, "main", **FAST)["exclusions"]["7"]
+        self.assertEqual((ex["applicable"], ex["validity_exclusions"]), (8, 2))
+        self.assertAlmostEqual(ex["exclusion_rate"], 0.25)
+        self.assertTrue(ex["flagged"])
+        # Three not-applicable rows and one invalid: 1 / 7 is under 20%, though 4 / 10 is not.
+        inp = sn.synthetic_inputs(n_queries=10, seed=4)
+        self._mark(inp, "7", {"q000": "invalid: check 1", "q001": "not applicable: the editor returned NONE",
+                              "q002": "not applicable: the editor returned NONE",
+                              "q003": "not applicable: the editor returned NONE"})
+        ex = an.analyze_set(inp, "main", **FAST)["exclusions"]["7"]
+        self.assertEqual((ex["applicable"], ex["validity_exclusions"]), (7, 1))
+        self.assertFalse(ex["flagged"])
+
 
 class Replication(unittest.TestCase):
     def test_replication_set_uses_one_family_and_reports_removal_support(self):

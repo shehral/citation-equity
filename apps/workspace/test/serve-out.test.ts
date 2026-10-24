@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { type ChildProcess, spawn } from 'node:child_process';
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,9 +16,14 @@ function tempDir() {
   return dir;
 }
 
-function start(outDir: string, port: number) {
+function start(outDir: string, port: number, basePath?: string) {
   const child = spawn(process.execPath, [SCRIPT], {
-    env: { ...process.env, OUT_DIR: outDir, PORT: String(port) },
+    env: {
+      ...process.env,
+      OUT_DIR: outDir,
+      PORT: String(port),
+      ...(basePath === undefined ? {} : { BASE_PATH: basePath }),
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   children.push(child);
@@ -71,5 +76,36 @@ describe('serve-out', () => {
     const home = await fetch('http://127.0.0.1:47393/');
     expect(home.status).toBe(200);
     expect(await home.text()).toContain('home');
+  });
+  it('serves the build under BASE_PATH as GitHub Pages does, and nothing outside it', async () => {
+    const dir = tempDir();
+    writeFileSync(join(dir, 'index.html'), '<p>home</p>');
+    writeFileSync(join(dir, '404.html'), '<p>missing</p>');
+    mkdirSync(join(dir, 'draft'));
+    writeFileSync(join(dir, 'draft', 'index.html'), '<p>draft</p>');
+    const { ready } = start(dir, 47395, '/citation-equity');
+    await ready;
+    const at = (path: string) => fetch(`http://127.0.0.1:47395${path}`, { redirect: 'manual' });
+
+    const home = await at('/citation-equity/');
+    expect(home.status).toBe(200);
+    expect(await home.text()).toContain('home');
+    const draft = await at('/citation-equity/draft/');
+    expect(await draft.text()).toContain('draft');
+    const bare = await at('/citation-equity');
+    expect(bare.status).toBe(301);
+    expect(bare.headers.get('location')).toBe('/citation-equity/');
+    for (const outside of ['/', '/draft/', '/citation-equityx/']) {
+      const res = await at(outside);
+      expect(res.status, outside).toBe(404);
+      expect(await res.text()).toContain('missing');
+    }
+  });
+
+  it('names the Pages build in its message when that build is missing', async () => {
+    const { exited } = start(tempDir(), 47396, '/citation-equity');
+    const { code, stderr } = await exited;
+    expect(code).toBe(1);
+    expect(stderr).toContain('pnpm build:pages');
   });
 });

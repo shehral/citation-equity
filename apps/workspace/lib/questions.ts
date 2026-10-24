@@ -22,10 +22,6 @@ export const SOURCE_LABELS: Record<WorkspaceQuestionSource, string> = {
   user: 'By you',
 };
 
-/** Shown on the question-coverage card. */
-export const CIRCULARITY_NOTE =
-  "Questions generated from your own draft tend to look covered, so real readers' queries are the better test.";
-
 /** The engine's key: case, spacing and closing punctuation ignored, so "What is crema" = "What is crema?". */
 const keyOf = questionKey;
 

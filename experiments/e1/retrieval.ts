@@ -4,7 +4,7 @@
 // target's original is replaced by that version and every other page stays as fetched. Ranking is
 // the bench's retrieve() (BM25, MiniSearch defaults, title + text) with k = pool size; pages are
 // indexed in docId (page_id) order, so retrieve()'s input-order tie-break is a tie-break by docId.
-// retrieve() returns only pages that match a query term (Ruling R12); the rest follow in docId
+// retrieve() returns only pages that match a query term; the rest follow in docId
 // order, so every page has a rank.
 // Outcomes: the target's 1-based rank in the pool, its rank among the query's own 4 in-prompt pages,
 // and whether it is in the top 8 (matched and rank <= 8). BM25 rewards lexical arms (12, 9, 2) by

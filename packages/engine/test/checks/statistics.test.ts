@@ -114,7 +114,7 @@ describe('statistics check', () => {
     expect(found(text)).toEqual([]);
   });
 
-  it('ignores numbers in fenced code, inline code and front matter (Review Focus 2)', () => {
+  it('ignores numbers in fenced code, inline code and front matter', () => {
     const md = `---\nshare: 50%\n---\n\n${filler(20)}\n\n\`\`\`\nrate = "42%"\n\`\`\`\n\nThe value \`42%\` is code.\n`;
     const result = run(md);
     expect(result.applicable).toBe(true);

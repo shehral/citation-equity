@@ -1,8 +1,4 @@
-import { CHECK_DEFINITIONS } from '@citation-equity/engine';
-import { cleanup, render, screen } from '@testing-library/react';
-import { createElement } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SuggestionCard } from '@/components/panel/suggestion-card';
+import { describe, expect, it } from 'vitest';
 import {
   applySuggestion,
   mapApplied,
@@ -13,8 +9,6 @@ import {
 } from '@/lib/apply';
 import { DRAFT, HEADING_EDIT, QUOTE_ADVISORY } from './fixtures';
 
-afterEach(cleanup);
-
 describe('applySuggestion', () => {
   it('replaces exactly the suggestion range with `after`', () => {
     const out = applySuggestion(DRAFT, HEADING_EDIT);
@@ -24,7 +18,7 @@ describe('applySuggestion', () => {
     });
   });
 
-  it('refuses as stale when one character inside the range changed (Review Focus 3)', () => {
+  it('refuses as stale when one character inside the range changed', () => {
     const at = HEADING_EDIT.range.start + 5;
     const edited = `${DRAFT.slice(0, at)}X${DRAFT.slice(at + 1)}`;
     expect(applySuggestion(edited, HEADING_EDIT)).toEqual({ ok: false, reason: 'stale' });
@@ -163,78 +157,5 @@ describe('sectionAround', () => {
     const start = md.indexOf('## Two');
     const { start: s, end: e } = sectionAround(md, { start, end: start + 6 });
     expect(md.slice(s, e)).toBe('## Two\n\nBody two.\n');
-  });
-});
-
-function renderCard(suggestion: typeof HEADING_EDIT, stale = false, finding?: string) {
-  const def = CHECK_DEFINITIONS.find((d) => d.id === suggestion.checkId);
-  if (!def) throw new Error('missing check definition');
-  const handlers = {
-    onShow: vi.fn(),
-    onPreview: vi.fn(),
-    onApply: vi.fn(),
-    onMarkDone: vi.fn(),
-    onIgnore: vi.fn(),
-  };
-  render(
-    createElement(SuggestionCard, { suggestion, definition: def, stale, finding, ...handlers }),
-  );
-  return handlers;
-}
-
-describe('SuggestionCard', () => {
-  it('for an advisory renders Mark done and Ignore but no Apply', () => {
-    renderCard(QUOTE_ADVISORY);
-    expect(screen.getByRole('button', { name: /mark done/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /ignore/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /show in draft/i })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /apply/i })).toBeNull();
-    expect(screen.queryByRole('button', { name: /preview change/i })).toBeNull();
-  });
-
-  it('for an edit renders Preview change, Apply and Ignore but no Mark done', () => {
-    const h = renderCard(HEADING_EDIT);
-    screen.getByRole('button', { name: /^apply/i }).click();
-    expect(h.onApply).toHaveBeenCalledWith(HEADING_EDIT);
-    expect(screen.getByRole('button', { name: /preview change/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /ignore/i })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /mark done/i })).toBeNull();
-    expect(screen.getByText(HEADING_EDIT.before)).toBeTruthy();
-  });
-
-  it('leads with what the check found, so a generic rationale still says what is wrong', () => {
-    renderCard(QUOTE_ADVISORY, false, 'It has 4 words, too short to carry its point alone.');
-    const card = screen.getByRole('article');
-    expect(card.textContent).toContain(
-      `It has 4 words, too short to carry its point alone. ${QUOTE_ADVISORY.rationale}`,
-    );
-  });
-
-  it('offers no wording helper on a data-support advisory', () => {
-    const def = CHECK_DEFINITIONS.find((d) => d.id === 'statistics');
-    if (!def) throw new Error('missing');
-    for (const checkId of ['statistics', 'expert-quotes', 'cited-sources'] as const) {
-      const view = render(
-        createElement(SuggestionCard, {
-          suggestion: { ...QUOTE_ADVISORY, checkId },
-          definition: def,
-          onShow: vi.fn(),
-          onPreview: vi.fn(),
-          onApply: vi.fn(),
-          onMarkDone: vi.fn(),
-          onIgnore: vi.fn(),
-          onSuggestWording: vi.fn(),
-        }),
-      );
-      expect(screen.queryByRole('button', { name: /suggest wording/i })).toBeNull();
-      view.unmount();
-    }
-  });
-
-  it('shows the out-of-date message when stale', () => {
-    renderCard(HEADING_EDIT, true);
-    expect(
-      screen.getByText('Out of date. The text changed since this was suggested.'),
-    ).toBeTruthy();
   });
 });

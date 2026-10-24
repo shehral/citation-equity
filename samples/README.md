@@ -34,6 +34,12 @@ Packs are licensed `MIT (written for this project)`, with source `Citation Equit
 
 Content check on a local model over a fixed page set. It does not predict live AI engines.
 
+### How the test works
+
+For each question in a pack, the bench puts the draft among the pack's competitor pages, retrieves the top 8 with BM25, and asks a local model (default `llama3.2:3b` through Ollama, with a 16,384-token window) to answer from those sources with numbered citations. It repeats each question 8 times with different seeds and source orders. For the draft before and after a revision it reports how often the draft was retrieved, the answers that failed the citation format, how often the draft was cited among valid answers, and the draft's share of each answer next to the chance level (an even split over the retrieved sources). A paired sign-flip test over the questions compares before and after. The sections below give the exact settings and what changed since the first recording.
+
+To test your own topic, build a pack from pages you name or, for research, from C-SEO Bench: see [docs/cli.md](../docs/cli.md#make-a-test-pack).
+
 ### The first recording, and why it was superseded
 
 The first canonical runs (commit `760a239`, k 5, Ollama's default context window) are superseded. Their files were replaced by the runs below and stay in the git history. Diagnosing them showed that the bench, not the drafts, produced most of what they seemed to say:
@@ -92,6 +98,10 @@ What these runs show:
 - **No difference the test can separate from noise.** Paired over the 4 questions: espresso, cited among valid +9 points (sign-flip p = 1), share +0.050 (p = 0.25); RAG, cited among valid -3 points (p = 1), share +0.009 (p = 0.75). With 4 questions the smallest possible p is 0.125, so these runs can show a direction at most.
 
 The after drafts score much higher on the checks (foundation score 35 to 73 for espresso, 45 to 76 for RAG, from `ce analyze` with its ten checks and each draft's own question headings as targets; with the pack's four questions as targets, as the workspace sets them for the samples, RAG after scores 77 and the others are unchanged). On these pages this model did not cite them more often, or give them a larger share, by an amount these runs can tell apart from chance. That fits the evidence page, which grades no check as strongly supported.
+
+### Larger models
+
+A pre-registered sensitivity test on four larger open models (9B to 31B) gave the same picture. The floor held: an off-topic page was almost never cited. But no model met the pre-registered bar of a 0.10 share gain for an answer-first rewrite (gains of +0.007 to +0.034), so none qualified for the planned follow-up. The small positive shifts were consistent across questions and are treated as exploratory. See [experiments/RESULTS_sensitivity.md](../experiments/RESULTS_sensitivity.md) and [experiments/README.md](../experiments/README.md).
 
 ### Replay check
 

@@ -21,5 +21,11 @@ export { buildPrompt, type ParsedAnswer, parseAnswer, stripReasoning } from './p
 export { fanOutPrompt, fanOutQuestions } from './questions-llm';
 export { retrieve } from './retrieve';
 export { mulberry32, shuffle } from './rng';
+export {
+  type CrawlerAccessStatus,
+  type CrawlerVerdict,
+  crawlerAccessStatus,
+  crawlerVerdicts,
+} from './robots-check';
 export { compareReports, runBench } from './run';
 export * from './types';

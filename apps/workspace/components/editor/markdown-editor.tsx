@@ -2,6 +2,7 @@
 
 import type { CheckId, Range } from '@citation-equity/engine';
 import { markdown } from '@codemirror/lang-markdown';
+import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search';
 import {
   Annotation,
   type Range as CmRange,
@@ -11,15 +12,17 @@ import {
   StateEffect,
   StateField,
 } from '@codemirror/state';
-import { Decoration, type DecorationSet, EditorView } from '@codemirror/view';
-import { basicSetup } from 'codemirror';
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import { editorTheme } from './editor-theme';
+import { Decoration, type DecorationSet, dropCursor, EditorView, keymap } from '@codemirror/view';
+import { minimalSetup } from 'codemirror';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+import { markdownFromClipboard } from '@/lib/paste';
+import { editorTheme, markdownHighlighting, paperLayout } from './editor-theme';
 
 export interface MarkdownEditorHandle {
   focusRange(r: Range): void;
 }
 
+/** A fix's passage. Only the selected (`active`) one is marked; the others stay unmarked. */
 export interface EditorHighlight {
   range: Range;
   checkId: CheckId;
@@ -37,6 +40,11 @@ interface MarkdownEditorProps {
   docVersion?: number;
   onChange(v: string): void;
   highlights: EditorHighlight[];
+  /**
+   * Passages to underline besides the selected fix, e.g. every range of the selected group.
+   * Compared by value, so a new array with the same ranges keeps marks mapped through edits.
+   */
+  selectedRanges?: Range[];
   ariaLabel: string;
 }
 
@@ -55,20 +63,53 @@ const highlightField = StateField.define<DecorationSet>({
   provide: (field) => EditorView.decorations.from(field),
 });
 
-function buildDecorations(highlights: EditorHighlight[], docLength: number): DecorationSet {
+const NO_RANGES: Range[] = [];
+
+/**
+ * Marks for the selected fix (dotted underline and fill) and the selected ranges (dotted
+ * underline). Nothing is marked while nothing is selected, so the draft never looks flagged.
+ */
+function buildDecorations(
+  highlights: EditorHighlight[],
+  selectedRanges: Range[],
+  docLength: number,
+): DecorationSet {
   const marks: CmRange<Decoration>[] = [];
-  for (const h of highlights) {
-    const { start, end } = h.range;
-    if (start < 0 || end > docLength || start >= end) continue;
+  const valid = ({ start, end }: Range) => start >= 0 && end <= docLength && start < end;
+  const active = highlights.filter((h) => h.active && valid(h.range));
+  for (const h of active)
     marks.push(
       Decoration.mark({
-        class: h.active ? 'cm-ce-highlight cm-ce-highlight-active' : 'cm-ce-highlight',
+        class: 'cm-ce-highlight cm-ce-highlight-active',
         attributes: { 'data-check': h.checkId },
-      }).range(start, end),
+      }).range(h.range.start, h.range.end),
     );
+  const seen = new Set(active.map((h) => `${h.range.start}:${h.range.end}`));
+  for (const r of selectedRanges) {
+    const key = `${r.start}:${r.end}`;
+    if (!valid(r) || seen.has(key)) continue;
+    seen.add(key);
+    marks.push(Decoration.mark({ class: 'cm-ce-highlight' }).range(r.start, r.end));
   }
   return Decoration.set(marks, true);
 }
+
+/** Rich text on the clipboard (text/html) goes in as Markdown; anything else pastes as usual. */
+const richPaste = EditorView.domEventHandlers({
+  paste(event, view) {
+    const html = event.clipboardData?.getData('text/html');
+    if (!html) return false;
+    const markdown = markdownFromClipboard(html);
+    if (markdown === null) return false;
+    event.preventDefault();
+    view.dispatch({
+      ...view.state.replaceSelection(markdown),
+      scrollIntoView: true,
+      userEvent: 'input.paste',
+    });
+    return true;
+  },
+});
 
 /** The smallest replacement that turns `from` into `to`, so undo history and scroll survive. */
 function minimalChange(from: string, to: string) {
@@ -89,18 +130,26 @@ function minimalChange(from: string, to: string) {
 }
 
 /**
- * CodeMirror 6 over the Markdown source, so engine offsets are editor
- * positions. Suggestion ranges are underlined; `focusRange` selects one and
- * scrolls it into view.
+ * CodeMirror 6 over the Markdown source, so engine offsets are editor positions, styled as a
+ * sheet of paper. Only the selected fix and `selectedRanges` are underlined; `focusRange`
+ * selects a passage and scrolls it into view. Rich-text pastes arrive as Markdown.
  */
 export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(
-  function MarkdownEditor({ value, docVersion = 0, onChange, highlights, ariaLabel }, ref) {
+  function MarkdownEditor(
+    { value, docVersion = 0, onChange, highlights, selectedRanges = NO_RANGES, ariaLabel },
+    ref,
+  ) {
     const host = useRef<HTMLDivElement>(null);
     const view = useRef<EditorView | null>(null);
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const highlightsRef = useRef(highlights);
     highlightsRef.current = highlights;
+    const selectedKey = selectedRanges.map((r) => `${r.start}:${r.end}`).join(',');
+    // biome-ignore lint/correctness/useExhaustiveDependencies: compared by value through selectedKey
+    const selected = useMemo(() => selectedRanges, [selectedKey]);
+    const selectedRef = useRef(selected);
+    selectedRef.current = selected;
     const initial = useRef({ value, ariaLabel, docVersion });
     const shownVersion = useRef(docVersion);
     const extensions = useRef<Extension[]>([]);
@@ -108,10 +157,17 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     useEffect(() => {
       if (!host.current) return;
       extensions.current = [
-        basicSetup,
+        minimalSetup,
+        dropCursor(),
+        search(),
+        highlightSelectionMatches(),
+        keymap.of(searchKeymap),
         markdown(),
+        markdownHighlighting,
         EditorView.lineWrapping,
         editorTheme,
+        paperLayout,
+        richPaste,
         highlightField,
         EditorView.contentAttributes.of({ 'aria-label': initial.current.ariaLabel }),
         EditorView.updateListener.of((update) => {
@@ -139,7 +195,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         shownVersion.current = docVersion;
         editor.setState(EditorState.create({ doc: value, extensions: extensions.current }));
         editor.dispatch({
-          effects: setHighlights.of(buildDecorations(highlightsRef.current, value.length)),
+          effects: setHighlights.of(
+            buildDecorations(highlightsRef.current, selectedRef.current, value.length),
+          ),
         });
         return;
       }
@@ -152,9 +210,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       const editor = view.current;
       if (!editor) return;
       editor.dispatch({
-        effects: setHighlights.of(buildDecorations(highlights, editor.state.doc.length)),
+        effects: setHighlights.of(buildDecorations(highlights, selected, editor.state.doc.length)),
       });
-    }, [highlights]);
+    }, [highlights, selected]);
 
     useImperativeHandle(
       ref,

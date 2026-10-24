@@ -166,6 +166,25 @@ class Check3NoNewFactsTest(unittest.TestCase):
         self.assertIsNone(v.check_no_new_facts("Then New York. The City", corpus))
         self.assertIsNone(v.check_no_new_facts("## Grind Size\n\nOk.", corpus))
 
+    def test_title_case_heading_words_found_in_lower_case_are_allowed(self):
+        corpus = v.corpus(("Kit guide", "Brands publish transparency scores for every kit."))
+        self.assertIsNone(v.check_no_new_facts("## How do Transparency Scores work?\n\nOk.", corpus))
+        self.assertIsNone(v.check_no_new_facts("Kit guide\n## Which Brands Publish Transparency Scores?", corpus))
+        self.assertIsNone(v.check_no_new_facts("Which Brands Publish Transparency Scores\nOk.", corpus, titled=True))
+
+    def test_title_case_heading_words_absent_from_the_sources_still_fail(self):
+        corpus = v.corpus(("Kit guide", "Every kit is listed with its transparency scores."))
+        self.assertIn("'FTC Listed'", v.check_no_new_facts("## Is the kit FTC Listed?\n\nOk.", corpus))
+        self.assertIn("'FTC Listed'", v.check_no_new_facts("Is the kit FTC Listed?\nOk.", corpus, titled=True))
+
+    def test_body_prose_keeps_the_verbatim_rule(self):
+        corpus = v.corpus(("Kit guide", "Brands publish transparency scores for every kit."))
+        self.assertIn("'Transparency Scores'",
+                      v.check_no_new_facts("## Kits\n\nRead the Transparency Scores here.", corpus))
+        self.assertIn("'Transparency Scores'",
+                      v.check_no_new_facts("Kit guide\nRead the Transparency Scores here.", corpus))
+        self.assertIsNone(v.check_no_new_facts("## Kits\n\nTransparency Scores matter.", corpus))
+
     def test_donor_and_query_widen_the_allowed_text(self):
         donor = {"title": "D", "text": "Experts at Coffee Lab measured 70% extraction.", "url": "https://d.org/x"}
         c = v.corpus(("T", TEXT), donor=donor, query=QUERY)

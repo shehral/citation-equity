@@ -1,6 +1,6 @@
 You are editing one web page for a controlled experiment. This is a control condition: paraphrase the spans below without improving them in any way.
 
-The change: each span opens a section: reword it with the same meaning, keeping the same sentence first (do not make the opening more or less direct). Use other wording where you can, keep each span within 10% of its original number of words, keep every figure, name, date, quote and link exactly as it is, and keep exactly the words of the question that the span contains. Do not add structure (no new headings, lists, tables, quotes, links or figures) and do not remove any.
+The change: each span opens a section: reword it with the same meaning, keeping the same sentence first (do not make the opening more or less direct). Use other wording where you can, give each span the number of words listed for it at the end, keep every figure, name, date, quote and link exactly as it is, and keep the question's words listed for each span and add none. Do not add structure (no new headings, lists, tables, quotes, links or figures) and do not remove any.
 
 Rules that apply to every span:
 - Change only the text inside the spans. Everything outside them stays exactly as it is.
@@ -20,5 +20,10 @@ Page:
 
 Spans to paraphrase:
 {{spans}}
+
+Words and question words, span by span (a word is a run of letters or digits; link URLs are not counted):
+{{span_targets}}
+
+Count the words of each new span before you answer: a span outside its range fails the check. Paraphrases tend to come out short, so do not condense or drop any clause; swap words and phrases one for one. Keep each listed question word exactly as written ("bitter" may not become "harsh"), and do not bring in a question word a span lacks.
 
 Return the JSON object now.

@@ -26,6 +26,7 @@ Every function returns None when its check passes, or a message for the regenera
 from __future__ import annotations
 
 import difflib
+import math
 import re
 import sys
 from collections import Counter
@@ -50,6 +51,7 @@ QUERY_ARMS = {"9", "11", "12"}
 HEADING_CONVERTERS = {"2", "12", "P2", "P12"}
 LIST_CONVERTERS = {"4"}
 PLACEBO_TOLERANCE = 0.02
+PLACEBO_LENGTH = (0.9, 1.1)  # check 5: a placebo's span words stay within +-10%
 
 
 def is_placebo(arm: str) -> bool:
@@ -230,8 +232,17 @@ def _occurs(token: str, text: str, guard: str) -> bool:
     return re.search(rf"(?<!{guard}){re.escape(token)}(?!{guard})", text) is not None
 
 
-def new_facts(text: str, allowed: str) -> list[str]:
+def _in_heading(text: str, pos: int, titled: bool) -> bool:
+    """True when `pos` lies on a Markdown heading line, or on the first line when `titled`
+    (the page title is that line)."""
+    line_start = text.rfind("\n", 0, pos) + 1
+    return text.startswith("#", line_start) or (titled and line_start == 0)
+
+
+def new_facts(text: str, allowed: str, titled: bool = False) -> list[str]:
+    """`titled`: the first line of `text` is the page title (heading rule below applies)."""
     found = []
+    allowed_stems = None
     for m in _NUMBER.finditer(text):
         tok = m.group(0).rstrip(".,")
         if tok and not _occurs(tok, allowed, "[0-9]"):
@@ -246,13 +257,21 @@ def new_facts(text: str, allowed: str) -> list[str]:
             words = words[1:]
         if len(words) >= 2:
             seq = " ".join(words)
-            if not _occurs(seq, re.sub(r"[ \t]+", " ", allowed), r"[\w'’-]"):
-                found.append(f"name '{seq}'")
+            if _occurs(seq, re.sub(r"[ \t]+", " ", allowed), r"[\w'’-]"):
+                continue
+            # In a heading or the title, Title Case is style, not a name: the sequence is new
+            # only if one of its words (lowercased, stemmed) occurs nowhere in the sources.
+            if _in_heading(text, start, titled):
+                if allowed_stems is None:
+                    allowed_stems = _stems(allowed)
+                if _stems(seq) <= allowed_stems:
+                    continue
+            found.append(f"name '{seq}'")
     return list(dict.fromkeys(found))
 
 
-def check_no_new_facts(text: str, allowed: str):
-    found = new_facts(text, allowed)
+def check_no_new_facts(text: str, allowed: str, titled: bool = False):
+    found = new_facts(text, allowed, titled)
     if found:
         return "Do not add facts that are not in the allowed sources: " + ", ".join(found[:8]) + "."
     return None
@@ -340,13 +359,21 @@ def page_words(version) -> int:
     return common.count_words(f"{version[0]}\n{version[1]}")
 
 
+def placebo_word_range(words: int) -> tuple[int, int]:
+    """The fewest and most words a placebo may give spans of `words` words (check 5), for the
+    editor's prompts and regenerate messages."""
+    lo, hi = PLACEBO_LENGTH
+    return math.ceil(round(lo * words, 6)), math.floor(round(hi * words, 6))
+
+
 def check_length(arm, original, edited, orig_span_texts, new_span_texts):
     """(message or None, added words)."""
     if is_placebo(arm):
         before = sum(common.count_words(t) for t in orig_span_texts)
         after = sum(common.count_words(t) for t in new_span_texts)
         ratio = after / before if before else 1.0
-        if not 0.9 - 1e-9 <= ratio <= 1.1 + 1e-9:
+        lo, hi = PLACEBO_LENGTH
+        if not lo - 1e-9 <= ratio <= hi + 1e-9:
             return f"The paraphrase must keep the spans' length within 10% ({before} -> {after} words).", 0
         return None, 0
     w0, w1 = page_words(original), page_words(edited)
@@ -453,7 +480,7 @@ def validate(arm, original, edited, edits, spans, eng_orig, eng_edit, query, tar
                      query=None if placebo or a not in QUERY_ARMS else query)
     if step:  # an ALL step may keep what earlier steps added (the query heading, a donor figure)
         allowed += f"\n{original[0]}\n{original[1]}"
-    add(check_no_new_facts(f"{edited[0]}\n{edited[1]}", allowed))
+    add(check_no_new_facts(f"{edited[0]}\n{edited[1]}", allowed, titled=True))
     if arm == "2":
         add(check_heading_vocabulary(original[1], eng_orig, edits))
     if arm == "12":
@@ -471,7 +498,7 @@ def validate(arm, original, edited, edits, spans, eng_orig, eng_edit, query, tar
 def validate_all(original, edited, query, target, donor):
     """The whole ALL version against the original: checks 3 and 5 (each step passed 1-4 and 6)."""
     failures = []
-    msg = check_no_new_facts(f"{edited[0]}\n{edited[1]}", corpus(target, donor=donor, query=query))
+    msg = check_no_new_facts(f"{edited[0]}\n{edited[1]}", corpus(target, donor=donor, query=query), titled=True)
     if msg:
         failures.append(msg)
     msg, _ = check_length("ALL", original, edited, [], [])

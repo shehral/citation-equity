@@ -46,6 +46,7 @@ export {
   questionContext,
   type TargetQuestion,
 } from './questions';
+export { groupFixes, type RankedFix, rankFixes } from './rank';
 export {
   analyzeReadiness,
   READINESS_EVIDENCE,
@@ -59,6 +60,12 @@ export {
   type ReadinessStatus,
 } from './readiness';
 export { CHECK_DEFINITIONS, GRADE_WEIGHTS, PRESET_WEIGHTS } from './registry';
+export {
+  RENDER_PASS_WORDS,
+  RENDER_WARN_WORDS,
+  type RenderCheck,
+  rendersWithoutJs,
+} from './render-check';
 export { scoreChecks } from './score';
 export type { Sentence } from './text';
 export { countWords, splitSentences, suggestionId } from './text';

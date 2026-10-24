@@ -37,6 +37,11 @@ export interface OffPageAdvice {
   advice: string;
   /** The ethical line: what not to do, with the platform rule or law behind it. */
   avoid: string;
+  /**
+   * `advice` and `avoid` cut to one line each (20 words or fewer) for the workspace's Do and
+   * Avoid lines. They keep the guardrails of the full text, which a test checks per kind.
+   */
+  short: { do: string; avoid: string };
   evidence: Evidence;
 }
 
@@ -388,6 +393,10 @@ export const OFFPAGE_ADVICE: Record<SourceKind, OffPageAdvice> = {
       'Answer questions in communities you already take part in, in your own words, and link your page only where it answers the question better than a reply can. Say plainly that the page is yours.',
     avoid:
       'No posting the same link across communities, no accounts made to promote, no vote manipulation, and never hide that a page is yours. Reddit asks people to participate authentically where they have a personal interest and not to spam; Stack Exchange requires you to disclose your affiliation whenever you mention your own product or site.',
+    short: {
+      do: "Answer in communities you're already part of. Link your page only when it answers better, and say it's yours.",
+      avoid: "No link-dropping, sock accounts or vote games. Never hide that it's yours.",
+    },
     evidence: {
       grade: 'mixed',
       summary:
@@ -423,6 +432,11 @@ export const OFFPAGE_ADVICE: Record<SourceKind, OffPageAdvice> = {
       "You cannot place yourself here. If independent sources have covered your work, check that what Wikipedia says about it is accurate; to correct it, propose the change with sources on the article's talk page and say how you are connected.",
     avoid:
       'Do not write or edit an article about yourself, your business or your clients. Wikipedia strongly discourages editing with a conflict of interest, expects you to disclose it, and requires paid editors to disclose who pays them. A topic needs significant coverage in reliable sources independent of the subject; your own site, press releases and ads do not count.',
+    short: {
+      do: "You can't place yourself here. If coverage of your work is wrong, propose a sourced fix on the Talk page.",
+      avoid:
+        "Don't write or edit articles about yourself or clients, or hide how you're connected.",
+    },
     evidence: {
       grade: 'mixed',
       summary:
@@ -458,6 +472,11 @@ export const OFFPAGE_ADVICE: Record<SourceKind, OffPageAdvice> = {
       'If a question is easier to show than to tell, a short video that answers it, with a plain title, a description and a link to your page, puts you on a kind of site Google AI Overviews and Perplexity cite often.',
     avoid:
       "Disclose any sponsorship or paid promotion, with YouTube's paid promotion setting and in the video itself. No reuploads of other people's work and no titles that promise what the video does not show.",
+    short: {
+      do: "If it's easier to show than tell, make a short video that answers it and links your page.",
+      avoid:
+        "Disclose sponsorships. No reuploads of others' work, and no titles the video doesn't deliver.",
+    },
     evidence: {
       grade: 'moderate',
       summary:
@@ -489,6 +508,11 @@ export const OFFPAGE_ADVICE: Record<SourceKind, OffPageAdvice> = {
       'Claim your listing on the review sites your field uses (G2 or Capterra for software, Yelp or Tripadvisor for a local place), keep it accurate, and ask real customers for honest reviews with no strings attached.',
     avoid:
       'No fake reviews, no reviews from people who did not use the product, no paying for positive reviews, no reviews by staff or family without saying so, and no suppressing negative ones. The FTC rule on consumer reviews bans these and allows civil penalties, and its Endorsement Guides require disclosing any material connection.',
+    short: {
+      do: 'Claim your listing on the review sites your field uses, and ask real customers for honest reviews.',
+      avoid:
+        'No fake or paid reviews, no staff or family reviews without saying so, and never hide negative ones.',
+    },
     evidence: {
       grade: 'mixed',
       summary:
@@ -520,6 +544,11 @@ export const OFFPAGE_ADVICE: Record<SourceKind, OffPageAdvice> = {
       'Coverage comes from having something worth reporting: original data, or expertise a reporter can quote. Offer it to journalists who cover your field, and answer reporters when you can help.',
     avoid:
       "No paid placements presented as coverage, no paid links in articles, and no press releases written to carry keyword links: Google's spam policies treat links bought for ranking, and optimized anchor text in guest posts and press releases, as link spam. Disclose any sponsored piece.",
+    short: {
+      do: 'Offer reporters in your field original data or expertise they can quote.',
+      avoid:
+        'No paid placements or paid links, no keyword-link press releases, and disclose any sponsored piece.',
+    },
     evidence: {
       grade: 'moderate',
       summary:
@@ -547,6 +576,11 @@ export const OFFPAGE_ADVICE: Record<SourceKind, OffPageAdvice> = {
       'You cannot place yourself on these sites. Cite them accurately in your own page and keep your claims consistent with them, so an answer that draws on both does not set them against you.',
     avoid:
       'Do not imply that an institution endorses you because you cite it, and do not copy its text.',
+    short: {
+      do: "You can't place yourself here. Cite these sites accurately and keep your claims consistent with them.",
+      avoid:
+        "Don't imply an institution endorses you because you cite it, and don't copy its text.",
+    },
     evidence: {
       grade: 'mixed',
       summary:
@@ -574,6 +608,11 @@ export const OFFPAGE_ADVICE: Record<SourceKind, OffPageAdvice> = {
       "Post what you know under your own name on the networks your readers use, LinkedIn above all for professional topics, and link your page where it adds something. List those profiles under sameAs in your site's JSON-LD, which Google documents for profile pages on other sites; no study we opened tests whether that changes AI citation.",
     avoid:
       'No fake accounts, no bought followers or engagement, and disclose any paid or sponsored post.',
+    short: {
+      do: 'Post what you know under your own name where your readers are, and link your page when it helps.',
+      avoid:
+        'No fake accounts, bought followers or bought engagement. Disclose any paid or sponsored post.',
+    },
     evidence: {
       grade: 'moderate',
       summary:
@@ -606,6 +645,11 @@ export const OFFPAGE_ADVICE: Record<SourceKind, OffPageAdvice> = {
       'If you sell through a marketplace, keep the listing accurate and complete, and consistent with your own page.',
     avoid:
       'No fake or bought reviews on a listing, no reviews from staff or family without saying so, and no claims the product page cannot back up.',
+    short: {
+      do: 'Keep your marketplace listing accurate, complete and consistent with your own page.',
+      avoid:
+        "No fake or bought reviews, no staff or family reviews without saying so, and no claims you can't back up.",
+    },
     evidence: {
       grade: 'mixed',
       summary:
@@ -630,6 +674,11 @@ export const OFFPAGE_ADVICE: Record<SourceKind, OffPageAdvice> = {
       'Most citations go to sites outside any top-ten list, and that is where your own page competes: keep it accurate and useful (the checks in the workspace). When you have something to add, write for respected publications in your field under your own name.',
     avoid:
       "No bought or exchanged links, no guest posts written to carry keyword links, and no mass-produced pages: Google's spam policies treat these as link spam and scaled content abuse.",
+    short: {
+      do: 'Most citations go beyond the big sites. Keep your page accurate and useful; write for respected publications in your field.',
+      avoid:
+        'No bought or swapped links, no keyword-stuffed guest posts and no mass-produced pages.',
+    },
     evidence: {
       grade: 'moderate',
       summary:

@@ -1,8 +1,8 @@
 // Reads samples/index.json and each sample's files into
-// lib/generated/samples.json, which the app imports at build time (Ruling R7).
+// lib/generated/samples.json, which the app imports at build time.
 // Runs before dev, build, test and typecheck. The output is gitignored.
 // The browser never replays a recording, so recording.json and every run's answer
-// text stay out of the bundle (Ruling R21); summaries, cited pages and the
+// text stay out of the bundle; summaries, cited pages and the
 // comparison stay, since the bench panel renders them.
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

@@ -1,20 +1,18 @@
 import {
   analyzeReadiness,
+  RENDER_PASS_WORDS,
+  RENDER_WARN_WORDS,
   type ReadinessItem,
   type ReadinessResult,
 } from '@citation-equity/engine';
 import { Defuddle } from 'defuddle/node';
 import { parseHTML } from 'linkedom';
-import { AI_CRAWLERS, type CrawlerInfo } from '../crawlers';
+import { AI_CRAWLERS } from '../crawlers';
+import { type CrawlerVerdict, crawlerAccessStatus, verdictsFromRules } from '../robots-check';
 import { DEFAULT_USER_AGENT } from './from-urls';
 import { readRobots } from './robots';
 
-export { AI_CRAWLERS };
-
-export interface CrawlerVerdict extends CrawlerInfo {
-  /** Whether robots.txt lets this crawler fetch the checked URL. */
-  allowed: boolean;
-}
+export { AI_CRAWLERS, type CrawlerVerdict };
 export interface SiteReport {
   schemaVersion: 1;
   url: string;
@@ -31,9 +29,6 @@ export interface SiteReport {
 
 /** Each request gives up after this long, so a site that never answers cannot stall the check. */
 const TIMEOUT_MS = 20_000;
-/** renders-without-js thresholds, in extracted words. */
-const PASS_WORDS = 200;
-const WARN_WORDS = 50;
 
 /**
  * Site readiness for one URL, reported apart from any GEO Score. Reads the origin's robots.txt
@@ -67,15 +62,11 @@ export async function checkSite(
   const robots = await readRobots(get, target.origin);
   const unavailable = robots !== null && 'unavailable' in robots ? robots.unavailable : undefined;
   const parsed = robots !== null && !('unavailable' in robots) ? robots : undefined;
-  const crawlers: CrawlerVerdict[] = AI_CRAWLERS.map((c) => ({
-    ...c,
-    // Unreadable robots.txt: RFC 9309 says to assume everything is disallowed.
-    allowed: unavailable
-      ? false
-      : parsed
-        ? parsed.isAllowed(target.href, c.userAgent) !== false
-        : true,
-  }));
+  // Unreadable robots.txt: RFC 9309 says to assume everything is disallowed. The verdicts on a
+  // readable one come from robots-check.ts, which the workspace's /site view runs too.
+  const crawlers: CrawlerVerdict[] = parsed
+    ? verdictsFromRules(parsed, target.href)
+    : AI_CRAWLERS.map((c) => ({ ...c, allowed: unavailable === undefined }));
 
   const page = await fetchPage(get, target);
   const extraction = page.html === undefined ? 0 : await countMainWords(page.html, target.href);
@@ -160,8 +151,7 @@ async function countMainWords(html: string, url: string): Promise<number | strin
 
 type ItemState = Pick<ReadinessItem, 'status' | 'detail'>;
 
-const label = (c: CrawlerVerdict) => `${c.userAgent} (${c.operator}, ${c.purpose})`;
-
+/** The crawler-access item: the shared grade (robots-check.ts), plus the fetch-only cases. */
 function crawlerAccess(
   crawlers: CrawlerVerdict[],
   unavailable: string | undefined,
@@ -173,51 +163,13 @@ function crawlerAccess(
       detail: `${unavailable}. Under RFC 9309 crawlers treat a robots.txt they cannot read as disallowing everything.`,
     };
   }
-  const blocked = crawlers.filter((c) => !c.allowed);
-  // Ruling R25: a blocked AI search, user-fetch or search-engine crawler (Googlebot, Bingbot,
-  // Applebot) fails; otherwise a blocked training crawler warns; anything else passes. A page
-  // Googlebot may not fetch is out of Google Search, and so out of AI Overviews and AI Mode too.
-  const answering = blocked.filter((c) => c.purpose === 'search' || c.purpose === 'user-fetch');
-  const training = blocked.filter((c) => c.purpose === 'training');
-  const engines = blocked.filter((c) => c.purpose === 'search-engine');
-  const trainingNote = training.length > 0 ? ` ${trainingDetail(training)}` : '';
-  if (answering.length > 0 || engines.length > 0) {
-    const parts: string[] = [];
-    if (answering.length > 0) {
-      parts.push(
-        `robots.txt disallows this URL for ${answering.map(label).join(', ')}. These crawlers feed AI search and answers, not only training, so the page can drop out of those engines' answers.`,
-      );
-    }
-    if (engines.length > 0) {
-      parts.push(
-        `robots.txt disallows this URL for ${engines.map(label).join(', ')}. A blocked search engine crawler keeps the page out of that engine's results and the AI answers built on them.`,
-      );
-    }
-    return { status: 'fail', detail: `${parts.join(' ')}${trainingNote}` };
-  }
-  if (training.length > 0) {
+  if (!found) {
     return {
-      status: 'warn',
-      detail: `${trainingDetail(training)} The AI search, user-fetch and search engine crawlers checked are allowed.`,
+      status: 'pass',
+      detail: `No robots.txt (HTTP 4xx), so all ${crawlers.length} AI crawlers checked may fetch this URL.`,
     };
   }
-  return {
-    status: 'pass',
-    detail: found
-      ? `robots.txt allows all ${crawlers.length} AI crawlers checked to fetch this URL.`
-      : `No robots.txt (HTTP 4xx), so all ${crawlers.length} AI crawlers checked may fetch this URL.`,
-  };
-}
-
-/**
- * The training-crawler sentence. Google-Extended is a training token, but Google says it also
- * decides whether Gemini Apps may ground answers on the page, so the sentence says that too.
- */
-function trainingDetail(training: CrawlerVerdict[]): string {
-  const text = `Training crawlers are blocked: ${training.map(label).join(', ')}.`;
-  return training.some((c) => c.userAgent === 'Google-Extended')
-    ? `${text} Google-Extended also controls grounding in Gemini Apps, so Gemini's own answers may not use this page; Google Search is not affected.`
-    : text;
+  return crawlerAccessStatus(crawlers);
 }
 
 function rendering(page: FetchedPage, words: number | string): ItemState {
@@ -237,8 +189,8 @@ function rendering(page: FetchedPage, words: number | string): ItemState {
       : { status: 'unknown', detail: `Not checked: ${page.problem}.` };
   }
   const text = `Without running JavaScript, ${words} word${words === 1 ? '' : 's'} of main text could be extracted`;
-  if (words >= PASS_WORDS) return { status: 'pass', detail: `${text}.` };
-  if (words >= WARN_WORDS) {
+  if (words >= RENDER_PASS_WORDS) return { status: 'pass', detail: `${text}.` };
+  if (words >= RENDER_WARN_WORDS) {
     return {
       status: 'warn',
       detail: `${text}. Check that the article's text is in the HTML the server sends.`,

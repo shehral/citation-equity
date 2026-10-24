@@ -263,7 +263,7 @@ describe('ce bench --answers', () => {
     expect(replay.code).toBe(0);
     expect(replay.fetches).toBe(0);
     expect(replay.stdout).toMatch(/^After vs before, paired over 2 queries/m);
-    // A replay cannot vouch that the answers came from a local model (Ruling R32).
+    // A replay cannot vouch that the answers came from a local model.
     const printed = replay.stdout.trimEnd().split('\n');
     expect(printed[0]).toBe(REMOTE_CAVEAT);
     expect(printed.at(-1)).toBe(REMOTE_CAVEAT);

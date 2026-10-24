@@ -1,6 +1,19 @@
 You are editing one web page for a controlled experiment. Make exactly one kind of change and nothing else.
 
-The change: each span below is a paragraph that opens with a word pointing back to earlier text ("This", "It", "These", "They", "Such", "The above", "As mentioned"). Rewrite only the opening of each paragraph so that it names its subject in words taken from the page, for example "This" becomes "Over-extraction". Keep the rest of the paragraph word for word.
+The change: each span below is a paragraph whose very first word points back to earlier text: "This", "That", "These", "Those", "It", "They", "Such", "The above" or "As mentioned". A reader who sees only that paragraph cannot tell what the word refers to. Rewrite the opening of each span so that its first words name the subject itself, in words taken from the page. Keep the rest of the paragraph word for word.
+
+How to do it:
+- Only the first word of the span matters. The list after the spans names it for each span. A pointer word later in the paragraph, such as a second sentence that starts with "This", is not the problem: leave it as it is.
+- Replace the first word (and only the words that must change with it) by the noun phrase it stands for, taken from the page or the paragraph before it.
+- Start the paragraph with that noun phrase itself. Do not keep the pointer in front of a noun ("This method", "Those people"), and do not start with another pointer word.
+- Change as few words as you can, so the paragraph stays about the same length.
+
+Example (from a page about espresso, not this page):
+Before: "Those who skip the warm-up usually pull sour shots. This means the first shot of the day is often wasted."
+After: "Baristas who skip the warm-up usually pull sour shots. This means the first shot of the day is often wasted."
+Before: "It depends mostly on grind size, since a finer grind slows the water."
+After: "Extraction time depends mostly on grind size, since a finer grind slows the water."
+In the first example only the opening "Those" changed; the "This" that opens the second sentence stays.
 
 Rules that apply to every span:
 - Change only the text inside the spans. Everything outside them stays exactly as it is.
@@ -20,5 +33,8 @@ Page:
 
 Spans to edit:
 {{spans}}
+
+The first word to replace, span by span:
+{{openers}}
 
 Return the JSON object now.

@@ -408,6 +408,41 @@ describe('OFFPAGE_ADVICE', () => {
     expect(OFFPAGE_ADVICE.reviews.avoid).toMatch(/fake reviews/i);
     expect(OFFPAGE_ADVICE['blog-or-other'].avoid).toMatch(/link/i);
   });
+
+  it('cuts every card to one Do and one Avoid line of 20 words or fewer', () => {
+    const words = (s: string) => s.split(/\s+/).filter(Boolean).length;
+    for (const card of Object.values(OFFPAGE_ADVICE)) {
+      expect(card.short.do.trim(), `${card.kind} do`).not.toBe('');
+      expect(card.short.avoid.trim(), `${card.kind} avoid`).not.toBe('');
+      expect(words(card.short.do), `${card.kind} do`).toBeLessThanOrEqual(20);
+      expect(words(card.short.avoid), `${card.kind} avoid`).toBeLessThanOrEqual(20);
+    }
+  });
+
+  it('keeps the guardrails of the full text in the short lines', () => {
+    // Each pattern names a guardrail the full advice or avoid text states. The short lines must
+    // state it too, so editing a guardrail in one place and not the other fails here.
+    const guardrails: Record<SourceKind, RegExp[]> = {
+      forum: [/\byours\b/i, /link/i, /vote/i],
+      wiki: [/place yourself/i, /\bconnected\b/i, /yourself|your business/i, /clients/i],
+      video: [/disclose/i, /sponsor/i, /reuploads/i, /titles/i],
+      reviews: [/fake/i, /paid|paying/i, /staff or family/i, /negative/i, /real customers/i],
+      news: [/paid placements/i, /paid links/i, /press releases/i, /disclose any sponsored/i],
+      reference: [/place yourself/i, /endorses/i, /copy its text/i],
+      social: [/fake accounts/i, /bought followers/i, /engagement/i, /disclose/i, /own name/i],
+      commerce: [/fake or bought reviews/i, /staff or family/i, /claims/i, /accurate/i],
+      'blog-or-other': [/bought/i, /guest posts/i, /mass-produced/i, /accurate/i],
+    };
+    for (const kind of SOURCE_KINDS) {
+      const card = OFFPAGE_ADVICE[kind];
+      const full = `${card.advice} ${card.avoid}`;
+      const short = `${card.short.do} ${card.short.avoid}`;
+      for (const rule of guardrails[kind]) {
+        expect(full, `${kind} full text ${rule}`).toMatch(rule);
+        expect(short, `${kind} short lines ${rule}`).toMatch(rule);
+      }
+    }
+  });
 });
 
 describe('docs/evidence.md, Off-page', () => {

@@ -24,8 +24,10 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
-  # Playwright smoke test of the workspace, against the static export
-  # (apps/workspace/out) served locally by apps/workspace/scripts/serve-out.mjs.
+  # The Playwright suite of the workspace, run on both static exports (the root
+  # build in apps/workspace/out and the GitHub Pages build under /citation-equity/),
+  # each served locally by apps/workspace/scripts/serve-out.mjs. `pnpm e2e` builds
+  # both first (the workspace's pree2e script).
   e2e:
     runs-on: ubuntu-latest
     steps:
@@ -38,7 +40,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Install Chromium for Playwright
         run: pnpm --filter workspace exec playwright install --with-deps chromium
-      - run: pnpm build
       - run: pnpm e2e
       - uses: actions/upload-artifact@v7
         if: failure()

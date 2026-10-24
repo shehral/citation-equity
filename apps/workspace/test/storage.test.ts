@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  clearDraft,
   forgetDraft,
   loadDraft,
   loadQuestions,
@@ -8,11 +9,20 @@ import {
   saveQuestions,
   saveStatuses,
 } from '@/lib/storage';
+import { clearAll } from '@/lib/store';
 
 afterEach(() => {
   vi.restoreAllMocks();
   localStorage.clear();
+  clearAll();
 });
+
+/** A private window: the localStorage accessor itself throws. */
+function blockStorage() {
+  vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
+    throw new DOMException('denied', 'SecurityError');
+  });
+}
 
 describe('storage when localStorage throws (private mode)', () => {
   it('loadStatuses returns {} and loadDraft returns null', () => {
@@ -37,6 +47,47 @@ describe('storage when localStorage throws (private mode)', () => {
     });
     expect(loadStatuses('espresso')).toEqual({});
     expect(() => saveDraft('espresso', 'x')).not.toThrow();
+  });
+});
+
+describe('storage when localStorage is blocked, for the page lifetime', () => {
+  it('keeps the draft, its statuses and its questions in memory', () => {
+    blockStorage();
+    saveDraft('my-draft', '# My post');
+    saveStatuses('my-draft', { a: 'done', b: 'ignored' });
+    saveQuestions('my-draft', [{ text: 'Why?', source: 'user' }]);
+    expect(loadDraft('my-draft')).toBe('# My post');
+    expect(loadStatuses('my-draft')).toEqual({ a: 'done', b: 'ignored' });
+    expect(loadQuestions('my-draft')).toEqual([{ text: 'Why?', source: 'user' }]);
+    expect(loadDraft('espresso')).toBeNull();
+  });
+
+  it('forgets in memory too: forgetDraft, clearDraft and Clear my data', () => {
+    blockStorage();
+    saveDraft('a', 'text a');
+    saveStatuses('a', { x: 'done' });
+    forgetDraft('a');
+    expect(loadDraft('a')).toBeNull();
+    expect(loadStatuses('a')).toEqual({ x: 'done' });
+    saveDraft('a', 'again');
+    clearDraft('a');
+    expect(loadDraft('a')).toBeNull();
+    expect(loadStatuses('a')).toEqual({});
+    saveDraft('b', 'text b');
+    clearAll();
+    expect(loadDraft('b')).toBeNull();
+  });
+
+  it('reads localStorage again once it takes the value', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {
+      throw new DOMException('quota', 'QuotaExceededError');
+    });
+    saveDraft('a', 'in memory');
+    expect(loadDraft('a')).toBe('in memory');
+    saveDraft('a', 'stored');
+    expect(localStorage.getItem('ce:v1:draft:a')).toBe('stored');
+    localStorage.setItem('ce:v1:draft:a', 'changed elsewhere');
+    expect(loadDraft('a')).toBe('changed elsewhere');
   });
 });
 

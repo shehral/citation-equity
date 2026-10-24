@@ -1,9 +1,24 @@
 /*
- * Adapted from shadcn-ui/ui (https://github.com/shadcn-ui/ui): the Tailwind v4 theme that
- * `shadcn init` writes (style new-york, base color neutral; shadcn CLI 4.22.1, 2026-10-23).
- * Copyright (c) 2023 shadcn, licensed MIT (see NOTICE).
- * Changes: the unused chart and sidebar tokens trimmed. The highlight, warning and grade-*
- * tokens, the font stacks and the .cm-ce-* editor classes are this project's own.
+ * The visual system: warm paper surfaces, ink text, one indigo brand colour, with semantic
+ * tokens for score, grades and fix kinds in light and dark.
+ *
+ * The @theme / :root / .dark structure and the shadcn variable names (--primary, --card,
+ * --muted-foreground, --ring ...) follow shadcn-ui/ui (https://github.com/shadcn-ui/ui), the
+ * Tailwind v4 theme that `shadcn init` writes (style new-york; shadcn CLI 4.22.1, 2026-10-23).
+ * Copyright (c) 2023 shadcn, licensed MIT (see NOTICE). Changes: every value replaced by this
+ * project's palette; the shadcn names now point at the project tokens, so components/ui/*
+ * inherit the brand unchanged. All token values, the project tokens themselves and the
+ * .cm-ce-* editor classes are this project's own.
+ *
+ * Rules for components:
+ * - Colour means one thing. brand = the tool and your actions; grade-* only in evidence marks
+ *   (always with a word or an aria-label); stale only for "out of date"; done only for done/pass.
+ * - Text colours: foreground (ink) and muted-foreground (ink-soft) pass AA on background, paper,
+ *   surface and sunken in both themes (test/tokens.test.ts). ink-faint is for icons, rules and
+ *   placeholders only, never for text a reader must read.
+ * - No raw colour values in components: use these tokens through Tailwind (bg-paper,
+ *   text-ink-soft, border-border-strong, shadow-card, rounded-paper, font-serif ...).
+ * - Numbers that can change use `tabular-nums lining-nums` (Tailwind's own utilities).
  */
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -11,113 +26,201 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Fonts: next/font variables set on <html> in app/layout.tsx (self-hosted at build). */
+  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* shadcn names, pointing at the project tokens. */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--foreground);
+  --color-primary: var(--brand);
+  --color-primary-foreground: var(--brand-foreground);
+  --color-secondary: var(--sunken);
+  --color-secondary-foreground: var(--foreground);
+  --color-muted: var(--sunken);
+  --color-muted-foreground: var(--ink-soft);
+  --color-accent: var(--sunken);
+  --color-accent-foreground: var(--foreground);
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-highlight: var(--highlight);
-  --color-highlight-strong: var(--highlight-strong);
-  --color-warning: var(--warning);
-  --color-warning-foreground: var(--warning-foreground);
-  --color-grade-mixed: var(--grade-mixed);
-  --color-grade-moderate: var(--grade-moderate);
+
+  /* Project tokens. */
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-border-strong: var(--border-strong);
+  --color-ink: var(--foreground);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-mark: var(--mark);
+  --color-mark-fill: var(--mark-fill);
+  --color-score: var(--score);
+  --color-score-track: var(--score-track);
+  --color-done: var(--done);
+  --color-done-soft: var(--done-soft);
+  --color-stale: var(--stale);
+  --color-stale-soft: var(--stale-soft);
   --color-grade-strong: var(--grade-strong);
+  --color-grade-moderate: var(--grade-moderate);
+  --color-grade-mixed: var(--grade-mixed);
   --color-grade-untested: var(--grade-untested);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  --color-kind-edit: var(--kind-edit);
+  --color-kind-advisory: var(--kind-advisory);
+
+  /* Older token names, kept as aliases of the current ones for the components that use them. */
+  --color-highlight: var(--mark-fill);
+  --color-highlight-strong: var(--mark);
+  --color-warning: var(--stale-soft);
+  --color-warning-foreground: var(--stale);
+
+  /* Radius: 12px panels and cards, 8px inputs and buttons, 4px the draft sheet, full chips. */
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius-xl: 1rem;
+  --radius-paper: 0.25rem;
+
+  /* Elevation: a soft two-layer lift in light; none in dark (surface steps separate). */
+  --shadow-card: var(--elevation-card);
+  --shadow-pop: var(--elevation-pop);
+
+  /* Motion (always behind motion-safe:, see the reduced-motion rule below). */
+  --ease-out-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.45 0 0);
-  --highlight: oklch(0.93 0.08 90);
-  --highlight-strong: oklch(0.86 0.15 85);
-  --warning: oklch(0.95 0.06 85);
-  --warning-foreground: oklch(0.38 0.09 60);
-  --grade-strong: oklch(0.55 0.14 150);
-  --grade-moderate: oklch(0.55 0.12 230);
-  --grade-mixed: oklch(0.6 0.13 70);
-  --grade-untested: oklch(0.556 0 0);
+  --radius: 0.75rem;
+  /* Surfaces: warm paper, not pure white. */
+  --background: oklch(0.982 0.005 85); /* page */
+  --paper: oklch(0.996 0.003 85); /* the draft sheet */
+  --surface: oklch(1 0 0); /* cards, popovers, dialogs */
+  --sunken: oklch(0.962 0.006 85); /* wells, tracks, inputs at rest, hover fills */
+  --border: oklch(0.905 0.008 85);
+  --border-strong: oklch(0.86 0.01 85);
+  --input: oklch(0.88 0.01 85);
+  /* Text: ink with a hint of indigo. */
+  --foreground: oklch(0.23 0.02 275);
+  --ink-soft: oklch(0.48 0.015 275);
+  --ink-faint: oklch(0.62 0.012 275);
+  /* Brand: indigo ink. */
+  --brand: oklch(0.48 0.17 277);
+  --brand-hover: oklch(0.43 0.17 277);
+  --brand-soft: oklch(0.95 0.03 277);
+  --brand-foreground: oklch(0.985 0.01 277);
+  --ring: oklch(0.58 0.17 277);
+  --destructive: oklch(0.52 0.19 27);
+  /* Draft markers: dotted underline under flagged text; fill on the active passage only. */
+  --mark: oklch(0.62 0.15 277);
+  --mark-fill: oklch(0.92 0.05 277);
+  /* Score. */
+  --score: var(--brand);
+  --score-track: oklch(0.92 0.012 277);
+  /* States. */
+  --done: oklch(0.5 0.13 155);
+  --done-soft: oklch(0.95 0.04 155);
+  --stale: oklch(0.5 0.11 65);
+  --stale-soft: oklch(0.96 0.045 85);
+  /* Evidence grades: four only. */
+  --grade-strong: oklch(0.53 0.13 155);
+  --grade-moderate: oklch(0.53 0.09 205);
+  --grade-mixed: oklch(0.6 0.12 70);
+  --grade-untested: oklch(0.6 0.01 275);
+  /* Suggestion kinds: edit has Preview + Apply; advisory is changed by the writer. */
+  --kind-edit: var(--brand);
+  --kind-advisory: oklch(0.42 0.03 275);
+  /* Elevation. */
+  --elevation-card: 0 1px 2px oklch(0.25 0.02 85 / 0.06), 0 2px 8px -2px oklch(0.25 0.02 85 / 0.06);
+  --elevation-pop: 0 8px 24px -6px oklch(0.25 0.02 85 / 0.14), 0 2px 6px oklch(0.25 0.02 85 / 0.06);
+  color-scheme: light;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.75 0 0);
-  --highlight: oklch(0.42 0.08 85 / 55%);
-  --highlight-strong: oklch(0.55 0.13 85 / 70%);
-  --warning: oklch(0.32 0.07 60);
-  --warning-foreground: oklch(0.93 0.07 90);
-  --grade-strong: oklch(0.72 0.14 150);
-  --grade-moderate: oklch(0.72 0.11 230);
-  --grade-mixed: oklch(0.78 0.13 80);
-  --grade-untested: oklch(0.708 0 0);
+  --background: oklch(0.175 0.012 277); /* ink-night, not black */
+  --paper: oklch(0.205 0.012 277);
+  --surface: oklch(0.225 0.013 277);
+  --sunken: oklch(0.195 0.012 277);
+  --border: oklch(1 0 0 / 9%);
+  --border-strong: oklch(1 0 0 / 16%);
+  --input: oklch(1 0 0 / 14%);
+  --foreground: oklch(0.94 0.01 85); /* warm paper-white text */
+  --ink-soft: oklch(0.74 0.015 277);
+  --ink-faint: oklch(0.6 0.015 277);
+  --brand: oklch(0.74 0.13 280);
+  --brand-hover: oklch(0.8 0.12 280);
+  --brand-soft: oklch(0.3 0.06 280);
+  --brand-foreground: oklch(0.2 0.03 277);
+  --ring: oklch(0.74 0.13 280);
+  --destructive: oklch(0.72 0.17 25);
+  --mark: oklch(0.7 0.12 280);
+  --mark-fill: oklch(0.74 0.13 280 / 20%);
+  --score-track: oklch(0.3 0.02 277);
+  --done: oklch(0.75 0.13 155);
+  --done-soft: oklch(0.3 0.05 155);
+  --stale: oklch(0.82 0.11 80);
+  --stale-soft: oklch(0.3 0.06 70);
+  --grade-strong: oklch(0.76 0.13 155);
+  --grade-moderate: oklch(0.76 0.09 205);
+  --grade-mixed: oklch(0.8 0.11 75);
+  --grade-untested: oklch(0.68 0.01 277);
+  --kind-advisory: oklch(0.8 0.02 277);
+  --elevation-card: none;
+  --elevation-pop: 0 16px 40px -10px oklch(0 0 0 / 0.6);
+  color-scheme: dark;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring;
   }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background font-sans text-foreground;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  ::selection {
+    background-color: var(--mark-fill);
   }
 }
 
-/* Editor anchors: suggestion ranges underlined in the draft. */
+/* Everything that moves stops under reduced motion. */
+/* biome-ignore-start lint/complexity/noImportantStyles: must beat every utility's own duration */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* biome-ignore-end lint/complexity/noImportantStyles: must beat every utility's own duration */
+
+/*
+ * Editor marks. The editor marks only what the author selected: the
+ * passages of the selected group get a dotted underline, the selected fix also gets the fill.
+ */
 .cm-ce-highlight {
-  background-color: var(--highlight);
-  border-bottom: 2px solid var(--highlight-strong);
+  text-decoration: underline dotted var(--mark) 2px;
+  text-underline-offset: 4px;
+  text-decoration-skip-ink: none;
 }
 .cm-ce-highlight-active {
-  background-color: var(--highlight-strong);
+  background-color: var(--mark-fill);
+  border-radius: 2px;
 }

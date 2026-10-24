@@ -90,7 +90,8 @@ describe.each(INDEX)('sample $slug', (entry) => {
   });
 });
 
-describe('espresso-bitterness before.md (Ruling R8, for the smoke test)', () => {
+// The draft e2e spec applies this "?" edit on the example, so the sample must keep offering it.
+describe('espresso-bitterness before.md (for the e2e draft flow)', () => {
   const result = analyze(read('espresso-bitterness', 'before.md'));
   const check = (id: string) => result.checks.find((c) => c.checkId === id);
 

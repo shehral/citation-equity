@@ -1,6 +1,6 @@
 import data from './generated/samples.json';
 
-/** A sample draft, read from samples/ at build time by scripts/gen-samples.mjs (Ruling R7). */
+/** A sample draft, read from samples/ at build time by scripts/gen-samples.mjs. */
 export interface Sample {
   slug: string;
   title: string;
@@ -38,4 +38,14 @@ export function sampleFor(slug: string): Sample | null {
 /** The text a draft starts from (and Reset returns to): the sample's before draft, or empty. */
 export function startingText(slug: string): string {
   return sampleFor(slug)?.before ?? '';
+}
+
+/** Short names for the examples in menus and labels; the title otherwise. */
+const EXAMPLE_LABELS: Record<string, string> = {
+  'espresso-bitterness': 'Bitter espresso',
+  'rag-explained': 'RAG explainer',
+};
+
+export function exampleLabel(sample: Sample): string {
+  return EXAMPLE_LABELS[sample.slug] ?? sample.title;
 }

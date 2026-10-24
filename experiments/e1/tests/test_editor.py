@@ -242,7 +242,273 @@ class LoopTest(unittest.TestCase):
         rows = editor.run([self.page("target", 1)], [], editor.FakeBackend(), arms=[], engine=toy_engine,
                           placebos=False, do_all=False)
         self.assertEqual(set(rows[0]) >= {"version_id", "query_id", "arm", "text", "title", "valid", "attempts",
-                                          "excluded_reason", "edit_distance", "length_ratio", "key_terms_delta"}, True)
+                                          "excluded_reason", "edit_distance", "length_ratio", "key_terms_delta",
+                                          "skipped_steps"}, True)
+
+
+# A synthetic query (not from GEO-bench): "save" stems to "sav", and the plural "Crewmen" does not stem to
+# the key term "crewman".
+SAVES = "how much do ferry crewman save"
+
+
+class PlaceboPromptTest(unittest.TestCase):
+    spans = [{"id": "s1", "field": "text", "start": 0, "end": 1,
+              "text": "Most deckhands save their money from overtime on every single crossing they work each month here."},
+             {"id": "s2", "field": "text", "start": 2, "end": 3, "text": "Pay plans differ."}]
+
+    def test_every_placebo_prompt_takes_the_span_targets(self):
+        for name in [n for n in editor.PROMPT_NAMES if n.startswith("p")]:
+            body = (editor.PROMPTS_DIR / f"{name}.txt").read_text(encoding="utf-8")
+            self.assertIn("{{span_targets}}", body, name)
+            self.assertNotIn("within 10%", body, name)  # replaced by the exact per-span ranges
+
+    def test_word_range_matches_the_validators_own_check(self):
+        for n in range(0, 400):
+            lo, hi = validate.placebo_word_range(n)
+            ok = lambda m: validate.check_length("P3", ("", ""), ("", ""), [" ".join(["w"] * n)],  # noqa: E731
+                                                 [" ".join(["w"] * m)])[0] is None
+            self.assertTrue(ok(lo) and ok(hi), n)
+            if n:
+                self.assertFalse(ok(lo - 1), n)
+                self.assertFalse(ok(hi + 1), n)
+        self.assertEqual(validate.placebo_word_range(19), (18, 20))
+        self.assertEqual(validate.placebo_word_range(130), (117, 143))
+        self.assertEqual(validate.placebo_word_range(2), (2, 2))
+
+    def test_the_prompt_gives_each_spans_word_count_range_and_key_words(self):
+        out = editor.render("p3", query=SAVES, title="T", page="p", spans=self.spans, donor=None, missing_terms=[])
+        self.assertNotRegex(out, r"\{\{\w+\}\}")
+        line1 = next(line for line in out.split("\n") if line.startswith("- s1:"))
+        self.assertIn("16 words", line1)
+        self.assertIn("15 to 17 words", line1)
+        self.assertIn('"save"', line1)
+        self.assertIn('"ferry"', line1.split("Do not add")[1])
+        self.assertIn('"crewman"', line1.split("Do not add")[1])
+        line2 = next(line for line in out.split("\n") if line.startswith("- s2:"))
+        self.assertIn("exactly 3 words", line2)
+        self.assertIn('"ferry", "crewman", "save"', line2)
+        total = next(line for line in out.split("\n") if line.startswith("- The spans you change"))
+        self.assertIn("19 words", total)
+        self.assertIn("18 to 20 words", total)
+        self.assertNotIn("All spans together", out)  # check 5 sums only the changed spans
+
+    def test_a_span_with_no_counted_words_gets_no_word_count(self):
+        spans = [{"id": "s1", "field": "text", "start": 0, "end": 1, "text": "https://example.com/a"},
+                 {"id": "s2", "field": "text", "start": 2, "end": 3, "text": "Pay plans differ."}]
+        out = editor.render("p3", query=SAVES, title="T", page="p", spans=spans, donor=None, missing_terms=[])
+        line1 = next(line for line in out.split("\n") if line.startswith("- s1:"))
+        self.assertEqual(line1.split(" Do not add")[0], "- s1: 0 counted words now.")
+        self.assertNotRegex(out, r"exactly 0 words|0 to 0 words")
+        self.assertIn("exactly 3 words", next(line for line in out.split("\n") if line.startswith("- s2:")))
+
+    def test_spans_with_no_counted_words_at_all_get_no_total(self):
+        spans = [{"id": "s1", "field": "text", "start": 0, "end": 1, "text": "https://example.com/a"}]
+        out = editor.render("p3", query=SAVES, title="T", page="p", spans=spans, donor=None, missing_terms=[])
+        self.assertNotIn("The spans you change", out)
+        self.assertNotRegex(out, r"exactly 0 words|0 to 0 words")
+
+    def test_key_words_are_given_as_written_in_the_span(self):
+        spans = [{"id": "s1", "field": "text", "start": 0, "end": 1, "text": "Ferry Crewmen often save fares."}]
+        out = editor.render("p2", query=SAVES, title="T", page="p", spans=spans, donor=None, missing_terms=[])
+        line = next(line for line in out.split("\n") if line.startswith("- s1:"))
+        self.assertIn('"Ferry", "save"', line)
+        self.assertIn('"crewman"', line.split("Do not add")[1])  # "Crewmen" does not stem to "crewman"
+
+    def test_the_regenerate_hints_give_the_measured_count_and_the_range(self):
+        task = {"arm": "P3", "query": SAVES, "spans": self.spans}
+        short = "Most deckhands bank money from overtime on each crossing worked monthly."
+        edits = [{"field": "text", "start": 0, "end": 1, "replacement": short}]
+        hints = editor.retry_hints(task, edits, None, None)
+        text = "\n".join(hints)
+        self.assertIn("s1", text)
+        self.assertIn("11 words", text)
+        self.assertIn("15 to 17 words", text)
+        self.assertIn('"save"', text)  # dropped: put it back
+        self.assertIn("together", text)
+
+    def test_the_regenerate_hints_give_no_range_for_a_span_with_no_counted_words(self):
+        spans = [{"id": "s1", "field": "text", "start": 0, "end": 1, "text": "https://example.com/a"}] + self.spans[1:]
+        edits = [{"field": "text", "start": 0, "end": 1, "replacement": "See https://example.com/a"},
+                 {"field": "text", "start": 2, "end": 3, "replacement": "Plans differ."}]
+        hints = editor.retry_hints({"arm": "P3", "query": SAVES, "spans": spans}, edits, None, None)
+        self.assertEqual(hints[0], "s1: your version has 1 word; the original has 0 counted words.")
+        self.assertIn("it must have exactly 3 words", hints[1])
+        self.assertNotRegex("\n".join(hints), r"exactly 0 words|0 to 0 words")
+        only = editor.retry_hints({"arm": "P3", "query": SAVES, "spans": spans[:1]}, edits[:1], None, None)
+        self.assertEqual(only, ["s1: your version has 1 word; the original has 0 counted words."])  # no total
+
+    def test_hints_follow_the_failures_in_the_regenerate_prompt(self):
+        retry = editor.with_feedback("PROMPT", ["The paraphrase must keep ..."], ["s1 has 11 words; write 15 to 17."])
+        self.assertTrue(retry.startswith("PROMPT"))
+        self.assertLess(retry.index("must keep"), retry.index("s1 has 11 words"))
+        self.assertTrue(retry.rstrip().endswith("Return a corrected answer in the same format."))
+
+
+OPEN_TEXT = ("Espresso is a coffee drink.\n\n## Grind size\n\n"
+             "Those who skip the warm-up pull sour shots. This means the first shot is wasted.\n\n"
+             "## Water\n\nHot water extracts faster.")
+POINTER = re.compile(r"^(?:This|That|These|Those|It|They|Such)\b")
+
+
+def opener_engine(items):
+    """question-headings as in toy_engine, plus standalone-paragraphs flagging pointer openers."""
+    out = toy_engine(items)
+    for item in items:
+        eng = out[item["id"]]
+        md = item["markdown"]
+        paras = eng["artifacts"]["paragraphs"]
+        flagged = [p for p in paras if POINTER.match(md[p["start"]:p["end"]])]
+        findings = [{"start": p["start"], "end": p["end"],
+                     "message": f'It opens with "{POINTER.match(md[p["start"]:p["end"]]).group(0)}", which points '
+                                "back to earlier text, so a reader who sees only this paragraph cannot tell."}
+                    for p in flagged]
+        eng["checks"]["standalone-paragraphs"] = check(1 - len(flagged) / max(1, len(paras)), findings=findings,
+                                                       metrics={"unresolvedOpeners": len(flagged)})
+    return out
+
+
+class Arm1PromptTest(unittest.TestCase):
+    def test_the_prompt_has_a_worked_example_and_names_each_spans_opener(self):
+        body = (editor.PROMPTS_DIR / "arm1.txt").read_text(encoding="utf-8")
+        self.assertIn("{{openers}}", body)
+        self.assertIn("Before:", body)
+        self.assertIn("After:", body)
+        spans = [{"id": "s1", "field": "text", "start": 0, "end": 1, "text": "Those who skip the warm-up pull sour shots."},
+                 {"id": "s2", "field": "text", "start": 2, "end": 3, "text": "“It is rare,” he said."}]
+        out = editor.render("arm1", query=QUERY, title="T", page="p", spans=spans, donor=None, missing_terms=[])
+        self.assertIn('- s1 opens with "Those"', out)
+        self.assertIn('- s2 opens with "It"', out)
+
+    def test_the_regenerate_message_names_the_paragraphs_that_still_open_with_a_pointer(self):
+        pages = [{"page_id": "q1-p1", "query_id": "q1", "set": "smoke", "query": QUERY, "url": None, "source": "sample",
+                  "title": "T", "text": OPEN_TEXT, "words": 30, "tokens_max": 40, "cut": False, "sha256": "0" * 64,
+                  "role": "target"}]
+        applicability = [{"query_id": "q1", "arm": "1", "applicable": True, "reason": None}]
+
+        class Backend:
+            def __init__(self):
+                self.prompts = []
+
+            def generate(self, jobs):
+                self.prompts += [j["prompt"] for j in jobs]
+                out = []
+                for j in jobs:
+                    if "failed these checks" in j["prompt"]:
+                        body = {s["id"]: s["text"].replace("Those who", "Baristas who") for s in j["spans"]}
+                    else:  # the timing smoke's mistake: rewrites the second sentence, keeps "Those"
+                        body = {s["id"]: s["text"].replace("This means the", "So the") for s in j["spans"]}
+                    out.append((editor.json.dumps(body), "stop"))
+                return out
+
+        backend = Backend()
+        rows = editor.run(pages, applicability, backend, arms=["1"], engine=opener_engine, placebos=False, do_all=False)
+        row = next(r for r in rows if r["arm"] == "1")
+        self.assertEqual((row["valid"], row["attempts"]), (True, 2), row["excluded_reason"])
+        self.assertIn("Baristas who skip", row["text"])
+        retry = backend.prompts[1]
+        hint = retry.split("failed these checks")[1]
+        self.assertIn('s1 still opens with "Those"', hint)
+        self.assertIn("Those who skip the warm-up", hint)
+
+
+def table_engine(items):
+    """opener_engine plus a tables check that suggests a table and never rises (arm 4's step fails)."""
+    out = opener_engine(items)
+    for item in items:
+        md, sub = item["markdown"], "Hot water extracts faster."
+        at = md.find(sub)
+        suggestions = [{"kind": "edit", "start": at, "end": at + len(sub),
+                        "after": "| Water | Speed |\n| --- | --- |\n| Hot | faster |"}] if at >= 0 else []
+        out[item["id"]]["checks"]["tables"] = check(0.5, suggestions=suggestions)
+    return out
+
+
+class AllSkipTest(unittest.TestCase):
+    def page(self):
+        return {"page_id": "q1-p1", "query_id": "q1", "set": "smoke", "query": QUERY, "url": None, "source": "sample",
+                "title": "T", "text": OPEN_TEXT, "words": 30, "tokens_max": 40, "cut": False, "sha256": "0" * 64,
+                "role": "target"}
+
+    class Backend:
+        """Arm 2 steps never change anything (check 2 fails twice); arm 1 steps name the subject."""
+
+        def __init__(self, fix_arm1=True):
+            self.jobs, self.fix_arm1 = [], fix_arm1
+
+        def generate(self, jobs):
+            self.jobs += jobs
+            out = []
+            for j in jobs:
+                if j["arm"] == "1" and self.fix_arm1:
+                    body = {s["id"]: s["text"].replace("Those who", "Baristas who") for s in j["spans"]}
+                else:
+                    body = {s["id"]: s["text"] for s in j["spans"]}
+                out.append((editor.json.dumps(body), "stop"))
+            return out
+
+    def run_all(self, backend):
+        applicability = [{"query_id": "q1", "arm": a, "applicable": True, "reason": None} for a in ("1", "2", "ALL")]
+        rows = editor.run([self.page()], applicability, backend, arms=[], engine=opener_engine, placebos=True,
+                          do_all=True)
+        return {r["arm"]: r for r in rows}
+
+    def test_a_step_that_fails_twice_is_skipped_and_recorded(self):
+        backend = self.Backend()
+        by_arm = self.run_all(backend)
+        row = by_arm["ALL"]
+        self.assertTrue(row["valid"], row["excluded_reason"])
+        self.assertIsNone(row["excluded_reason"])
+        self.assertIn("Baristas who skip", row["text"])
+        self.assertIn("## Grind size\n", row["text"])  # the skipped step left the headings alone
+        self.assertEqual([s["step"] for s in row["skipped_steps"]], ["2"])
+        self.assertIn("question-headings check did not rise", row["skipped_steps"][0]["reason"])
+        self.assertEqual(row["attempts"], 2)
+        p_all = next(j for j in backend.jobs if j["arm"] == "P_ALL")  # only the kept LLM step's spans
+        self.assertEqual([s["text"] for s in p_all["spans"]],
+                         ["Those who skip the warm-up pull sour shots. This means the first shot is wasted."])
+
+    def test_all_is_excluded_when_every_step_was_skipped(self):
+        row = self.run_all(self.Backend(fix_arm1=False))["ALL"]
+        self.assertFalse(row["valid"])
+        self.assertEqual(row["excluded_reason"], "invalid: every step failed")
+        self.assertEqual([s["step"] for s in row["skipped_steps"]], ["2", "1"])
+
+    def test_all_with_no_step_attempted_is_not_applicable(self):
+        # ALL is applicable, but none of its steps is (r3 amendment 5): nothing was tried.
+        backend = self.Backend()
+        rows = editor.run([self.page()], [{"query_id": "q1", "arm": "ALL", "applicable": True, "reason": None}],
+                          backend, arms=[], engine=opener_engine, placebos=True, do_all=True)
+        row = next(r for r in rows if r["arm"] == "ALL")
+        self.assertFalse(row["valid"])
+        self.assertEqual(row["excluded_reason"], "not applicable: no step applied")
+        self.assertEqual(row["skipped_steps"], [])
+        self.assertEqual(backend.jobs, [])
+        self.assertNotIn("P_ALL", [r["arm"] for r in rows])
+
+    def test_a_deterministic_step_that_fails_once_is_skipped_and_recorded(self):
+        backend = self.Backend()
+        applicability = [{"query_id": "q1", "arm": a, "applicable": True, "reason": None}
+                         for a in ("1", "4", "ALL")]
+        rows = editor.run([self.page()], applicability, backend, arms=[], engine=table_engine, placebos=False,
+                          do_all=True)
+        row = next(r for r in rows if r["arm"] == "ALL")
+        self.assertTrue(row["valid"], row["excluded_reason"])
+        self.assertEqual([s["step"] for s in row["skipped_steps"]], ["4"])
+        self.assertIn("tables check did not rise", row["skipped_steps"][0]["reason"])
+        self.assertIn("Hot water extracts faster.", row["text"])  # the skipped step's edit is not kept
+        self.assertNotIn("| Water |", row["text"])
+        self.assertIn("Baristas who skip", row["text"])  # the next step went on from the version before
+        self.assertEqual(row["attempts"], 1)  # a deterministic step has one attempt, no regenerate
+        self.assertEqual([j["arm"] for j in backend.jobs], ["1"])
+
+    def test_every_row_carries_skipped_steps(self):
+        by_arm = self.run_all(self.Backend())
+        self.assertEqual(set(by_arm), {"original", "ALL", "P_ALL"})
+        for arm, row in by_arm.items():
+            self.assertIsInstance(row["skipped_steps"], list, arm)
+        self.assertEqual(by_arm["original"]["skipped_steps"], [])
+        self.assertEqual(by_arm["P_ALL"]["skipped_steps"], [])
+        self.assertEqual([s["step"] for s in by_arm["ALL"]["skipped_steps"]], ["2"])
 
 
 if __name__ == "__main__":

@@ -53,7 +53,7 @@ export async function runLive(
   }
   const targetDomain = domainOf(targetUrl);
   // A host with no dot (localhost, an intranet name) has no domain: it would match every source
-  // whose domain is unknown (''), so its results would be false citations (Ruling R33).
+  // whose domain is unknown (''), so its results would be false citations.
   if (targetDomain === '') {
     throw new Error(
       `The target URL's host has no domain (${new URL(targetUrl).hostname}); give the page's public address, for example https://example.com/page`,

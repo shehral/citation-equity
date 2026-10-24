@@ -371,7 +371,7 @@ async function bench(o: BenchOptions, io: CliIo): Promise<void> {
 
 /**
  * The model server for `ce bench`. The OpenAI key is read from the environment only and never
- * printed. It is sent only to an https server, or to any server with --send-key (Ruling R33), so
+ * printed. It is sent only to an https server, or to any server with --send-key, so
  * a key exported for OpenAI does not travel in clear text to a plain-http LAN or third-party host.
  */
 function benchAdapter(o: BenchOptions, io: CliIo): EngineAdapter {

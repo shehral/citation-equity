@@ -4,7 +4,7 @@
  */
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { OllamaInstructions } from '@/components/panel/ollama-help';
+import { OllamaInstructions } from '@/components/draft/ollama-help';
 
 afterEach(cleanup);
 

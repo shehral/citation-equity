@@ -470,18 +470,27 @@ def _subgroups(ix: Index, d: dict, resamples: int) -> dict:
     return out
 
 
+def not_applicable(v: dict | None) -> bool:
+    """A version recorded as not applicable (ALL with no step applied, arm 7 whose editor returned
+    NONE): neither applicable nor a validity exclusion (PREREG_E1.md r3 amendments 5 and 9)."""
+    return v is not None and not v["valid"] and (v.get("excluded_reason") or "").startswith("not applicable")
+
+
 def _exclusions(ix: Index, arms: list[str]) -> dict:
     out = {}
     for arm in arms:
         rows = [ix.version[(q, arm)] for q in ix.queries if (q, arm) in ix.version]
         if arm == "ALL" or arm in PLACEBOS:
-            applicable = sum(1 for q in ix.queries if (q, arm) in ix.version and ix.applicable(q, arm))
+            applicable = sum(1 for q in ix.queries if (q, arm) in ix.version and ix.applicable(q, arm)
+                             and not not_applicable(ix.version[(q, arm)]))
         else:
-            applicable = sum(1 for q in ix.queries if ix.appl.get((q, arm)) is True)
+            applicable = sum(1 for q in ix.queries if ix.appl.get((q, arm)) is True
+                             and not not_applicable(ix.version.get((q, arm))))
         if not rows and not applicable:
             continue
         valid = [v for v in rows if v["valid"] and ix.applicable(v["query_id"], arm)]
-        excluded = sum(1 for v in rows if not v["valid"] and ix.applicable(v["query_id"], arm))
+        excluded = sum(1 for v in rows if not v["valid"] and not not_applicable(v)
+                       and ix.applicable(v["query_id"], arm))
 
         def mean(name):
             xs = [float(v[name]) for v in valid if v.get(name) is not None]

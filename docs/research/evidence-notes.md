@@ -153,4 +153,4 @@ Sources re-opened in full on 2026-10-23 (PDFs downloaded from arXiv and the ACL 
 
 ### Advice copy (same task)
 
-The statistics, expert-quotes and cited-sources advisories now say to add only real, sourced material, say that adding it for its own sake did not raise citation rank in C-SEO Bench (statistics: lowered it in 19 of 24 settings), and end with the check's evidence grade. The cited-sources advisory also says internal (relative) links do not count (controller ruling R19).
+The statistics, expert-quotes and cited-sources advisories now say to add only real, sourced material, say that adding it for its own sake did not raise citation rank in C-SEO Bench (statistics: lowered it in 19 of 24 settings), and end with the check's evidence grade. The cited-sources advisory also says internal (relative) links do not count.

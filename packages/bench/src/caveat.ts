@@ -6,7 +6,7 @@ export const CAVEAT =
   'Content check on a local model over a fixed page set. It does not predict live AI engines.';
 
 /**
- * Shown in place of CAVEAT when the bench cannot vouch that the model is local (Ruling R32): a
+ * Shown in place of CAVEAT when the bench cannot vouch that the model is local: a
  * server on another host, such as a hosted OpenAI-compatible API, or answers replayed from a file.
  */
 export const REMOTE_CAVEAT =

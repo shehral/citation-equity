@@ -16,16 +16,23 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { applySuggestion, sectionAround } from '@/lib/apply';
-import { STALE_MESSAGE } from '../panel/suggestion-card';
+import { STALE_MESSAGE } from '@/lib/fix-copy';
 import { editorTheme } from './editor-theme';
 
 interface MergePreviewProps {
   markdown: string;
   suggestion: Suggestion | null;
+  /** The fix's short title (the card's); the suggestion's own title otherwise. */
+  title?: string;
   /** A line shown above the comparison, e.g. who proposed the wording. */
   note?: string;
   onApply(s: Suggestion): void;
   onClose(): void;
+  /**
+   * Where focus goes when the preview closes, for an opener that is gone by then (the phone's
+   * fix bar). Null or absent: back to the element focused before it opened.
+   */
+  returnFocus?(): HTMLElement | null;
 }
 
 const readOnly = [
@@ -37,7 +44,15 @@ const readOnly = [
 ];
 
 /** Side-by-side before/after of the section an edit suggestion changes. Applies only on click. */
-export function MergePreview({ markdown, suggestion, note, onApply, onClose }: MergePreviewProps) {
+export function MergePreview({
+  markdown,
+  suggestion,
+  title,
+  note,
+  onApply,
+  onClose,
+  returnFocus,
+}: MergePreviewProps) {
   const [host, setHost] = useState<HTMLElement | null>(null);
   const outcome = suggestion ? applySuggestion(markdown, suggestion) : null;
   const after = outcome?.ok ? outcome.markdown : null;
@@ -70,20 +85,24 @@ export function MergePreview({ markdown, suggestion, note, onApply, onClose }: M
 
   return (
     <Dialog open={suggestion !== null} onOpenChange={(open) => open || onClose()}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent
+        className="sm:max-w-3xl"
+        onCloseAutoFocus={(e) => {
+          const target = returnFocus?.();
+          if (!target) return;
+          e.preventDefault();
+          target.focus();
+        }}
+      >
         <DialogHeader>
-          <DialogTitle>{suggestion?.title ?? 'Preview change'}</DialogTitle>
+          <DialogTitle>{title ?? suggestion?.title ?? 'Preview'}</DialogTitle>
           <DialogDescription>
-            Left: the section now. Right: the section after this change. Nothing changes until you
-            click Apply.
+            Before on the left, after on the right. Nothing changes until you click Apply.
           </DialogDescription>
         </DialogHeader>
         {note && <p className="text-muted-foreground text-sm">{note}</p>}
         {after === null ? (
-          <p
-            role="status"
-            className="rounded-md bg-warning px-3 py-2 text-sm text-warning-foreground"
-          >
+          <p role="status" className="rounded-md bg-stale-soft px-3 py-2 text-sm text-stale">
             {STALE_MESSAGE}
           </p>
         ) : (

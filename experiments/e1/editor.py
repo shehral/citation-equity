@@ -11,15 +11,25 @@ P6, P7, P8, P10, P12, ALL and P_ALL.
   `splice` puts the replacements in. Gemma-4-31B-it, temperature 0, at most 4,096 new tokens; an
   answer cut off at that limit counts as failed.
 - Every edit runs the six validity checks (validate.py). A failing edit is regenerated once with
-  the validator's messages appended to the prompt; a second failure excludes the (query, arm) pair.
+  the validator's messages appended to the prompt, plus hints for placebos (each span's measured
+  word count and allowed range, the query words to put back or remove) and arm 1 (the spans that
+  still open with a pointer); a second failure excludes the (query, arm) pair.
+- Placebo prompts give each span's word count, its allowed range (validate.placebo_word_range)
+  and the query key-term words it must keep or must not gain; arm 1's prompt names each span's
+  pointer word.
 - A placebo P_A paraphrases exactly the spans A edited (for arms 5-7, the sentences A's insertion
   attaches to) and is built only when A's edit is valid.
 - ALL applies the applicable tool-check edits in the order 3, 4, 2, 1, 8, 9, 10, 5, 6, 7 (on the
   replication set ALL-text: 8, 9, 5, 6, 7), recomputing spans with the engine after each step and
-  validating each step; a step that fails twice excludes ALL for that query. P_ALL paraphrases
-  the union of the original spans ALL's LLM steps touched.
-- Arm 7 (and an ALL step 7) whose editor answers NONE is not applicable: its row has
-  valid=false and excluded_reason starting "not applicable".
+  validating each step. A step that fails twice (a deterministic step: once) is skipped and
+  recorded in the row's `skipped_steps`, and ALL goes on from the version before it (r3
+  amendment 9). ALL is invalid only when every step it attempted failed or was skipped ("invalid:
+  every step failed") or the whole version fails check 3 or 5; when no step was attempted it is "not
+  applicable: no step applied" (amendment 5). P_ALL paraphrases the union of the original spans
+  ALL's kept LLM steps touched.
+- Arm 7 whose editor answers NONE is not applicable: its row has valid=false and
+  excluded_reason starting "not applicable" (an ALL step 7 that answers NONE is skipped instead).
+  Neither "not applicable" reason is a validity exclusion (r3 amendments 5 and 9).
 
 Run on Explorer (edit.sbatch) with --backend vllm, or locally with --backend fake (a fake editor
 that returns fixed replacements) for the smoke set. The engine runs as a subprocess
@@ -55,6 +65,10 @@ EDITOR_MODEL = "google/gemma-4-31B-it"
 MAX_NEW_TOKENS = 4096
 QUOTE_MAX_WORDS = 40
 OPENER_FINDING = "points back to earlier text"
+# The engine's opener list (standalone-paragraphs.ts, UNRESOLVED_OPENER) and the marks that may
+# precede the first word (its LEADING_PUNCTUATION, plus Markdown emphasis and link brackets).
+POINTER_OPENER = re.compile(r"(?:this|that|these|those|it|they|such|the above|as mentioned)(?![^\W_])", re.I)
+LEADING_MARKS = re.compile(r"^[\s\"'“‘(*_\[]+")
 CUT_OFF = "The answer was cut off at the token limit. Return only the JSON object, with short replacements."
 
 # --- Spans ------------------------------------------------------------------------------------
@@ -173,6 +187,68 @@ def donor_attribution(donor: dict | None) -> str:
     return f'the source\'s name in parentheses, such as "(source: {donor_name(donor)})" (the source has no URL)'
 
 
+def _words(n: int) -> str:
+    return "1 word" if n == 1 else f"{n} words"
+
+
+def _range(lo: int, hi: int) -> str:
+    return f"exactly {_words(lo)}" if lo == hi else f"{lo} to {hi} words"
+
+
+def _quoted(words) -> str:
+    return ", ".join(f'"{w}"' for w in words)
+
+
+def term_forms(terms: list[str], text: str) -> dict[str, str]:
+    """{key term: the first word of `text`, as written, that stems to it}."""
+    forms: dict[str, str] = {}
+    for w in re.findall(r"[^\W_]+", text):
+        t = common.stem(w.lower())
+        if t in terms and t not in forms:
+            forms[t] = w
+    return forms
+
+
+def span_targets(query: str, spans: list[dict]) -> str:
+    """For placebo prompts: each span's word count and allowed range (check 5) and the query's
+    key-term words it must keep or must not gain (check 2)."""
+    terms = common.content_terms(query)
+    asked = term_forms(terms, query)
+    lines, total = [], 0
+    for s in spans:
+        n = common.count_words(s["text"])
+        total += n
+        if n == 0:  # no word count to aim for (never "exactly 0 words"); the total below still binds
+            line = f'- {s["id"]}: 0 counted words now.'
+        else:
+            lo, hi = validate.placebo_word_range(n)
+            aim = "" if lo == hi else f", as close to {n} as you can"
+            line = f'- {s["id"]}: {_words(n)} now. Write {_range(lo, hi)}{aim}.'
+        has = term_forms(terms, s["text"])
+        if has:
+            line += f" Keep, spelled exactly as here: {_quoted(has[t] for t in terms if t in has)}."
+        absent = [asked.get(t, t) for t in terms if t not in has]
+        if absent:
+            line += f" Do not add: {_quoted(absent)} (nor any other form of {'it' if len(absent) == 1 else 'them'})."
+        lines.append(line)
+    if total:  # check 5 sums the spans the answer changes
+        lo, hi = validate.placebo_word_range(total)
+        lines.append(f"- The spans you change, together, must keep their word count: all of them have "
+                     f"{_words(total)} now, so if you change every span, write {_range(lo, hi)} in all.")
+    return "\n".join(lines)
+
+
+def opener(text: str) -> str:
+    """The pointer word a paragraph opens with (else its first word)."""
+    lead = LEADING_MARKS.sub("", text)
+    m = POINTER_OPENER.match(lead)
+    return m.group(0) if m else (lead.split() or [""])[0]
+
+
+def opener_lines(spans: list[dict]) -> str:
+    return "\n".join(f'- {s["id"]} opens with "{opener(s["text"])}"' for s in spans) or "(none)"
+
+
 def render(name: str, query: str, title: str, page: str, spans: list[dict], donor: dict | None,
            missing_terms: list[str]) -> str:
     """prompts/<name>.txt with {{placeholders}} filled in one pass (values are never re-read)."""
@@ -183,14 +259,82 @@ def render(name: str, query: str, title: str, page: str, spans: list[dict], dono
         "donor_title": (donor or {}).get("title") or "", "donor_url": (donor or {}).get("url") or "(none)",
         "donor_text": (donor or {}).get("text") or "", "donor_name": donor_name(donor) if donor else "",
         "donor_attribution": donor_attribution(donor), "missing_terms": ", ".join(missing_terms) or "(none)",
+        "span_targets": span_targets(query, spans), "openers": opener_lines(spans),
     }
     return re.sub(r"\{\{(\w+)\}\}", lambda m: values[m.group(1)], template)
 
 
-def with_feedback(prompt: str, failures: list[str]) -> str:
+def with_feedback(prompt: str, failures: list[str], hints=()) -> str:
     lines = "\n".join(f"- {f}" for f in failures)
-    return (f"{prompt}\n\nYour previous answer failed these checks:\n{lines}\n"
+    details = "".join(f"\n- {h}" for h in hints)
+    if details:
+        details = f"\n\nWhat to fix:{details}"
+    return (f"{prompt}\n\nYour previous answer failed these checks:\n{lines}{details}\n"
             "Return a corrected answer in the same format.")
+
+
+def _placebo_hints(query: str, spans: list[dict], edits: list[dict]) -> list[str]:
+    """Each changed span's measured word count against its range, the query words it dropped or
+    gained, and the total that check 5 measures."""
+    terms = common.content_terms(query)
+    by_range = {(s["field"], s["start"], s["end"]): s for s in spans}
+    hints, before, after = [], 0, 0
+    for e in edits:
+        s = by_range.get((e["field"], e["start"], e["end"]))
+        if s is None:
+            continue
+        n, m = common.count_words(s["text"]), common.count_words(e["replacement"])
+        before, after = before + n, after + m
+        if n == 0:
+            hint = f'{s["id"]}: your version has {_words(m)}; the original has 0 counted words.'
+        else:
+            lo, hi = validate.placebo_word_range(n)
+            hint = (f'{s["id"]}: your version has {_words(m)}; it must have {_range(lo, hi)} '
+                    f"(the original has {_words(n)}).")
+        had, has = term_forms(terms, s["text"]), term_forms(terms, e["replacement"])
+        lost = [had[t] for t in terms if t in had and t not in has]
+        gained = [has[t] for t in terms if t in has and t not in had]
+        if lost:
+            hint += f" Put back {_quoted(lost)}, spelled as in the original."
+        if gained:
+            hint += f" Remove {_quoted(gained)}: the original span has no form of {'it' if len(gained) == 1 else 'them'}."
+        hints.append(hint)
+    if hints and before:
+        lo, hi = validate.placebo_word_range(before)
+        hints.append(f"The changed spans together have {_words(after)}; together they must have {_range(lo, hi)} "
+                     f"(the originals have {_words(before)}).")
+    return hints
+
+
+def _opener_hints(spans: list[dict], edits: list[dict], text: str, eng: dict) -> list[str]:
+    """Arm 1: the paragraphs of the edited text that still open with a pointer, by span id."""
+    findings = [f for f in eng["checks"].get(ENGINE_CHECK["1"], {}).get("findings", [])
+                if OPENER_FINDING in f["message"]]
+    text_edits = [e for e in edits if e["field"] == "text"]
+
+    def moved(pos: int, inside: bool) -> int:  # an original offset in the edited text
+        return pos + sum(len(e["replacement"]) - (e["end"] - e["start"]) for e in text_edits
+                         if e["end"] <= pos and (inside or e["start"] < pos))
+
+    where = [(s["id"], moved(s["start"], False), moved(s["end"], True)) for s in spans if s["field"] == "text"]
+    hints = []
+    for f in findings:
+        sid = next((i for i, a, b in where if a <= f["start"] < b), None)
+        named = re.search(r'opens with "([^"]+)"', f["message"])
+        word = named.group(1) if named else opener(text[f["start"] :])
+        start = " ".join(text[f["start"] : f["end"]].split()[:8])
+        hints.append(f'{sid or "A paragraph"} still opens with "{word}" ("{start} ..."): make its first words the '
+                     f'subject that "{word}" stands for, as in the example, and do not start it with a pointer word.')
+    return hints
+
+
+def retry_hints(task: dict, edits: list[dict], edited, eng) -> list[str]:
+    """Details for the regenerate message beyond the validator's own messages."""
+    if validate.is_placebo(task["arm"]):
+        return _placebo_hints(task["query"], task["spans"], edits)
+    if task["arm"] == "1" and eng is not None:
+        return _opener_hints(task["spans"], edits, edited[1], eng)
+    return []
 
 
 def prompt_name(arm: str) -> str:
@@ -332,7 +476,7 @@ def edit_round(tasks: list[dict], backend, engine, log: list) -> dict:
             log.append({"key": t["key"], "attempt": attempt, "prompt": t["prompt_now"], "answer": answer,
                         "finish_reason": finish})
             if finish == "length":
-                failed.append((t, [CUT_OFF], None))
+                failed.append((t, [CUT_OFF], None, []))
                 continue
             edits, outcome = parse_response(t["arm"], answer, t["spans"], t.get("donor"))
             if outcome == "NONE":
@@ -340,7 +484,7 @@ def edit_round(tasks: list[dict], backend, engine, log: list) -> dict:
                                      "eng": None, "failures": []}
                 continue
             if outcome:
-                failed.append((t, [outcome], None))
+                failed.append((t, [outcome], None, []))
                 continue
             candidates.append((t, edits, _edited(t["before"], edits)))
         engs = engine(_engine_items([(f"{t['key']}#{attempt}", ed, t["query"]) for t, _, ed in candidates]))
@@ -353,12 +497,12 @@ def edit_round(tasks: list[dict], backend, engine, log: list) -> dict:
                 results[t["key"]] = {"status": "valid", "attempts": attempt, "edited": edited, "edits": edits,
                                      "eng": eng, "failures": [], "added_words": res["added_words"]}
             else:
-                failed.append((t, res["failures"], edited))
+                failed.append((t, res["failures"], edited, retry_hints(t, edits, edited, eng)))
         pending = []
-        for t, failures, edited in failed:
+        for t, failures, edited, hints in failed:
             t["last_failures"], t["last_edited"] = failures, edited or t.get("last_edited")
             if attempt == 1:
-                t["prompt_now"] = with_feedback(t["prompt"], failures)
+                t["prompt_now"] = with_feedback(t["prompt"], failures, hints)
                 pending.append(t)
             else:
                 results[t["key"]] = {"status": "excluded", "attempts": 2, "edited": t["last_edited"] or t["before"],
@@ -418,11 +562,12 @@ def run(pages: list[dict], applicability: list[dict], backend, arms=None, engine
         t = queries[qid]["target"]
         return (t["title"], t["text"])
 
-    def row(qid, arm, version, valid, attempts, reason, added=0):
+    def row(qid, arm, version, valid, attempts, reason, added=0, skipped=()):
         t = queries[qid]["target"]
         return {"version_id": f"{qid}:{arm}", "query_id": qid, "set": t["set"], "arm": arm, "text": version[1],
                 "title": version[0], "valid": valid, "attempts": attempts, "excluded_reason": reason,
-                **validate.metrics(t["query"], original(qid), version), "added_words": added}
+                **validate.metrics(t["query"], original(qid), version), "added_words": added,
+                "skipped_steps": list(skipped)}
 
     def result_row(qid, arm, res):
         if res["status"] == "valid":
@@ -501,14 +646,15 @@ def run(pages: list[dict], applicability: list[dict], backend, arms=None, engine
 
 
 def run_all(queries, eng0, app, ok, backend, engine, log, row, llm_task, placebos) -> list[dict]:
-    """ALL (and P_ALL): the applicable tool-check edits in the fixed order, step by step."""
+    """ALL (and P_ALL): the applicable tool-check edits in the fixed order, step by step. A step
+    that fails validation is skipped and recorded (r3 amendment 9)."""
     state = {}
     for qid, q in queries.items():
         if not app.get((qid, "ALL"), False):
             continue
         t = q["target"]
         state[qid] = {"version": (t["title"], t["text"]), "eng": eng0[qid], "map": OriginMap(t["text"]),
-                      "llm": [], "steps": 0, "attempts": 1, "failure": None, "added": 0,
+                      "llm": [], "steps": 0, "attempts": 1, "skipped": [], "added": 0,
                       "order": ALL_TEXT_ORDER if t["set"] == "replication" else ALL_ORDER}
     for arm in ALL_ORDER:
         det, tasks = [], []
@@ -516,7 +662,7 @@ def run_all(queries, eng0, app, ok, backend, engine, log, row, llm_task, placebo
             # On the replication set, arm 8 is not run alone but is a step of ALL-text, so the
             # table marks it "not run"; the step then rests on the engine re-check below.
             step_ok = ok(qid, arm) or (arm == "8" and queries[qid]["target"]["set"] == "replication")
-            if s["failure"] or arm not in s["order"] or not step_ok:
+            if arm not in s["order"] or not step_ok:
                 continue
             c = s["eng"]["checks"].get(ENGINE_CHECK[arm], {})
             if not c.get("applicable") or c.get("score", 0) >= 0.9:
@@ -539,8 +685,8 @@ def run_all(queries, eng0, app, ok, backend, engine, log, row, llm_task, placebo
             s, res = state[t["qid"]], results[t["key"]]
             if res["status"] == "none":
                 continue
-            if res["status"] != "valid":
-                s["failure"] = f"invalid: step {t['arm']}: " + " | ".join(res["failures"])
+            if res["status"] != "valid":  # skipped: the next step starts from this step's input
+                s["skipped"].append({"step": t["arm"], "reason": "invalid: " + " | ".join(res["failures"])})
                 s["attempts"] = max(s["attempts"], res["attempts"])
                 continue
             text_edits = [e for e in res["edits"] if e["field"] == "text"]
@@ -557,15 +703,13 @@ def run_all(queries, eng0, app, ok, backend, engine, log, row, llm_task, placebo
     for qid, s in state.items():
         t = queries[qid]["target"]
         original = (t["title"], t["text"])
-        if s["failure"]:
-            rows.append(row(qid, "ALL", s["version"], False, s["attempts"], s["failure"]))
-            continue
-        if s["steps"] == 0:
-            rows.append(row(qid, "ALL", s["version"], False, s["attempts"], "invalid: no step applied"))
+        if s["steps"] == 0:  # r3 amendments 5 and 9: nothing tried is not applicable; all failed is invalid
+            reason = "invalid: every step failed" if s["skipped"] else "not applicable: no step applied"
+            rows.append(row(qid, "ALL", s["version"], False, s["attempts"], reason, skipped=s["skipped"]))
             continue
         res = validate.validate_all(original, s["version"], t["query"], original, queries[qid]["donor"])
         reason = None if res["valid"] else "invalid: " + " | ".join(res["failures"])
-        rows.append(row(qid, "ALL", s["version"], res["valid"], s["attempts"], reason))
+        rows.append(row(qid, "ALL", s["version"], res["valid"], s["attempts"], reason, skipped=s["skipped"]))
         if res["valid"] and placebos and s["llm"]:
             spans = _span_dicts(t["text"], s["llm"])
             if spans:

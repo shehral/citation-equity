@@ -366,7 +366,7 @@ describe('recordingKey', () => {
   });
 });
 
-describe('bench caveat (Ruling R32)', () => {
+describe('bench caveat', () => {
   it('calls a server local only when it is this machine', () => {
     for (const url of [
       'http://127.0.0.1:11434',

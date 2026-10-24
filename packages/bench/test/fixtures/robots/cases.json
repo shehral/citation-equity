@@ -1,0 +1,126 @@
+{
+  "_comment": "Shared robots.txt fixtures: ce site (checkSite), the browser check (crawlerVerdicts + crawlerAccessStatus) and the workspace /site view must all give these verdicts. Written for this project.",
+  "cases": [
+    {
+      "name": "allows everything",
+      "robots": "User-agent: *\nAllow: /\n",
+      "url": "https://example.com/blog/espresso",
+      "status": "pass",
+      "blocked": []
+    },
+    {
+      "name": "comments only",
+      "robots": "# Nothing to say here.\n",
+      "url": "https://example.com/blog/espresso",
+      "status": "pass",
+      "blocked": []
+    },
+    {
+      "name": "blocks two training crawlers",
+      "robots": "User-agent: GPTBot\nUser-agent: CCBot\nDisallow: /\n",
+      "url": "https://example.com/blog/espresso",
+      "status": "warn",
+      "blocked": ["GPTBot", "CCBot"]
+    },
+    {
+      "name": "lowercase user-agent token",
+      "robots": "User-agent: gptbot\nDisallow: /\n",
+      "url": "https://example.com/blog/espresso",
+      "status": "warn",
+      "blocked": ["GPTBot"]
+    },
+    {
+      "name": "blocks Google-Extended",
+      "robots": "User-agent: Google-Extended\nDisallow: /\n",
+      "url": "https://example.com/blog/espresso",
+      "status": "warn",
+      "blocked": ["Google-Extended"]
+    },
+    {
+      "name": "blocks an AI search crawler",
+      "robots": "User-agent: GPTBot\nDisallow: /\n\nUser-agent: OAI-SearchBot\nDisallow: /\n",
+      "url": "https://example.com/blog/espresso",
+      "status": "fail",
+      "blocked": ["GPTBot", "OAI-SearchBot"]
+    },
+    {
+      "name": "blocks Googlebot only",
+      "robots": "User-agent: Googlebot\nDisallow: /\n",
+      "url": "https://example.com/blog/espresso",
+      "status": "fail",
+      "blocked": ["Googlebot"]
+    },
+    {
+      "name": "star disallows this path",
+      "robots": "User-agent: *\nDisallow: /blog/\n",
+      "url": "https://example.com/blog/espresso",
+      "status": "fail",
+      "blocked": [
+        "GPTBot",
+        "OAI-SearchBot",
+        "ChatGPT-User",
+        "ClaudeBot",
+        "Claude-SearchBot",
+        "Claude-User",
+        "PerplexityBot",
+        "Perplexity-User",
+        "Googlebot",
+        "Google-Extended",
+        "Bingbot",
+        "Applebot",
+        "Applebot-Extended",
+        "CCBot"
+      ]
+    },
+    {
+      "name": "star disallows another path",
+      "robots": "User-agent: *\nDisallow: /blog/\n",
+      "url": "https://example.com/about",
+      "status": "pass",
+      "blocked": []
+    },
+    {
+      "name": "longer allow wins",
+      "robots": "User-agent: *\nDisallow: /blog/\nAllow: /blog/espresso\n",
+      "url": "https://example.com/blog/espresso",
+      "status": "pass",
+      "blocked": []
+    },
+    {
+      "name": "named group overrides star",
+      "robots": "User-agent: *\nDisallow: /\n\nUser-agent: Googlebot\nUser-agent: Bingbot\nUser-agent: Applebot\nUser-agent: OAI-SearchBot\nUser-agent: ChatGPT-User\nUser-agent: Claude-SearchBot\nUser-agent: Claude-User\nUser-agent: PerplexityBot\nUser-agent: Perplexity-User\nAllow: /\n",
+      "url": "https://example.com/blog/espresso",
+      "status": "warn",
+      "blocked": ["GPTBot", "ClaudeBot", "Google-Extended", "Applebot-Extended", "CCBot"]
+    },
+    {
+      "name": "wildcard and end anchor",
+      "robots": "User-agent: *\nDisallow: /*.pdf$\nDisallow: /*espresso\n",
+      "url": "https://example.com/blog/espresso",
+      "status": "fail",
+      "blocked": [
+        "GPTBot",
+        "OAI-SearchBot",
+        "ChatGPT-User",
+        "ClaudeBot",
+        "Claude-SearchBot",
+        "Claude-User",
+        "PerplexityBot",
+        "Perplexity-User",
+        "Googlebot",
+        "Google-Extended",
+        "Bingbot",
+        "Applebot",
+        "Applebot-Extended",
+        "CCBot"
+      ]
+    },
+    {
+      "name": "end anchor misses",
+      "robots": "User-agent: *\nDisallow: /*.pdf$\n",
+      "url": "https://example.com/blog/espresso",
+      "status": "pass",
+      "blocked": []
+    }
+  ]
+}

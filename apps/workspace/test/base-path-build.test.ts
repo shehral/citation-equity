@@ -3,9 +3,9 @@
 // (NEXT_PUBLIC_BASE_PATH=/citation-equity) and checks that every asset and
 // page link in the HTML sits under the base path. The build goes to its own
 // folder (NEXT_DIST_DIR, inside .next/) so it never replaces out/, which the
-// Playwright smoke test serves at /.
+// root Playwright project serves at /.
 import { execFile } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
@@ -17,11 +17,23 @@ const OUT = join(APP, DIST);
 const BASE = '/citation-equity';
 const PAGES = [
   'index.html',
-  'evidence/index.html',
+  'draft/index.html',
   'site/index.html',
+  'cited/index.html',
+  'research/index.html',
+  // Redirects from the old routes.
+  'evidence/index.html',
   'off-page/index.html',
   'about/index.html',
 ];
+
+/** Every file under `dir`, as paths relative to it. */
+function files(dir: string, prefix = ''): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    return statSync(path).isDirectory() ? files(path, `${prefix}${name}/`) : [`${prefix}${name}`];
+  });
+}
 
 /** Every href and src value in an HTML file. */
 function urls(html: string): string[] {
@@ -71,11 +83,44 @@ describe(`static export with NEXT_PUBLIC_BASE_PATH=${BASE}`, () => {
     }
   });
 
-  it('links the nav to the base-path pages, with trailing slashes', () => {
-    const html = readFileSync(join(OUT, 'evidence/index.html'), 'utf8');
+  it('links the header tabs and footer to the base-path pages, with trailing slashes', () => {
+    const html = readFileSync(join(OUT, 'research/index.html'), 'utf8');
     const links = sameSite(urls(html));
-    for (const route of ['/', '/evidence/', '/site/', '/off-page/', '/about/']) {
+    for (const route of ['/', '/draft/', '/site/', '/cited/', '/research/']) {
       expect(links).toContain(`${BASE}${route}`);
+    }
+  });
+
+  it('links each old route to its new one under the base path (the redirect fallback)', () => {
+    const fallback = (page: string) =>
+      readFileSync(join(OUT, page), 'utf8').match(
+        /This page moved\.\s*(?:<!-- -->)?\s*<a[^>]*href="([^"]*)"/,
+      )?.[1];
+    expect(fallback('off-page/index.html')).toBe(`${BASE}/cited/`);
+    expect(fallback('evidence/index.html')).toBe(`${BASE}/research/`);
+    expect(fallback('about/index.html')).toBe(`${BASE}/#about`);
+  });
+});
+
+// next/font downloads the fonts at build time; the export must serve them itself.
+describe('fonts', () => {
+  it('ships Newsreader and Instrument Sans as files in the export, by relative URL', () => {
+    const css = files(join(OUT, '_next/static'))
+      .filter((f) => f.endsWith('.css'))
+      .map((f) => readFileSync(join(OUT, '_next/static', f), 'utf8'))
+      .join('\n');
+    for (const family of ['Newsreader', 'Instrument Sans']) expect(css).toContain(family);
+    const sources = [...css.matchAll(/@font-face\{[^}]*?src:url\(([^)]+)\)/g)].map((m) => m[1]);
+    expect(sources.length).toBeGreaterThan(0);
+    for (const src of sources) {
+      expect(src, src).toMatch(/^\.\.\/media\/[\w.-]+\.woff2$/);
+      expect(existsSync(join(OUT, '_next/static', src.slice(3))), src).toBe(true);
+    }
+  });
+
+  it('makes no reference to a font host anywhere in the export', () => {
+    for (const f of files(OUT).filter((p) => /\.(html|css|js|txt)$/.test(p))) {
+      expect(readFileSync(join(OUT, f), 'utf8'), f).not.toMatch(/fonts\.(googleapis|gstatic)\.com/);
     }
   });
 });
@@ -90,9 +135,10 @@ describe('values shared between server and client components', () => {
     }
   });
 
-  it('shows the real ce site command on /site', () => {
+  it('prerenders /site with its input first', () => {
     const html = readFileSync(join(OUT, 'site/index.html'), 'utf8');
-    expect(html).toContain('ce site https://example.com/your-page --json');
+    expect(html).toContain('Can AI read your page?');
+    expect(html).toContain('Page HTML');
   });
 
   it('inlines the theme script itself in <head>', () => {

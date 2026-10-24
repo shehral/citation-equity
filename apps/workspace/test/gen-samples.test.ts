@@ -7,7 +7,7 @@ interface GeneratedSample {
   results?: Record<string, { runs?: Record<string, unknown>[]; summary?: unknown }>;
 }
 
-describe('gen-samples (Ruling R21)', () => {
+describe('gen-samples', () => {
   const samples = generateSamples() as GeneratedSample[];
 
   it('ships no recording and no answer text to the browser', () => {

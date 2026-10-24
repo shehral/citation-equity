@@ -124,7 +124,7 @@ describe('checkSite', () => {
     expect(readinessItem(report, 'crawler-access').status).toBe('fail');
   });
 
-  it('fails when only a search engine crawler (Googlebot) is disallowed (Ruling R25)', async () => {
+  it('fails when only a search engine crawler (Googlebot) is disallowed', async () => {
     const { fetchImpl } = site({
       'https://example.com/robots.txt': robots('User-agent: Googlebot\nDisallow: /\n'),
       [URL_UNDER_TEST]: { body: ARTICLE(250) },

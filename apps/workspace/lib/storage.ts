@@ -1,9 +1,12 @@
-// Per-draft persistence in localStorage. Every access sits in try/catch: in a
-// private window, with blocked site data or a full quota, reads return the
-// fallback and writes do nothing, so the workspace still loads, edits and
-// analyzes (Review Focus 4).
+// Per-draft persistence in localStorage. Every access sits in try/catch. When
+// localStorage refuses a write (a private window, blocked site data, a full
+// quota), the value goes to an in-memory copy that reads prefer, so the draft,
+// its Done and Skip choices and its reader questions last for this page's
+// lifetime: switching views inside the app keeps them, and the home tile agrees
+// with the draft view. A full reload then starts empty, as nothing was stored.
 
 import { MAX_QUESTIONS, mergeQuestions, SOURCE_LABELS, type WorkspaceQuestion } from './questions';
+import { onClearAll } from './store';
 
 export type SuggestionStatus = 'pending' | 'applied' | 'done' | 'ignored';
 
@@ -14,7 +17,15 @@ const statusesKey = (draftKey: string) => `${PREFIX}statuses:${draftKey}`;
 const draftItemKey = (draftKey: string) => `${PREFIX}draft:${draftKey}`;
 const questionsKey = (draftKey: string) => `${PREFIX}questions:${draftKey}`;
 
+/**
+ * Values localStorage refused, by key; null marks a key removed while it was refused. Only these
+ * keys are read from memory, so a value localStorage holds is always read from there.
+ */
+const memory = new Map<string, string | null>();
+onClearAll(() => memory.clear());
+
 function read(key: string): string | null {
+  if (memory.has(key)) return memory.get(key) ?? null;
   try {
     return window.localStorage.getItem(key);
   } catch {
@@ -25,8 +36,20 @@ function read(key: string): string | null {
 function write(key: string, value: string): void {
   try {
     window.localStorage.setItem(key, value);
+    memory.delete(key);
   } catch {
-    // Storage unavailable: the value simply does not persist.
+    // Storage unavailable: the in-memory copy serves this page.
+    memory.set(key, value);
+  }
+}
+
+function remove(key: string): void {
+  try {
+    window.localStorage.removeItem(key);
+    memory.delete(key);
+  } catch {
+    // Storage unavailable: read the key as removed for this page.
+    memory.set(key, null);
   }
 }
 
@@ -64,11 +87,7 @@ export function saveDraft(draftKey: string, markdown: string): void {
  * the draft equals its starting text, so a later change to a sample reaches returning visitors.
  */
 export function forgetDraft(draftKey: string): void {
-  try {
-    window.localStorage.removeItem(draftItemKey(draftKey));
-  } catch {
-    // Storage unavailable: nothing was saved either.
-  }
+  remove(draftItemKey(draftKey));
 }
 
 /**
@@ -100,12 +119,13 @@ export function saveQuestions(draftKey: string, questions: WorkspaceQuestion[]):
   write(questionsKey(draftKey), JSON.stringify(questions));
 }
 
+/** Forgets the saved questions, so the draft's next load generates them from its text. */
+export function forgetQuestions(draftKey: string): void {
+  remove(questionsKey(draftKey));
+}
+
 /** Forgets the saved draft and statuses (used by "Reset draft"). */
 export function clearDraft(draftKey: string): void {
-  try {
-    window.localStorage.removeItem(draftItemKey(draftKey));
-    window.localStorage.removeItem(statusesKey(draftKey));
-  } catch {
-    // Storage unavailable: nothing was saved either.
-  }
+  remove(draftItemKey(draftKey));
+  remove(statusesKey(draftKey));
 }

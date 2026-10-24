@@ -1,51 +1,17 @@
-import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ThemeToggle } from '@/components/theme-toggle';
 
-const navLink =
-  'rounded-sm text-muted-foreground text-sm hover:text-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring';
-
-/** Header and reading column for the text pages (/evidence, /site, /off-page, /about). */
+/**
+ * The reading column of the text pages (/site, /cited, /research). The header and footer come
+ * from the app shell (components/shell/app-shell.tsx).
+ */
 export function PageShell({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="flex min-h-dvh flex-col">
-      <header className="flex flex-wrap items-center gap-x-6 gap-y-3 border-b px-4 py-3">
-        <Link
-          href="/"
-          prefetch={false}
-          className="rounded-sm font-semibold outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
-        >
-          Citation Equity
-        </Link>
-        <nav
-          aria-label="Pages"
-          className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-4"
-        >
-          <Link href="/" prefetch={false} className={navLink}>
-            Workspace
-          </Link>
-          <Link href="/evidence" prefetch={false} className={navLink}>
-            Evidence
-          </Link>
-          <Link href="/site" prefetch={false} className={navLink}>
-            Site readiness
-          </Link>
-          <Link href="/off-page" prefetch={false} className={navLink}>
-            Off-page
-          </Link>
-          <Link href="/about" prefetch={false} className={navLink}>
-            About
-          </Link>
-          <ThemeToggle />
-        </nav>
-      </header>
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-        <h1 className="font-semibold text-3xl">{title}</h1>
-        {children}
-      </main>
-    </div>
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 text-base sm:px-6">
+      <h1 className="font-medium font-serif text-4xl tracking-tight">{title}</h1>
+      {children}
+    </main>
   );
 }
 
 export const textLink =
-  'rounded-sm underline underline-offset-2 outline-none focus-visible:ring-[3px] focus-visible:ring-ring';
+  'rounded-sm text-brand underline underline-offset-2 outline-none hover:text-brand-hover focus-visible:ring-[3px] focus-visible:ring-ring';

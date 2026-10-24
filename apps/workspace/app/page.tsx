@@ -1,5 +1,6 @@
-import { Workspace } from '@/components/workspace';
+import { Home } from '@/components/home/home';
 
-export default function Home() {
-  return <Workspace />;
+/** The home dashboard. The draft editor lives at /draft/. */
+export default function HomePage() {
+  return <Home />;
 }

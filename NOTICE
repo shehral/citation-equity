@@ -125,8 +125,9 @@ Adapted (modified) in:
   colors changed to semantic tokens.
 - apps/workspace/components/ui/popover.tsx: registry item `popover`.
 - apps/workspace/lib/utils.ts: the `cn` helper written by `shadcn init`.
-- apps/workspace/app/globals.css: the neutral Tailwind v4 theme tokens written
-  by `shadcn init`; unused tokens trimmed, project tokens added.
+- apps/workspace/app/globals.css: the structure and variable names of the
+  Tailwind v4 theme written by `shadcn init`; every value replaced by this
+  project's palette, unused tokens trimmed, project tokens added.
 ------------------------------------------------------------------------------
 
 Data used at run time (not redistributed)
@@ -156,4 +157,18 @@ is part of the built site (apps/workspace/out/).
 - caniuse-lite (CC-BY-4.0): browser support data, read at build time by
   Browserslist and Next.js. Data from caniuse.com by Alexis Deveria.
   https://github.com/browserslist/caniuse-lite
+------------------------------------------------------------------------------
+
+Fonts shipped in the built site
+------------------------------------------------------------------------------
+apps/workspace/app/layout.tsx loads three fonts with next/font/google, which
+downloads them at build time and serves them from the static export (the site
+makes no request to Google). No font file is committed to this repository.
+
+- Newsreader, by Production Type. SIL Open Font License 1.1.
+  https://github.com/productiontype/Newsreader
+- Instrument Sans, by Instrument. SIL Open Font License 1.1.
+  https://github.com/Instrument/instrument-sans
+- JetBrains Mono, by JetBrains. SIL Open Font License 1.1.
+  https://github.com/JetBrains/JetBrainsMono
 ------------------------------------------------------------------------------

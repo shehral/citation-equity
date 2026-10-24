@@ -16,8 +16,8 @@ import {
 import type { Sample } from './samples';
 
 /**
- * A report as the bundled samples carry it: gen-samples.mjs strips each run's answer text
- * (Ruling R21, R28), so `runs[].answer` is absent. A local run's full `BenchReport` fits too.
+ * A report as the bundled samples carry it: gen-samples.mjs strips each run's answer text, to
+ * keep copyrighted page text out of the bundle, so `runs[].answer` is absent. A local run's full `BenchReport` fits too.
  */
 export type ReportView = Omit<BenchReport, 'runs'> & { runs: Omit<RunRecord, 'answer'>[] };
 
@@ -157,7 +157,7 @@ function untilAborted<T>(p: Promise<T>, signal: AbortSignal): Promise<T> {
 function abortable(inner: EngineAdapter, signal: AbortSignal): EngineAdapter {
   return {
     name: inner.name,
-    // The report's caveat and numCtx follow the adapter actually used (Ruling R32).
+    // The report's caveat and numCtx follow the adapter actually used.
     caveat: inner.caveat,
     sendsNumCtx: inner.sendsNumCtx,
     generate: (prompt, opts) =>

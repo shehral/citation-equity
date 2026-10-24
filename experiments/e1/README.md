@@ -10,12 +10,13 @@ Nothing fetched or derived from GEO-bench or C-SEO Bench is committed: `data/` a
 | ------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `data/pages.jsonl`        | admitted page                    | `page_id, query_id, set, query, url, source, title, text, words, tokens_max, cut, sha256, role`                                                             |
 | `data/applicability.jsonl`| (query, arm), arms 1-14 and ALL  | `query_id, arm, applicable, reason`                                                                                                                         |
-| `data/versions.jsonl`     | version of a target              | `version_id, query_id, set, arm, text, title, valid, attempts, excluded_reason, edit_distance, length_ratio, key_terms_delta, added_words`                   |
+| `data/versions.jsonl`     | version of a target              | `version_id, query_id, set, arm, text, title, valid, attempts, excluded_reason, edit_distance, length_ratio, key_terms_delta, added_words, skipped_steps`    |
 
 - `set` is `main`, `replication`, `smoke` or `timing` (the held-out timing-smoke query, never analyzed); `source` is `live`, `wayback`, `cseo` or `sample`; `role` is `target`, `competitor` or `donor`.
 - `arm` in versions is `original`, `1`-`14`, `P2`, `P3`, `P5`, `P6`, `P7`, `P8`, `P10`, `P12`, `ALL` or `P_ALL`. `version_id` is `<query_id>:<arm>`.
-- A version is used only when `valid` is true. `excluded_reason` starting `not applicable` (arm 7 whose editor answered NONE) is not a validity exclusion; every other reason starts `invalid:` and counts as one.
+- A version is used only when `valid` is true. `excluded_reason` starting `not applicable` (ALL with no step applied, `not applicable: no step applied`; arm 7 whose editor answered NONE) is not a validity exclusion and does not count as applicable (r3 amendments 5 and 9); every other reason starts `invalid:` and counts as one.
 - A placebo `P_A` exists only when arm A's edit is valid. A version is written only for pairs the applicability table marks applicable.
+- `skipped_steps` is empty except on ALL rows, where it lists each step that failed validation and was skipped, as `{step, reason}` (r3 amendment 9).
 - `edit_distance` is a word-level Levenshtein distance from the original; `length_ratio` is words of the version over words of the original (title and text); `key_terms_delta` is the change in occurrences of the query's key terms.
 
 ## Files
@@ -29,8 +30,9 @@ Nothing fetched or derived from GEO-bench or C-SEO Bench is committed: `data/` a
 | `engine_json.ts`, `engine_cli.ts` | The engine's checks and artifacts as JSON, offsets converted from UTF-16 to code points. The CLI reads JSONL on stdin; it is bundled into one file, `out/bundle/engine_cli.js`, so Python (here and on the cluster) can call it. |
 | `applicability.ts` | Runs the engine on every target with the query as the target question, writes `engine_original.jsonl` and the frozen `applicability.jsonl`. |
 | `deterministic_arms.py` | Arms 4, 9, 11, 13, 14 and the arm 11-14 "feature already present" rules. |
-| `editor.py`, `prompts/*.txt` | Spans, one strict prompt per LLM arm and placebo (committed verbatim), JSON span replacements, splicing, ALL step by step, P_ALL, regenerate once. `--backend vllm` on Explorer, `--backend fake` locally. |
+| `editor.py`, `prompts/*.txt` | Spans, one strict prompt per LLM arm and placebo (committed verbatim), JSON span replacements, splicing, ALL step by step, P_ALL, regenerate once. Placebo prompts carry each span's word count, allowed range and the query words to keep or not add; arm 1's names each span's pointer word. `--backend vllm` on Explorer, `--backend fake` locally. |
 | `validate.py` | The six validity checks. |
+| `validity_report.py` | Calibration summary of a `versions.jsonl`: per arm valid, invalid and not-applicable counts, the top reasons, the over-20% flag and ALL's skipped steps. `python3 -I experiments/e1/validity_report.py <versions.jsonl> [--top 3] [--json out.json]`. |
 | `timing_report.py` | Reads the timing-smoke job logs and projects GPU-hours and shards for the main and replication sets (see Timing smoke). |
 | `edit.sbatch`, `normalize.sbatch`, `generate.sbatch` | Explorer jobs: the editor (Gemma-4-31B-it, one H200 or 2x A100), the tokenizer cap (CPU) and the judges' answers (measurement). |
 | `local.env.example` | The cluster settings the three jobs read: copy it to `local.env` (gitignored) next to them on the cluster and fill it in. |
@@ -86,7 +88,7 @@ The sbatch files hold no account or path of their own. They read site settings f
 
 ## Timing smoke
 
-PREREG_E1.md (r3, amendment 8) times the run on one query held out of both sets: the **last** qualifying `test` query in dataset order with five usable pages. `draw.py` picks it from the main candidates, gives it the same target, donor and competitor draw, writes its pages to `pages.jsonl` with `set: "timing"` and names it in `admission.json` (`timing.query_id`, and `main.held_out`); it is never admitted to main, the four-page fallback included. With the current fetch it is `geo-test-939` ("how much do car salesman make"). `applicability.ts` treats it as a main-set target and counts it as its own set.
+PREREG_E1.md (r3, amendment 8) times the run on one query held out of both sets: the **last** qualifying `test` query in dataset order with five usable pages. `draw.py` picks it from the main candidates, gives it the same target, donor and competitor draw, writes its pages to `pages.jsonl` with `set: "timing"` and names it in `admission.json` (`timing.query_id`, and `main.held_out`); it is never admitted to main, the four-page fallback included. With the current fetch it is `geo-test-939`. `applicability.ts` treats it as a main-set target and counts it as its own set.
 
 Its outcomes are discarded. The editor edits it only under `--set timing`, `score.py` scores it only under `--sets timing`, and `analyze.py` refuses `--set timing` and drops timing rows from every index. Keep its files in their own folder so the main `versions.jsonl` and `prompts.jsonl` are never overwritten.
 
@@ -143,5 +145,6 @@ The timing batch is small, so vLLM batches less than on a full set and the proje
 - **Check 3**: arm 2's new heading words must stem from the heading or its section's first paragraph (or be function words); arm 12 may add only query words and function words. Numbers lose trailing `.` and `,` before the lookup.
 - **Check 4** compares links by URL.
 - **Check 5** uses whole-page words for arms and ALL, span words for placebos. ALL steps run checks 1-4 and 6; the whole ALL version then runs checks 3 and 5.
-- **ALL**: a step is skipped when the recomputed check is no longer applicable or already scores 0.9 or more, or when arm 7's editor answers NONE; a step that fails twice excludes ALL. On the replication set ALL-text uses step 8 although arm 8 is not run alone there.
+- **ALL**: a step is skipped when the recomputed check is no longer applicable or already scores 0.9 or more, or when arm 7's editor answers NONE. A step that fails twice (a deterministic step: once) is also skipped and recorded in `skipped_steps` (r3 amendment 9); ALL is invalid only when every step it attempted failed or was skipped (`invalid: every step failed`) or the whole version fails check 3 or 5; when no step was attempted it is `not applicable: no step applied` (amendment 5). On the replication set ALL-text uses step 8 although arm 8 is not run alone there.
 - **Editor**: thinking mode off (`--thinking` turns it on); `max_model_len` 20,480.
+- **Regenerate message**: the validator's messages, then "What to fix" hints: for a placebo, each changed span's measured word count against its range (`validate.placebo_word_range`, the check 5 bounds) and the query words it dropped or gained; for arm 1, the spans that still open with a pointer and that word.

@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { defineProject, mergeConfig } from 'vitest/config';
 import { packageProject } from '../../vitest.shared.ts';
 
-// Only test/** runs here, so Playwright specs under e2e/ never load in Vitest (Ruling R10).
+// Only test/** runs here, so Playwright specs under e2e/ never load in Vitest.
 export default mergeConfig(
   packageProject('workspace'),
   defineProject({

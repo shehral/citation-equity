@@ -2,7 +2,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { TargetQuestions } from '@/components/panel/target-questions';
+import { ReaderQuestions } from '@/components/draft/reader-questions';
 import type { WorkspaceQuestion } from '@/lib/questions';
 
 // The local-model helper is never called here; mocked so nothing could reach Ollama.
@@ -22,12 +22,12 @@ const BING = [
 function Harness({ initial = [] as WorkspaceQuestion[] }) {
   const [questions, setQuestions] = useState(initial);
   return (
-    <TargetQuestions questions={questions} markdown="" localModel={null} onChange={setQuestions} />
+    <ReaderQuestions questions={questions} markdown="" localModel={null} onChange={setQuestions} />
   );
 }
 
 const csv = (text: string, name = 'Queries.csv') => new File([text], name, { type: 'text/csv' });
-const panel = () => within(screen.getByRole('region', { name: 'Target questions' }));
+const panel = () => within(document.body);
 const imported = () => within(screen.getByRole('region', { name: 'Imported queries' }));
 const questions = () =>
   panel()
@@ -39,13 +39,16 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('Import real queries (CSV)', () => {
+describe('Import from Search Console or Bing (CSV)', () => {
   it('reads a Search Console export in the browser and lists the top queries with their numbers', async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
     const user = userEvent.setup();
     render(<Harness />);
-    await user.upload(panel().getByLabelText('Import real queries (CSV)'), csv(SEARCH_CONSOLE));
+    await user.upload(
+      panel().getByLabelText('Import from Search Console or Bing (CSV)'),
+      csv(SEARCH_CONSOLE),
+    );
 
     const rows = await imported().findAllByRole('listitem');
     expect(rows.map((r) => r.textContent)).toEqual([
@@ -61,12 +64,15 @@ describe('Import real queries (CSV)', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('adds a query as a target question on a click, labelled with its source', async () => {
+  it('adds a query as a reader question on a click, labelled with its source', async () => {
     const user = userEvent.setup();
     render(<Harness />);
-    await user.upload(panel().getByLabelText('Import real queries (CSV)'), csv(BING, 'bing.csv'));
+    await user.upload(
+      panel().getByLabelText('Import from Search Console or Bing (CSV)'),
+      csv(BING, 'bing.csv'),
+    );
     const add = await imported().findByRole('button', {
-      name: 'Add "How long should a shot take?" as a target question',
+      name: 'Add "How long should a shot take?" as a reader question',
     });
     await user.click(add);
     expect(questions()).toEqual(['How long should a shot take?']);
@@ -81,7 +87,7 @@ describe('Import real queries (CSV)', () => {
     const user = userEvent.setup();
     render(<Harness />);
     await user.upload(
-      panel().getByLabelText('Import real queries (CSV)'),
+      panel().getByLabelText('Import from Search Console or Bing (CSV)'),
       csv('Keyword,Volume\nespresso,10\n', 'keywords.csv'),
     );
     const alert = await panel().findByRole('alert');
@@ -92,7 +98,10 @@ describe('Import real queries (CSV)', () => {
   it('closes the imported list', async () => {
     const user = userEvent.setup();
     render(<Harness />);
-    await user.upload(panel().getByLabelText('Import real queries (CSV)'), csv(BING));
+    await user.upload(
+      panel().getByLabelText('Import from Search Console or Bing (CSV)'),
+      csv(BING),
+    );
     await user.click(await imported().findByRole('button', { name: 'Close imported queries' }));
     expect(screen.queryByRole('region', { name: 'Imported queries' })).toBeNull();
   });

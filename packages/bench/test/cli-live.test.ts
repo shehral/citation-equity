@@ -193,7 +193,7 @@ describe('ce bench --adapter', () => {
     }
   });
 
-  it('does not send OPENAI_API_KEY to a plain-http server unless --send-key is given (R33)', async () => {
+  it('does not send OPENAI_API_KEY to a plain-http server unless --send-key is given', async () => {
     vi.stubEnv('OPENAI_API_KEY', 'sk-secret-cli');
     const plain = openaiFake();
     const off = await ce(

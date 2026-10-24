@@ -1,0 +1,28 @@
+{
+ "sims": 400,
+ "n_queries": 80,
+ "draws": 100000,
+ "seed": 1,
+ "alpha": 0.05,
+ "families": {
+  "A": {
+   "m": 9,
+   "fwer": 0.0575,
+   "mc_se": 0.011639775556255371,
+   "unadjusted_any": 0.3575
+  },
+  "B": {
+   "m": 3,
+   "fwer": 0.04,
+   "mc_se": 0.009797958971132711,
+   "unadjusted_any": 0.1325
+  },
+  "ALL": {
+   "m": 2,
+   "fwer": 0.055,
+   "mc_se": 0.011399013115177999,
+   "unadjusted_any": 0.0975
+  }
+ },
+ "method": "synthetic null cells (2 judges, 8 answers per cell), version labels permuted within query"
+}

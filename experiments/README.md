@@ -4,6 +4,8 @@ Research runs of the citation test bench on larger open models, on Northeastern'
 
 These are bench runs: a content check on a model over a fixed page set. They do not predict live AI engines.
 
+How the bench works and what it found on the sample drafts: [samples/README.md](../samples/README.md). Every `ce bench` option, including `--export-prompts` and `--answers`: [docs/cli.md](../docs/cli.md). The E1 study has its own folder, [e1/](e1/README.md), with its pre-registration in [PREREG_E1.md](PREREG_E1.md); the sensitivity test's results are in [RESULTS_sensitivity.md](RESULTS_sensitivity.md).
+
 ## Files
 
 | File                                                     | What it is                                                                                   |

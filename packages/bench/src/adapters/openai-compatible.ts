@@ -11,7 +11,7 @@ export const DEFAULT_OPENAI_BASE_URL = 'https://api.openai.com';
  * `fetch`, so it runs in the browser and in Node. Sends one user message with the seed and
  * temperature; `numCtx` has no Chat Completions field and is not sent (set it on the server), so
  * `sendsNumCtx` is false and reports record numCtx as null. `caveat` is the local-model caveat only
- * for a server on localhost; any other host, OpenAI's included, gets REMOTE_CAVEAT (Ruling R32).
+ * for a server on localhost; any other host, OpenAI's included, gets REMOTE_CAVEAT.
  * Failures map to the bench's error types as OllamaAdapter's do: the server cannot be reached ->
  * AdapterUnavailableError; HTTP 404 about the model -> ModelMissingError. The API key, when given,
  * goes in the Authorization header only and never into an error message.
