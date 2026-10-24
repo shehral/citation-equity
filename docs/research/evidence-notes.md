@@ -2,7 +2,7 @@
 
 Working log behind `packages/engine/src/evidence.ts` and `docs/evidence.md`. Every source below was opened in full (PDF downloaded from arXiv or the ACL Anthology and read as text, or read from disk) on 2026-10-23. Quotes are copied from the text; page layout extraction may have dropped hyphens or ligatures. Numbers marked "verified" were found in the paper itself, not in a secondary summary.
 
-Leads taken from the Oct 23 open-source sweep (`docs/research/2026-10-23-oss-sweep.json`) and from aiseo-audit's `docs/EVIDENCE.md` were treated as leads only. Each claim used was re-checked in the primary paper.
+Leads taken from our survey of open-source tools and from aiseo-audit's `docs/EVIDENCE.md` were treated as leads only. Each claim used was re-checked in the primary paper.
 
 ## Sources opened
 

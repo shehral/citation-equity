@@ -1,7 +1,14 @@
 // The plain words the working screens use for checks and evidence grades, in one place so the
 // draft view, the site rows, /cited and /research read the same. The engine's registry titles stay as they are for the CLI and the JSON report.
 
-import type { CheckId, EvidenceGrade } from '@citation-equity/engine';
+import {
+  type CheckId,
+  E1_COMBINED,
+  E1_DELTA,
+  type E1Label,
+  type EvidenceGrade,
+  signed3,
+} from '@citation-equity/engine';
 
 /** Plain names of the checks. */
 export const CHECK_NAMES: Record<CheckId, string> = {
@@ -51,3 +58,23 @@ export const PLAIN_LEADS: Partial<Record<CheckId, string>> = {
   'cited-sources':
     'Linking credible sources helped in one early test, but later tests found little gain from adding references alone.',
 };
+
+/** What our own test (E1) found for a check, in plain words. The numbers sit behind an expand. */
+export const E1_WORDS: Record<E1Label, string> = {
+  helps: 'Tested: helped a little, maybe through wording overlap',
+  'no-effect': 'Tested: no clear effect',
+  'insufficient-n': 'Tested: too few pages',
+  'not-run': 'Tested: no edit passed our checks',
+  // Measured, but the setup cannot give this check a verdict (it needs passage-level retrieval).
+  descriptive: 'Tested: no verdict by design',
+};
+
+/** Why an unscored check (weight 0 in both presets) is not scored, one plain sentence each. */
+export const UNSCORED_NOTES: Partial<Record<CheckId, string>> = {
+  lists: `Lists count only if you give them a weight, because a test found no effect larger than ${E1_DELTA}.`,
+};
+
+const all = E1_COMBINED.vsOriginal;
+
+/** The combined result of every fix applied together (E1's ALL arm), in one sentence. */
+export const E1_COMBINED_SENTENCE = `In our own test, applying every fix together raised the citation score by ${signed3(all.d)} (${all.level}% CI [${signed3(all.ci[0])}, ${signed3(all.ci[1])}], n ${all.n}) over the original page and by ${signed3(E1_COMBINED.vsPlacebo.d)} over a paraphrase of the same passages, possibly through length or query-term overlap.`;

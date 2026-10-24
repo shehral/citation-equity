@@ -1,0 +1,601 @@
+{
+ "answers": 17824,
+ "prompts": 17824,
+ "unknown_answer_keys": 0,
+ "valid": 17823,
+ "dropped_cells": 0,
+ "completion": [
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "1",
+   "prompts": 192,
+   "answered": 192,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "10",
+   "prompts": 64,
+   "answered": 64,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "11",
+   "prompts": 240,
+   "answered": 240,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "12",
+   "prompts": 400,
+   "answered": 400,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "13",
+   "prompts": 336,
+   "answered": 336,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "14",
+   "prompts": 56,
+   "answered": 56,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "2",
+   "prompts": 216,
+   "answered": 216,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "3",
+   "prompts": 312,
+   "answered": 312,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "5",
+   "prompts": 88,
+   "answered": 88,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "6",
+   "prompts": 288,
+   "answered": 288,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "7",
+   "prompts": 240,
+   "answered": 240,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "8",
+   "prompts": 200,
+   "answered": 200,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "9",
+   "prompts": 432,
+   "answered": 432,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "ALL",
+   "prompts": 624,
+   "answered": 624,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "P10",
+   "prompts": 64,
+   "answered": 64,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "P12",
+   "prompts": 264,
+   "answered": 264,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "P2",
+   "prompts": 136,
+   "answered": 136,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "P3",
+   "prompts": 264,
+   "answered": 264,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "P5",
+   "prompts": 32,
+   "answered": 32,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "P6",
+   "prompts": 208,
+   "answered": 208,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "P7",
+   "prompts": 200,
+   "answered": 200,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "P8",
+   "prompts": 160,
+   "answered": 160,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "P_ALL",
+   "prompts": 424,
+   "answered": 424,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "original",
+   "prompts": 640,
+   "answered": 640,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "1",
+   "prompts": 192,
+   "answered": 192,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "10",
+   "prompts": 64,
+   "answered": 64,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "11",
+   "prompts": 240,
+   "answered": 240,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "12",
+   "prompts": 400,
+   "answered": 400,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "13",
+   "prompts": 336,
+   "answered": 336,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "14",
+   "prompts": 56,
+   "answered": 56,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "2",
+   "prompts": 216,
+   "answered": 216,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "3",
+   "prompts": 312,
+   "answered": 312,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "5",
+   "prompts": 88,
+   "answered": 88,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "6",
+   "prompts": 288,
+   "answered": 288,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "7",
+   "prompts": 240,
+   "answered": 240,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "8",
+   "prompts": 200,
+   "answered": 200,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "9",
+   "prompts": 432,
+   "answered": 432,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "ALL",
+   "prompts": 624,
+   "answered": 624,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "P10",
+   "prompts": 64,
+   "answered": 64,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "P12",
+   "prompts": 264,
+   "answered": 264,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "P2",
+   "prompts": 136,
+   "answered": 136,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "P3",
+   "prompts": 264,
+   "answered": 264,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "P5",
+   "prompts": 32,
+   "answered": 32,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "P6",
+   "prompts": 208,
+   "answered": 208,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "P7",
+   "prompts": 200,
+   "answered": 200,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "P8",
+   "prompts": 160,
+   "answered": 160,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "P_ALL",
+   "prompts": 424,
+   "answered": 424,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "original",
+   "prompts": 640,
+   "answered": 640,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "gemma-4-12b",
+   "arm": "11",
+   "prompts": 144,
+   "answered": 144,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "gemma-4-12b",
+   "arm": "12",
+   "prompts": 112,
+   "answered": 112,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "gemma-4-12b",
+   "arm": "5",
+   "prompts": 24,
+   "answered": 24,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "gemma-4-12b",
+   "arm": "6",
+   "prompts": 208,
+   "answered": 208,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "gemma-4-12b",
+   "arm": "7",
+   "prompts": 240,
+   "answered": 240,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "gemma-4-12b",
+   "arm": "9",
+   "prompts": 416,
+   "answered": 416,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "gemma-4-12b",
+   "arm": "ALL",
+   "prompts": 464,
+   "answered": 464,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "gemma-4-12b",
+   "arm": "P12",
+   "prompts": 96,
+   "answered": 96,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "gemma-4-12b",
+   "arm": "P5",
+   "prompts": 16,
+   "answered": 16,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "gemma-4-12b",
+   "arm": "P6",
+   "prompts": 144,
+   "answered": 144,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "gemma-4-12b",
+   "arm": "P7",
+   "prompts": 232,
+   "answered": 232,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "gemma-4-12b",
+   "arm": "P_ALL",
+   "prompts": 256,
+   "answered": 256,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "gemma-4-12b",
+   "arm": "original",
+   "prompts": 480,
+   "answered": 480,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "qwen3.8-27b",
+   "arm": "11",
+   "prompts": 144,
+   "answered": 144,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "qwen3.8-27b",
+   "arm": "12",
+   "prompts": 112,
+   "answered": 112,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "qwen3.8-27b",
+   "arm": "5",
+   "prompts": 24,
+   "answered": 24,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "qwen3.8-27b",
+   "arm": "6",
+   "prompts": 208,
+   "answered": 208,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "qwen3.8-27b",
+   "arm": "7",
+   "prompts": 240,
+   "answered": 240,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "qwen3.8-27b",
+   "arm": "9",
+   "prompts": 416,
+   "answered": 416,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "qwen3.8-27b",
+   "arm": "ALL",
+   "prompts": 464,
+   "answered": 464,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "qwen3.8-27b",
+   "arm": "P12",
+   "prompts": 96,
+   "answered": 96,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "qwen3.8-27b",
+   "arm": "P5",
+   "prompts": 16,
+   "answered": 16,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "qwen3.8-27b",
+   "arm": "P6",
+   "prompts": 144,
+   "answered": 144,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "qwen3.8-27b",
+   "arm": "P7",
+   "prompts": 232,
+   "answered": 232,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "qwen3.8-27b",
+   "arm": "P_ALL",
+   "prompts": 256,
+   "answered": 256,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "qwen3.8-27b",
+   "arm": "original",
+   "prompts": 480,
+   "answered": 480,
+   "missing": 0
+  }
+ ]
+}

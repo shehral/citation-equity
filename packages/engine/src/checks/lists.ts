@@ -9,9 +9,14 @@
 // opener such as "For example," is not an item), and an advisory anchored on
 // that paragraph.
 
+import { unscoredNote } from '../e1';
+import { EVIDENCE } from '../evidence';
 import { countWords, type Sentence } from '../text';
 import { isProse, issueCollector } from './structure-issues';
 import { type CheckFn, notApplicable } from './types';
+
+/** Lists is an unscored note (E1 found no effect larger than δ); its suggestions say so. */
+const NOTE = unscoredNote(EVIDENCE.lists.e1);
 
 const MIN_WORDS = 300;
 const MIN_ITEMS = 3;
@@ -76,8 +81,7 @@ export const check: CheckFn = (a) => {
       range: p.range,
       message: 'This paragraph runs three or more items together in a sentence.',
       title: 'Turn this enumeration into a list',
-      rationale:
-        'Steps, options and causes written as a bulleted or numbered list are easier to scan, and each item can be quoted on its own.',
+      rationale: `Steps, options and causes written as a bulleted or numbered list are easier to scan, and each item can be quoted on its own. ${NOTE}`,
     });
   }
   if (enumerating.length > 0) return result(0.5);
@@ -93,8 +97,7 @@ export const check: CheckFn = (a) => {
       range: longest.range,
       message: `The draft has ${a.wordCount} words and no list of ${MIN_ITEMS} or more items.`,
       title: 'Look for steps or options to list',
-      rationale:
-        'This is the longest paragraph in a draft without a list. If it walks through steps, options or causes, a bulleted or numbered list makes them easier to scan.',
+      rationale: `This is the longest paragraph in a draft without a list. If it walks through steps, options or causes, a bulleted or numbered list makes them easier to scan. ${NOTE}`,
     });
   }
   return result(0);

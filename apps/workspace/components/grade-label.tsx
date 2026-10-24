@@ -1,7 +1,20 @@
-import type { CheckId, EvidenceGrade } from '@citation-equity/engine';
+import {
+  type CheckId,
+  E1_MODELS,
+  EVIDENCE,
+  type EvidenceGrade,
+  formatE1,
+  UNSCORED_CHECKS,
+} from '@citation-equity/engine';
 import Link from 'next/link';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CHECK_GRADE_MEANING, GRADE_MEANING, GRADE_WORDS } from '@/lib/glossary';
+import {
+  CHECK_GRADE_MEANING,
+  E1_WORDS,
+  GRADE_MEANING,
+  GRADE_WORDS,
+  UNSCORED_NOTES,
+} from '@/lib/glossary';
 import { cn } from '@/lib/utils';
 import { RESEARCH_HREF } from '@/lib/views';
 
@@ -31,6 +44,20 @@ function Pips({ grade }: { grade: EvidenceGrade }) {
         />
       ))}
     </span>
+  );
+}
+
+/** What our own test found for the check: plain words, with the numbers for a measured check. */
+function OwnTest({ checkId }: { checkId: CheckId }) {
+  const { e1 } = EVIDENCE[checkId];
+  return (
+    <>
+      <p>
+        <span className="font-medium">{E1_WORDS[e1.label]}.</span>
+        {e1.label === 'helps' && ` ${formatE1(e1)}; ${E1_MODELS}.`}
+      </p>
+      {UNSCORED_CHECKS.includes(checkId) && <p>{UNSCORED_NOTES[checkId]}</p>}
+    </>
   );
 }
 
@@ -82,6 +109,7 @@ export function GradeLabel({
           <span className="font-medium">{word}.</span>{' '}
           {CHECK_GRADE_MEANING[checkId] ?? GRADE_MEANING[grade]}
         </p>
+        <OwnTest checkId={checkId} />
         <Link
           href={`${RESEARCH_HREF}#check-${checkId}`}
           prefetch={false}

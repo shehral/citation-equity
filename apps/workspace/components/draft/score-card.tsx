@@ -1,9 +1,10 @@
 'use client';
 
-import type { AnalysisResult } from '@citation-equity/engine';
+import { type AnalysisResult, UNSCORED_CHECKS } from '@citation-equity/engine';
 import Link from 'next/link';
 import { useId } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { UNSCORED_NOTES } from '@/lib/glossary';
 import type { ActivePreset } from '@/lib/use-analysis';
 import { cn } from '@/lib/utils';
 import { RESEARCH_HREF } from '@/lib/views';
@@ -127,6 +128,9 @@ export function ScoreCard({
               No check is proven to raise AI citations yet. The score shows how clearly the post is
               written for quoting.
             </p>
+            {UNSCORED_CHECKS.map((id) => (
+              <p key={id}>{UNSCORED_NOTES[id]}</p>
+            ))}
             <Link
               href={RESEARCH_HREF}
               prefetch={false}

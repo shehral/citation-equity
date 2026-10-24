@@ -6,6 +6,7 @@ import {
   type AnalysisResult,
   analyze,
   CHECK_DEFINITIONS,
+  E1_DELTA,
   generateQuestions,
   parseDraft,
   READINESS_NOTE,
@@ -434,6 +435,12 @@ function formatAnalysis(result: AnalysisResult, format: 'markdown' | 'html' = 'm
     const score = c.applicable ? String(Math.round(c.score * 100)) : 'n/a';
     lines.push(
       `${c.checkId.padEnd(idWidth)}  ${(def?.evidence.grade ?? '').padEnd(8)}  ${score.padStart(5)}  ${def?.title ?? ''}`,
+    );
+  }
+  const unscored = CHECK_DEFINITIONS.filter((d) => !d.scored).map((d) => d.id);
+  if (unscored.length > 0) {
+    lines.push(
+      `Not scored: ${unscored.join(', ')} (our own test, E1, found no effect larger than ${E1_DELTA}).`,
     );
   }
   const suggestions = result.checks.flatMap((c) => c.suggestions);

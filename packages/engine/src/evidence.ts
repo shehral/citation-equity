@@ -1,8 +1,16 @@
-import type { CheckId, Evidence, SourceRef } from './types';
+import { E1_RESULTS } from './e1';
+import {
+  CHECK_IDS,
+  type CheckEvidence,
+  type CheckId,
+  type Evidence,
+  type SourceRef,
+} from './types';
 
 // Evidence review of 2026-10-23. Every source below was opened and read; the
 // research log with quotes is docs/research/evidence-notes.md and the public
-// reading is docs/evidence.md. Grades: strong, moderate, mixed, untested.
+// reading is docs/evidence.md. Grades: strong, moderate, mixed, untested. Each check also
+// carries its outcome in the project's own test, E1 (src/e1.ts); E1 does not change a grade.
 
 type Work = Omit<SourceRef, 'claim'>;
 
@@ -75,8 +83,8 @@ const STRUCTURE_SURVEY = cite(
   'The survey rates document structure as "moderate and heterogeneous" support with distinct effects at each pipeline stage, rates formatting alone as generalizing poorly, and advises testing headings, tables and fields "without assuming the direction of effect".',
 );
 
-/** Evidence behind each check, keyed in CHECK_IDS order. */
-export const EVIDENCE: Record<CheckId, Evidence> = {
+/** The literature review behind each check, keyed in CHECK_IDS order. */
+const REVIEW: Record<CheckId, Evidence> = {
   'standalone-paragraphs': {
     grade: 'untested',
     summary:
@@ -268,3 +276,8 @@ export const EVIDENCE: Record<CheckId, Evidence> = {
     ],
   },
 };
+
+/** Evidence behind each check, keyed in CHECK_IDS order: the review, plus the check's E1 outcome. */
+export const EVIDENCE: Record<CheckId, CheckEvidence> = Object.fromEntries(
+  CHECK_IDS.map((id) => [id, { ...REVIEW[id], e1: E1_RESULTS[id] }]),
+) as Record<CheckId, CheckEvidence>;

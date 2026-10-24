@@ -1,7 +1,13 @@
 'use client';
 
-import { type CheckId, type CheckResult, EVIDENCE, type Weights } from '@citation-equity/engine';
-import { CHECK_NAMES, GRADE_WORDS } from '@/lib/glossary';
+import {
+  type CheckId,
+  type CheckResult,
+  EVIDENCE,
+  UNSCORED_CHECKS,
+  type Weights,
+} from '@citation-equity/engine';
+import { CHECK_NAMES, E1_WORDS, GRADE_WORDS, UNSCORED_NOTES } from '@/lib/glossary';
 
 interface AllChecksProps {
   checks: CheckResult[];
@@ -11,7 +17,11 @@ interface AllChecksProps {
   onWeightChange(id: CheckId, value: number): void;
 }
 
-/** "All 10 checks": each check's bar and percent, its grade, and the weights behind Adjust weights. */
+/**
+ * "All 10 checks": each check's bar and percent, its grade and own-test result, and the weights
+ * behind Adjust weights. An unscored note (weight 0 by default) still shows its bar, marked
+ * "Not scored" with the reason under the list, until a custom weight includes it.
+ */
 export function AllChecks({
   checks,
   weights,
@@ -19,18 +29,21 @@ export function AllChecks({
   onShowWeights,
   onWeightChange,
 }: AllChecksProps) {
+  const notes = UNSCORED_CHECKS.filter((id) => weights[id] === 0);
   return (
     <>
       <ul className="space-y-2.5">
         {checks.map((check) => {
           const percent = Math.round(check.score * 100);
+          const unscored = notes.includes(check.checkId);
           return (
             <li key={check.checkId} className="space-y-1.5">
               <div className="grid grid-cols-[minmax(0,1fr)_4.5rem_2.5rem] items-center gap-2.5">
                 <span className="min-w-0">
                   {CHECK_NAMES[check.checkId]}
                   <span className="block text-ink-soft text-xs">
-                    {GRADE_WORDS[EVIDENCE[check.checkId].grade]}
+                    {`${GRADE_WORDS[EVIDENCE[check.checkId].grade]} · ${E1_WORDS[EVIDENCE[check.checkId].e1.label]}`}
+                    {unscored && ' · Not scored'}
                     {detail(check)}
                   </span>
                 </span>
@@ -66,6 +79,11 @@ export function AllChecks({
           );
         })}
       </ul>
+      {notes.map((id) => (
+        <p key={id} className="text-ink-soft text-xs">
+          {UNSCORED_NOTES[id]}
+        </p>
+      ))}
       <button
         type="button"
         aria-expanded={showWeights}

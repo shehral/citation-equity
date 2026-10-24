@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ScoreCard } from '@/components/draft/score-card';
+import { UNSCORED_NOTES } from '@/lib/glossary';
 
 afterEach(cleanup);
 
@@ -39,6 +40,8 @@ describe('ScoreCard', () => {
     expect(pop.getByRole('link', { name: 'See the research' }).getAttribute('href')).toMatch(
       /^\/research\/?$/,
     );
+    // The score explanation says plainly which check is not scored, and why.
+    expect(pop.getByText(UNSCORED_NOTES.lists ?? 'missing')).toBeTruthy();
   });
 
   it('switches scoring and opens Adjust weights from the Scoring popover', async () => {

@@ -45,6 +45,18 @@ describe('lists', () => {
     expect(r.findings).toHaveLength(1);
   });
 
+  it('still suggests, and says every suggestion is not scored and why', () => {
+    const note =
+      'Not scored in Standard or By evidence: our own test (E1) found no effect larger than 0.03 (d -0.007, 90% CI [-0.027, +0.013], n 33).';
+    const enumerating = run(
+      withParagraph('Bitter shots usually come from a fine grind, a high dose, or hot water.'),
+    );
+    for (const r of [run(fail), enumerating]) {
+      expect(r.suggestions.length).toBeGreaterThan(0);
+      for (const s of r.suggestions) expect(s.rationale).toContain(note);
+    }
+  });
+
   it('detects semicolon-separated enumerations', () => {
     const para =
       'Each morning we check the scale for drift; we taste a test shot; we wipe the steam wand.';

@@ -27,7 +27,7 @@ Prof. Akram Bayat's design has three modules. This build maps onto them as follo
 | **B. Automated data pipeline:** nightly queries of a frozen control group and live engines | The citation test bench (a frozen page set, a local model, repeated runs with intervals), a nightly GitHub Actions template (off by default), `ce live` for Gemini, and readers for your own logs and exports. It reports; it never retunes the weights. | `packages/bench`, `ce bench`, `ce live`, `ce signals` |
 | **C. Human-AI interactive workspace:** side-by-side suggestions the author accepts or rejects | The web app: a home dashboard with three tiles (your draft, your site, who gets cited), the draft view with its fixes, the page check, the citation report and the research page. | `apps/workspace` |
 
-Her design names the six original checks (standalone paragraphs, question headings, lists, statistics, tables, expert quotes); the Standard weighting gives them weight 1. The four added checks (cited sources, direct answer first, reader questions answered, explicit comparisons) come from the research literature and weigh 0.5 in Standard. Every threshold and weight is ours.
+Her design names the six original checks (standalone paragraphs, question headings, lists, statistics, tables, expert quotes); the Standard weighting gives them weight 1, except lists, which weighs 0 in both built-in weightings because our own test (E1) found no effect larger than 0.03. The four added checks (cited sources, direct answer first, reader questions answered, explicit comparisons) come from the research literature and weigh 0.5 in Standard. Every threshold and weight is ours.
 
 ## Module A: the engine (`packages/engine`)
 

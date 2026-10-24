@@ -87,6 +87,17 @@ const META: Record<CheckId, CheckMeta> = {
   },
 };
 
+/**
+ * Checks that are unscored notes: E1 found no effect larger than δ, so the pre-registration makes
+ * them weight 0 in every preset. They are still analyzed and still suggest; a custom weight the
+ * author sets still counts them.
+ */
+export const UNSCORED_CHECKS: CheckId[] = CHECK_IDS.filter(
+  (id) => EVIDENCE[id].e1.label === 'no-effect',
+);
+
+const isScored = (id: CheckId) => !UNSCORED_CHECKS.includes(id);
+
 /** Weight of a check in the `evidence` preset, by its evidence grade. */
 export const GRADE_WEIGHTS: Record<EvidenceGrade, number> = {
   strong: 1,
@@ -101,10 +112,11 @@ const presetFrom = (weightOf: (id: CheckId) => number): Weights =>
 /**
  * `foundation`: the foundation design's six checks at equal weight, the four
  * added checks at half weight. `evidence`: each check weighted by its grade.
+ * An unscored check is 0 in both.
  */
 export const PRESET_WEIGHTS: Record<PresetId, Weights> = {
-  foundation: presetFrom((id) => (META[id].inFoundationDesign ? 1 : 0.5)),
-  evidence: presetFrom((id) => GRADE_WEIGHTS[EVIDENCE[id].grade]),
+  foundation: presetFrom((id) => (!isScored(id) ? 0 : META[id].inFoundationDesign ? 1 : 0.5)),
+  evidence: presetFrom((id) => (!isScored(id) ? 0 : GRADE_WEIGHTS[EVIDENCE[id].grade])),
 };
 
 /** The check registry, in CHECK_IDS order. */
@@ -112,6 +124,7 @@ export const CHECK_DEFINITIONS: CheckDefinition[] = CHECK_IDS.map((id) => ({
   id,
   ...META[id],
   evidence: EVIDENCE[id],
+  scored: isScored(id),
   defaultWeights: {
     foundation: PRESET_WEIGHTS.foundation[id],
     evidence: PRESET_WEIGHTS.evidence[id],

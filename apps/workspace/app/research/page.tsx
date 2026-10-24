@@ -1,16 +1,29 @@
 import {
   CHECK_DEFINITIONS,
+  type CheckDefinition,
   type CheckId,
+  E1_MODELS,
   type EvidenceGrade,
+  formatE1,
+  formatE1Effect,
   GRADE_WEIGHTS,
   splitSentences,
+  UNSCORED_CHECKS,
 } from '@citation-equity/engine';
 import type { Metadata } from 'next';
 import { GradeLabel } from '@/components/grade-label';
 import { Markdown } from '@/components/markdown';
 import { PageShell, textLink } from '@/components/page-shell';
 import { checkDetails, REPO_URL, readEvidenceDoc } from '@/lib/evidence-doc';
-import { CHECK_NAMES, GRADE_MEANING, GRADE_WORDS, PLAIN_LEADS } from '@/lib/glossary';
+import {
+  CHECK_NAMES,
+  E1_COMBINED_SENTENCE,
+  E1_WORDS,
+  GRADE_MEANING,
+  GRADE_WORDS,
+  PLAIN_LEADS,
+  UNSCORED_NOTES,
+} from '@/lib/glossary';
 
 export const metadata: Metadata = {
   title: 'Research | Citation Equity',
@@ -46,6 +59,28 @@ function splitSummary(id: CheckId, summary: string): { lead: string; rest: strin
 
 const H2 = 'font-medium font-serif text-2xl';
 
+const E1_RESULTS_URL = `${REPO_URL}/blob/main/experiments/RESULTS_E1.md`;
+
+const summaryClass =
+  'w-fit cursor-pointer rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring';
+
+/** A check's result in our own test (E1): plain words, and the exact numbers on expand. */
+function OwnTest({ def }: { def: CheckDefinition }) {
+  const { e1 } = def.evidence;
+  const words = E1_WORDS[e1.label];
+  return (
+    <details className="mt-3 text-sm">
+      <summary className={summaryClass}>{def.scored ? words : `${words} · Not scored`}</summary>
+      <div className="mt-2 space-y-2 leading-relaxed">
+        <p>{formatE1(e1)}.</p>
+        {e1.replication && <p>Replication: {formatE1Effect(e1.replication)}.</p>}
+        <p className="text-muted-foreground">{E1_MODELS}.</p>
+        {!def.scored && <p>{UNSCORED_NOTES[def.id]}</p>}
+      </div>
+    </details>
+  );
+}
+
 /**
  * The research behind each check: per check one grade and one plain sentence (the engine's
  * summary), with the rest of the summary, what the studies did (docs/evidence.md), the weights
@@ -67,8 +102,13 @@ export default function ResearchPage() {
           : `Short answer: ${STRONG} of ${CHECK_DEFINITIONS.length} checks have strong evidence. Treat the score as a writing checklist.`}
       </p>
       <p className="mt-3 text-muted-foreground leading-relaxed">
-        Each check below shows its grade, what the studies found, and links to them.
+        Each check below shows its grade, what the studies found, what{' '}
+        <a href={E1_RESULTS_URL} target="_blank" rel="noreferrer" className={textLink}>
+          our own test
+        </a>{' '}
+        found, and links to the studies.
       </p>
+      <p className="mt-3 leading-relaxed">{E1_COMBINED_SENTENCE}</p>
       <ul
         aria-label={`Grades of the ${CHECK_DEFINITIONS.length} checks`}
         className="mt-4 flex flex-wrap gap-2"
@@ -102,10 +142,9 @@ export default function ResearchPage() {
                 <GradeLabel grade={def.evidence.grade} />
               </div>
               <p className="mt-2 leading-relaxed">{lead}</p>
+              <OwnTest def={def} />
               <details className="mt-3 text-sm">
-                <summary className="w-fit cursor-pointer rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring">
-                  Studies ({def.evidence.sources.length})
-                </summary>
+                <summary className={summaryClass}>Studies ({def.evidence.sources.length})</summary>
                 <div className="mt-2 leading-relaxed">
                   {rest && <p className="my-3">{rest}</p>}
                   <p className="my-3">
@@ -142,6 +181,12 @@ export default function ResearchPage() {
           A grade describes the research, not your draft. Scoring by evidence uses it as the weight:
           strong {GRADE_WEIGHTS.strong}, moderate {GRADE_WEIGHTS.moderate}, mixed{' '}
           {GRADE_WEIGHTS.mixed}, untested {GRADE_WEIGHTS.untested}.
+          {UNSCORED_CHECKS.map((id) => ` ${UNSCORED_NOTES[id]}`).join('')}
+        </p>
+        <p className="mt-3 leading-relaxed">
+          Our own test applied each check's fix to real pages and asked two local models to answer
+          from four sources. It changes no grade. d is the change in citation score, where a page
+          cited first scores 1 and an uncited page 0.
         </p>
         <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm">
           {GRADES.map((g) => (

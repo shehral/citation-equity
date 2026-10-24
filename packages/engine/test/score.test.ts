@@ -8,6 +8,7 @@ import {
   GRADE_WEIGHTS,
   PRESET_WEIGHTS,
   scoreChecks,
+  UNSCORED_CHECKS,
   type Weights,
 } from '../src/index';
 
@@ -54,11 +55,11 @@ describe('scoreChecks', () => {
 });
 
 describe('presets and registry', () => {
-  it('weights the six foundation-design checks at 1 and the four added checks at 0.5', () => {
+  it('weights the foundation-design checks at 1, the four added checks at 0.5, lists at 0', () => {
     expect(PRESET_WEIGHTS.foundation).toEqual({
       'standalone-paragraphs': 1,
       'question-headings': 1,
-      lists: 1,
+      lists: 0,
       statistics: 1,
       tables: 1,
       'expert-quotes': 1,
@@ -71,11 +72,36 @@ describe('presets and registry', () => {
     expect(PRESET_WEIGHTS.foundation['cited-sources']).toBe(0.5);
   });
 
-  it('derives the evidence preset from each check grade', () => {
+  it('derives the evidence preset from each check grade, unscored checks at 0', () => {
     expect(GRADE_WEIGHTS).toEqual({ strong: 1, moderate: 0.7, mixed: 0.25, untested: 0.15 });
     for (const id of CHECK_IDS) {
-      expect(PRESET_WEIGHTS.evidence[id]).toBe(GRADE_WEIGHTS[EVIDENCE[id].grade]);
+      const expected = UNSCORED_CHECKS.includes(id) ? 0 : GRADE_WEIGHTS[EVIDENCE[id].grade];
+      expect(PRESET_WEIGHTS.evidence[id], id).toBe(expected);
     }
+  });
+
+  it('makes lists an unscored note: weight 0 in both presets, as E1 found no effect larger than δ', () => {
+    expect(UNSCORED_CHECKS).toEqual(['lists']);
+    expect(EVIDENCE.lists.e1.label).toBe('no-effect');
+    expect(PRESET_WEIGHTS.foundation.lists).toBe(0);
+    expect(PRESET_WEIGHTS.evidence.lists).toBe(0);
+    for (const d of CHECK_DEFINITIONS) expect(d.scored, d.id).toBe(d.id !== 'lists');
+  });
+
+  it('leaves an unscored check out of each preset score, renormalizing over the other weights', () => {
+    const others = [result('tables', 1), result('statistics', 0.5), result('comparisons', 0)];
+    for (const preset of ['foundation', 'evidence'] as const) {
+      const w = PRESET_WEIGHTS[preset];
+      const without = scoreChecks(others, w);
+      expect(scoreChecks([...others, result('lists', 0)], w), preset).toBe(without);
+      expect(scoreChecks([...others, result('lists', 1)], w), preset).toBe(without);
+    }
+    // Only lists applies: no weight left, so no score (as for any all-zero weighting).
+    expect(scoreChecks([result('lists', 1)], PRESET_WEIGHTS.foundation)).toBeNull();
+    // A custom weight on lists still counts it.
+    expect(
+      scoreChecks([result('lists', 1), result('tables', 0)], weights({ lists: 1, tables: 1 })),
+    ).toBe(50);
   });
 
   it('defines every check in CHECK_IDS order with complete metadata', () => {
@@ -90,7 +116,7 @@ describe('presets and registry', () => {
         foundation: PRESET_WEIGHTS.foundation[d.id],
         evidence: PRESET_WEIGHTS.evidence[d.id],
       });
-      expect(d.inFoundationDesign).toBe(PRESET_WEIGHTS.foundation[d.id] === 1);
+      if (d.scored) expect(d.inFoundationDesign).toBe(PRESET_WEIGHTS.foundation[d.id] === 1);
     }
     expect(CHECK_DEFINITIONS.filter((d) => d.inFoundationDesign).map((d) => d.id)).toEqual([
       'standalone-paragraphs',

@@ -31,7 +31,9 @@ describe('analyze scores', () => {
       'lists',
       'tables',
     ]);
-    expect(result.scores.foundation).toBe(50);
+    // Lists is an unscored note (weight 0 in both presets), so only tables counts.
+    expect(result.scores.foundation).toBe(0);
+    expect(result.scores.evidence).toBe(0);
     expect(result.scores.evidence).toBe(scoreChecks(result.checks, PRESET_WEIGHTS.evidence));
     expect(result.scores.custom).toBeNull();
   });

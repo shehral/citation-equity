@@ -46,6 +46,10 @@ describe('question-coverage', () => {
     expect(slice(espresso, s?.range ?? { start: 0, end: 0 })).toBe(s?.before);
     expect(s?.rationale).toContain('What Gets Cited');
     expect(s?.rationale).toContain(`Evidence grade: ${EVIDENCE['question-coverage'].grade}.`);
+    // The measured E1 label: effect, interval and models.
+    expect(s?.rationale).toContain(
+      'Measured in our own test (E1): helps, possibly through length or query-term overlap (d +0.027, 95% CI [+0.010, +0.043], n 54, Holm p 0.006; Gemma-4-12B and Qwen3.8-27B judges, Gemma-edited).',
+    );
     expect(r.findings).toHaveLength(1);
     expect(r.findings[0]?.range).toEqual(s?.range);
   });

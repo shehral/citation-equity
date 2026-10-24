@@ -18,13 +18,14 @@ The score is a writing checklist, not a forecast; the test uses a small local mo
 
 ## How the score works
 
-- Ten checks, each scored 0 to 1, averaged into an AI-ready score from 0 to 100.
+- Ten checks, each scored 0 to 1; nine are averaged into an AI-ready score from 0 to 100. Lists is reported but not scored, because our own test found no effect.
 - Two weightings, Standard and By evidence (each check weighted by its research grade), both adjustable.
 - Four evidence grades: strong, moderate, mixed, untested. No check is graded strong yet; see [docs/evidence.md](docs/evidence.md).
+- Lists is a note, not scored: our own test found no effect larger than 0.03 ([experiments/RESULTS_E1.md](experiments/RESULTS_E1.md)).
 
 ## What the test found
 
-The edited sample drafts scored much higher on the checks, 35 to 73 (espresso) and 45 to 76 (RAG), but a small local model did not cite them measurably more. Details and the larger-model follow-up: [samples/README.md](samples/README.md) and [experiments/README.md](experiments/README.md).
+The edited sample drafts scored much higher on the checks, 32 to 69 (espresso) and 44 to 72 (RAG), but a small local model did not cite them measurably more. Details and the larger-model follow-up: [samples/README.md](samples/README.md) and [experiments/README.md](experiments/README.md).
 
 ## Quick start
 

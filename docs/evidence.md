@@ -33,6 +33,25 @@ Rules we followed:
 
 No check is graded strong or moderate today. Eight are mixed and two are untested.
 
+## Our own test (E1)
+
+E1 is this project's pre-registered test of the checks ([experiments/PREREG_E1.md](../experiments/PREREG_E1.md), results in [experiments/RESULTS_E1.md](../experiments/RESULTS_E1.md)). Each check's fix was applied to real pages, and two local models (Gemma-4-12B and Qwen3.8-27B judges, Gemma-edited) answered each query from a fixed set of four sources. d is the change in citation score, where a page cited first scores 1 and an uncited page 0, against a paraphrase of the same passages (or the original page where the plan says so). Labels below are for the main set's primary contrast. E1 changes no grade.
+
+| Check | E1 label | d and interval | What the tool does |
+|---|---|---|---|
+| `standalone-paragraphs` | descriptive, no verdict by design | d +0.007, 95% CI [-0.008, +0.023], n 24 | Grade kept, E1 shown |
+| `question-headings` | insufficient n | d -0.015, 95% CI [-0.031, +0.000], n 17 | Grade kept, E1 shown |
+| `lists` | no effect larger than 0.03 | d -0.007, 90% CI [-0.027, +0.013], n 33 | Not scored: weight 0 in both presets; still reported and still suggests |
+| `tables` | not run (no valid edit) | none | Grade kept |
+| `statistics` | insufficient n | d +0.023, 95% CI [-0.020, +0.062], n 4 | Grade kept, E1 shown |
+| `expert-quotes` | insufficient n | d +0.029, 95% CI [-0.008, +0.075], n 26 | Grade kept, E1 shown |
+| `cited-sources` | insufficient n | d -0.013, 95% CI [-0.038, +0.009], n 25 | Grade kept, E1 shown |
+| `direct-answer-lead` | insufficient n | d +0.008, 95% CI [-0.016, +0.030], n 20 | Grade kept, E1 shown |
+| `question-coverage` | helps, possibly through length or query-term overlap | d +0.027, 95% CI [+0.010, +0.043], n 54, Holm p 0.006; replication d +0.036, 95% CI [+0.016, +0.059], n 52 | Weight kept; the measured label is shown on the check and its suggestions |
+| `comparisons` | insufficient n | d +0.004, 95% CI [-0.016, +0.027], n 8 | Grade kept, E1 shown |
+
+Applying every applicable fix together raised the citation score by +0.049 (95% CI [+0.024, +0.076], n 78) against the original page and by +0.071 against a paraphrase of the same passages, possibly through length or query-term overlap. A candidate check for query wording (working the query's missing key terms into the title, the first heading and the first paragraph) also helped, by d +0.035 against its paraphrase (Holm p 0.037), possibly through query-term overlap; it is proposed in the [roadmap](roadmap.md), not added. These are local models in a fixed context of four sources, not ChatGPT, Perplexity or Google.
+
 ## The studies
 
 | Study | Setting | What was measured |
@@ -462,4 +481,4 @@ Medium, a blogging platform, is in Google AI Overviews' top ten in Profound's da
 
 ## Keeping this current
 
-The registry behind this page lives in `packages/engine/src/evidence.ts` (checks), `packages/engine/src/readiness.ts` (site readiness) and `packages/engine/src/offpage.ts` (off-page). When a new study changes a grade, update the registry, this page and the notes together; the engine tests check that every graded check has a linked source and that this page states the same grade as the registry.
+The registry behind this page lives in `packages/engine/src/evidence.ts` (checks, with their E1 outcomes from `packages/engine/src/e1.ts`), `packages/engine/src/readiness.ts` (site readiness) and `packages/engine/src/offpage.ts` (off-page). When a new study changes a grade, update the registry, this page and the notes together; the engine tests check that every graded check has a linked source and that this page states the same grade as the registry.

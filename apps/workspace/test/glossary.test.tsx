@@ -1,10 +1,10 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { CHECK_IDS, EVIDENCE } from '@citation-equity/engine';
+import { CHECK_IDS, E1_MODELS, EVIDENCE, formatE1 } from '@citation-equity/engine';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { GradeLabel } from '@/components/grade-label';
-import { CHECK_NAMES, GRADE_MEANING, GRADE_WORDS } from '@/lib/glossary';
+import { CHECK_NAMES, E1_WORDS, GRADE_MEANING, GRADE_WORDS, UNSCORED_NOTES } from '@/lib/glossary';
 
 // One grade label and one plain-name glossary for the draft groups, the site rows,
 // /cited and /research, so a grade or a check reads the same everywhere.
@@ -79,5 +79,20 @@ describe('GradeLabel', () => {
     expect(within(pop).getByRole('link', { name: 'See the studies' }).getAttribute('href')).toMatch(
       new RegExp(`/research/?#check-${id}$`),
     );
+  });
+
+  it('with a check, says what our own test found, with numbers for a measured check', async () => {
+    for (const id of CHECK_IDS) {
+      const { unmount } = render(<GradeLabel grade={EVIDENCE[id].grade} checkId={id} />);
+      fireEvent.click(screen.getByRole('button', { name: GRADE_WORDS[EVIDENCE[id].grade] }));
+      const pop = await screen.findByRole('dialog');
+      expect(pop.textContent, id).toContain(E1_WORDS[EVIDENCE[id].e1.label]);
+      if (EVIDENCE[id].e1.label === 'helps') {
+        expect(pop.textContent, id).toContain(formatE1(EVIDENCE[id].e1));
+        expect(pop.textContent, id).toContain(E1_MODELS);
+      }
+      if (id === 'lists') expect(pop.textContent).toContain(UNSCORED_NOTES.lists ?? 'missing');
+      unmount();
+    }
   });
 });

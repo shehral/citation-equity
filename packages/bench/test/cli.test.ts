@@ -88,6 +88,10 @@ describe('ce analyze', () => {
     for (const id of CHECK_IDS)
       expect(stdout).toMatch(new RegExp(`^${id} .*(strong|moderate|mixed|untested)`, 'm'));
     expect(stdout).toMatch(/^Suggestions/m);
+    // An unscored note is still a row, and the output says why it is not scored.
+    expect(stdout).toContain(
+      'Not scored: lists (our own test, E1, found no effect larger than 0.03).',
+    );
   });
 
   it('locates each suggestion: its line, the text it is about, and the finding behind it', async () => {

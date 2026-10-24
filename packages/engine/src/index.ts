@@ -3,6 +3,18 @@ export { type BingAiSignals, parseBingAiPerformanceCsv } from './bing-ai';
 export { CHECKS } from './checks/index';
 export { type QuestionCoverage, questionCoverage } from './checks/question-coverage';
 export type { CheckContext, CheckFn } from './checks/types';
+export {
+  E1_COMBINED,
+  E1_DELTA,
+  E1_LABEL_TEXT,
+  E1_MODELS,
+  E1_RESULTS,
+  formatE1,
+  formatE1Effect,
+  measuredNote,
+  signed3,
+  unscoredNote,
+} from './e1';
 export { EVIDENCE } from './evidence';
 export type {
   Artifacts,
@@ -59,7 +71,7 @@ export {
   type ReadinessResult,
   type ReadinessStatus,
 } from './readiness';
-export { CHECK_DEFINITIONS, GRADE_WEIGHTS, PRESET_WEIGHTS } from './registry';
+export { CHECK_DEFINITIONS, GRADE_WEIGHTS, PRESET_WEIGHTS, UNSCORED_CHECKS } from './registry';
 export {
   RENDER_PASS_WORDS,
   RENDER_WARN_WORDS,

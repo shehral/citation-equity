@@ -1,3 +1,4 @@
+import { measuredNote } from '../e1';
 import { EVIDENCE } from '../evidence';
 import type { Artifacts, Heading } from '../gather';
 import { countWords, type Sentence, suggestionId } from '../text';
@@ -124,7 +125,7 @@ function problem(target: Target, terms: Set<string>): string | null {
   return null;
 }
 
-const RATIONALE = `Answer engines lean on pages that address the question directly: in controlled tests, edits that made a page more relevant to the question raised how often models used it (ConflictingQA, SAGEO Arena), but pages missing the question's terms lost the first citation reliably in only four of six models (What Gets Cited). Open the section that covers this question, or add one, with one plain sentence of ${MIN_WORDS} to ${MAX_WORDS} words that answers it in the question's own words, and state only what is true. Evidence grade: ${EVIDENCE['question-coverage'].grade}.`;
+const RATIONALE = `Answer engines lean on pages that address the question directly: in controlled tests, edits that made a page more relevant to the question raised how often models used it (ConflictingQA, SAGEO Arena), but pages missing the question's terms lost the first citation reliably in only four of six models (What Gets Cited). Open the section that covers this question, or add one, with one plain sentence of ${MIN_WORDS} to ${MAX_WORDS} words that answers it in the question's own words, and state only what is true. ${measuredNote(EVIDENCE['question-coverage'].e1)} Evidence grade: ${EVIDENCE['question-coverage'].grade}.`;
 
 /** One target question: whether the draft answers it, and the text to show for it. */
 export interface QuestionCoverage {

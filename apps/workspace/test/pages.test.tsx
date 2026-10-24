@@ -1,11 +1,25 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { CHECK_DEFINITIONS, CHECK_IDS, splitSentences } from '@citation-equity/engine';
+import {
+  CHECK_DEFINITIONS,
+  CHECK_IDS,
+  E1_COMBINED,
+  E1_MODELS,
+  formatE1,
+  formatE1Effect,
+  splitSentences,
+} from '@citation-equity/engine';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import ResearchPage from '@/app/research/page';
 import { checkDetails, REPO_URL, readEvidenceDoc } from '@/lib/evidence-doc';
-import { CHECK_NAMES, PLAIN_LEADS } from '@/lib/glossary';
+import {
+  CHECK_NAMES,
+  E1_COMBINED_SENTENCE,
+  E1_WORDS,
+  PLAIN_LEADS,
+  UNSCORED_NOTES,
+} from '@/lib/glossary';
 
 afterEach(cleanup);
 
@@ -50,7 +64,9 @@ describe('/research', () => {
     render(<ResearchPage />);
     for (const def of CHECK_DEFINITIONS) {
       const section = screen.getByRole('region', { name: CHECK_NAMES[def.id] });
-      const details = section.querySelector('details');
+      const details = [...section.querySelectorAll('details')].find((d) =>
+        d.querySelector('summary')?.textContent?.startsWith('Studies'),
+      );
       expect(details?.open).toBe(false);
       expect(details?.querySelector('summary')?.textContent).toBe(
         `Studies (${def.evidence.sources.length})`,
@@ -69,6 +85,54 @@ describe('/research', () => {
       // What the studies did, from docs/evidence.md.
       expect(inside.textContent).toContain('What the studies did.');
     }
+  });
+
+  it("words E1's outcomes in plain words", () => {
+    expect(E1_WORDS).toEqual({
+      helps: 'Tested: helped a little, maybe through wording overlap',
+      'no-effect': 'Tested: no clear effect',
+      'insufficient-n': 'Tested: too few pages',
+      'not-run': 'Tested: no edit passed our checks',
+      descriptive: 'Tested: no verdict by design',
+    });
+    expect(UNSCORED_NOTES.lists).toBe(
+      'Lists count only if you give them a weight, because a test found no effect larger than 0.03.',
+    );
+  });
+
+  it("shows each check's own-test result in plain words, with the exact numbers on expand", () => {
+    render(<ResearchPage />);
+    for (const def of CHECK_DEFINITIONS) {
+      const section = screen.getByRole('region', { name: CHECK_NAMES[def.id] });
+      const e1 = [...section.querySelectorAll('details')].find((d) =>
+        d.querySelector('summary')?.textContent?.startsWith('Tested'),
+      );
+      expect(e1, def.id).toBeDefined();
+      expect(e1?.open).toBe(false);
+      const summary = e1?.querySelector('summary')?.textContent;
+      const words = E1_WORDS[def.evidence.e1.label];
+      expect(summary, def.id).toBe(def.scored ? words : `${words} · Not scored`);
+      const inside = e1?.textContent ?? '';
+      expect(inside, def.id).toContain(`${formatE1(def.evidence.e1)}.`);
+      expect(inside, def.id).toContain(E1_MODELS);
+      const rep = def.evidence.e1.replication;
+      if (rep) expect(inside, def.id).toContain(`Replication: ${formatE1Effect(rep)}.`);
+      if (!def.scored) expect(inside, def.id).toContain(UNSCORED_NOTES[def.id] ?? 'missing note');
+      // The grade is unchanged next to it.
+      expect(within(section).getAllByText(GRADE_WORD[def.evidence.grade])).toHaveLength(1);
+    }
+  });
+
+  it('states the combined result of applying every fix once, in one sentence', () => {
+    expect(E1_COMBINED_SENTENCE).toBe(
+      'In our own test, applying every fix together raised the citation score by +0.049 (95% CI [+0.024, +0.076], n 78) over the original page and by +0.071 over a paraphrase of the same passages, possibly through length or query-term overlap.',
+    );
+    expect(E1_COMBINED.vsOriginal.n).toBe(78);
+    render(<ResearchPage />);
+    const text = document.body.textContent ?? '';
+    expect(text.split(E1_COMBINED_SENTENCE)).toHaveLength(2);
+    const results = screen.getByRole('link', { name: 'our own test' });
+    expect(results.getAttribute('href')).toBe(`${REPO_URL}/blob/main/experiments/RESULTS_E1.md`);
   });
 
   it('ends with one short method and limits section', () => {

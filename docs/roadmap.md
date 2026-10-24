@@ -9,6 +9,7 @@ What comes next, roughly in order. Nothing here is promised by a date.
 - **A WYSIWYG editor.** Milkdown or MDXEditor in place of the Markdown source editor, keeping suggestion anchors exact (the reason the first build edits the source).
 - **Chunk-level retrieval.** The bench retrieves whole documents today. Splitting pages into passages, as most answer engines do, would test whether a single paragraph of the draft can win on its own.
 - **A user study.** Whether suggest-never-rewrite, compared with automatic rewriting, changes authors' sense of control, trust and the quality of their pages. It needs IRB approval first; the workspace logs nothing about its users until then.
+- **A proposed check: query wording.** Our own test (E1) found that working the query's missing key terms into the title, the first heading and the first paragraph raised the citation score by d +0.035 against a paraphrase of the same spans (95% CI [+0.008, +0.066], n 33, Holm p 0.037), possibly through query-term overlap, on local models in a fixed context of four sources ([experiments/RESULTS_E1.md](../experiments/RESULTS_E1.md)). It is proposed, not added: a check would need its own rule and a guard against repeating key words for their own sake.
 - **More languages.** The checks, the sentence rules and the question templates are English only.
 
 ## Done (no longer on the roadmap)
