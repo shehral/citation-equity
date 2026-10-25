@@ -6,6 +6,7 @@ import { check as expertQuotes } from './expert-quotes';
 import { check as lists } from './lists';
 import { check as questionCoverage } from './question-coverage';
 import { check as questionHeadings } from './question-headings';
+import { check as readerWords } from './reader-words';
 import { check as standaloneParagraphs } from './standalone-paragraphs';
 import { check as statistics } from './statistics';
 import { check as tables } from './tables';
@@ -23,4 +24,5 @@ export const CHECKS: Record<CheckId, CheckFn> = {
   'direct-answer-lead': directAnswerLead,
   'question-coverage': questionCoverage,
   comparisons,
+  'reader-words': readerWords,
 };

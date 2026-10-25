@@ -1,7 +1,7 @@
 // What a fix card says: one title of 6 words or fewer and one reason of 20
 // words or fewer, action first. The engine's own titles and rationales stay as they are for the
 // CLI and the JSON report; this maps them to the short card copy. The research behind each check
-// lives one click away, on the group's grade label.
+// lives on /research, linked from the group's Learn more.
 
 import type { Suggestion } from '@citation-equity/engine';
 
@@ -130,7 +130,17 @@ export function fixCopy(s: Suggestion, finding = ''): FixCopy {
   if (question) {
     return {
       title: `Answer "${question}" up front`,
-      reason: 'Open the section with one plain sentence (8 to 40 words) that answers it.',
+      reason: 'Answer it in your own words near the top. A heading is fine, not required.',
+    };
+  }
+  const wordsOf = /^Use the words of "(.+)" up top$/.exec(s.title)?.[1];
+  if (wordsOf) {
+    // The engine names at most 3 missing words; the card repeats them and warns against stuffing.
+    const missing = /Missing: ((?:"[^"]+"(?:, )?)+)\./.exec(s.rationale)?.[1];
+    const one = missing !== undefined && !missing.includes(',');
+    return {
+      title: `Use the words of "${wordsOf}"`,
+      reason: `Add ${missing ?? 'its key words'} to your title or opening if ${one ? 'it fits' : 'they fit'}. Never force words in.`,
     };
   }
   const copier = BY_TITLE[s.title];

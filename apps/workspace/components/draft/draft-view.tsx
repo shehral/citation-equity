@@ -8,11 +8,13 @@ import {
   gather,
   groupFixes,
   PRESET_WEIGHTS,
+  pageQuestions,
   parseDraft,
   questionCoverage,
   type Range,
   rankFixes,
   type Suggestion,
+  startHereFixes,
   type Weights,
 } from '@citation-equity/engine';
 import { Laptop, List, ListChecks, PenLine, RotateCcw, Target } from 'lucide-react';
@@ -48,9 +50,10 @@ import {
   sinceStart,
 } from '@/lib/baseline';
 import { classifyBenchError } from '@/lib/bench';
-import { draftKeyFor, START_HERE_COUNT, selectDraftSlot, slotFor } from '@/lib/draft-summary';
+import { draftKeyFor, selectDraftSlot, slotFor } from '@/lib/draft-summary';
 import { fixCopy, STALE_MESSAGE } from '@/lib/fix-copy';
-import { initialQuestions, type WorkspaceQuestion } from '@/lib/questions';
+import { chipFor } from '@/lib/glossary';
+import { authorQuestionTexts, initialQuestions, type WorkspaceQuestion } from '@/lib/questions';
 import {
   exampleLabel,
   MY_DRAFT_LABEL,
@@ -158,7 +161,7 @@ function findingsOf(result: AnalysisResult | null): Record<string, string> {
 
 /**
  * Your draft: the paper editor and the fix rail (score, Start here, all fixes by check, then
- * Reader questions, All 10 checks and Test it, collapsed). The draft changes only when the author
+ * Reader questions, All checks and Test it, collapsed). The draft changes only when the author
  * types, or clicks Apply in one edit's preview (or Undo); there is no bulk action.
  */
 export function DraftView() {
@@ -307,6 +310,7 @@ export function DraftView() {
   }
 
   const questionTexts = useMemo(() => questions.map((q) => q.text), [questions]);
+  const authorTexts = useMemo(() => authorQuestionTexts(questions), [questions]);
   const weights =
     preset === 'custom' ? (customWeights ?? PRESET_WEIGHTS.foundation) : PRESET_WEIGHTS[preset];
   const { result, pending, refresh } = useAnalysis(
@@ -314,6 +318,7 @@ export function DraftView() {
     preset,
     customWeights ?? PRESET_WEIGHTS.foundation,
     questionTexts,
+    authorTexts,
   );
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs once per draft switch; changeMarkdown only sets state
@@ -382,6 +387,16 @@ export function DraftView() {
     setBaseline(next);
   }, [fresh, baseline, result, draftKey]);
 
+  // The questions reader-words measured when the author has none of their own, worked out as
+  // analyze() does, so the panel lists every question its cards can name.
+  const pageQuestionTexts = useMemo(
+    () =>
+      result?.markdown === undefined || authorTexts.length > 0
+        ? []
+        : pageQuestions(result.markdown).map((q) => q.text),
+    [result?.markdown, authorTexts],
+  );
+
   const coverage = useMemo(
     () =>
       result?.markdown === undefined
@@ -425,13 +440,19 @@ export function DraftView() {
       checkId: g.checkId,
       items: [],
       handled: [],
+      chip: chipFor(g.checkId, weights[g.checkId]),
     }));
     const byCheck = new Map(out.map((g) => [g.checkId, g]));
     for (const g of groupFixes(ranked)) byCheck.get(g.checkId)?.items.push(...g.fixes.map(item));
     for (const id of CHECK_IDS) {
       const done = handled.filter((h) => h.suggestion.checkId === id);
       if (done.length === 0) continue;
-      const group = byCheck.get(id) ?? { checkId: id, items: [], handled: [] };
+      const group = byCheck.get(id) ?? {
+        checkId: id,
+        items: [],
+        handled: [],
+        chip: chipFor(id, weights[id]),
+      };
       if (!byCheck.has(id)) {
         byCheck.set(id, group);
         out.push(group);
@@ -441,7 +462,7 @@ export function DraftView() {
     return out;
   })();
 
-  const startHere = ranked.slice(0, START_HERE_COUNT).map(item);
+  const startHere = startHereFixes(ranked).map(item);
   // Next up on the home links here (/draft/#start-here); the list appears after the analysis.
   useScrollToHash(START_HERE_ID, fresh && startHere.length > 0);
 
@@ -501,7 +522,7 @@ export function DraftView() {
   // Its score is always the Standard score, whatever mode is shown, so the home's "+N" compares
   // Standard with Standard.
   const score = result?.scores.foundation ?? null;
-  const openStartHere = Math.min(START_HERE_COUNT, ranked.length);
+  const openStartHere = startHere.length;
   const summaryKey = useRef('');
   useEffect(() => {
     if (!fresh || score === null || baseline === null) return;
@@ -953,6 +974,7 @@ export function DraftView() {
                   markdown={markdown}
                   localModel={localModel}
                   coverage={coverage}
+                  pageQuestions={pageQuestionTexts}
                   onShowRange={(range) => {
                     setActiveId(null);
                     jumpTo(range, null);
@@ -961,7 +983,7 @@ export function DraftView() {
               </RailSection>
               <div ref={checksRef}>
                 <RailSection
-                  title="All 10 checks"
+                  title={`All ${CHECK_IDS.length} checks`}
                   icon={List}
                   open={sections.checks}
                   onOpenChange={(open) => setSections((s) => ({ ...s, checks: open }))}

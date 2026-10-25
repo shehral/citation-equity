@@ -14,8 +14,16 @@
 // "How it works"; hyphenated compounds and "May 2024" are not auxiliaries)
 // in place of a single threshold warning.
 
+import { unscoredNote } from '../e1';
+import { EVIDENCE } from '../evidence';
 import { issueCollector } from './structure-issues';
 import { type CheckFn, notApplicable } from './types';
+
+/**
+ * Question headings is an unscored note (E3 found no effect larger than δ); its suggestions,
+ * the "?" edit included, say so.
+ */
+const NOTE = unscoredNote(EVIDENCE['question-headings'].e1);
 
 const INTERROGATIVES = new Set([
   'what',
@@ -141,8 +149,7 @@ export const check: CheckFn = (a) => {
         range: h.range,
         message: `"${h.text}" starts with a question word but reads as a statement, not a question.`,
         title: 'Reword this heading as a question',
-        rationale:
-          'A question word followed by "we", "it", "you" or a similar word makes a label ("How it works", "What we learned"), and a "?" alone would not turn it into a question. If the section answers a question, reword the heading as the question a reader would ask, such as "How does it work?". Rewording is left to you.',
+        rationale: `A question word followed by "we", "it", "you" or a similar word makes a label ("How it works", "What we learned"), and a "?" alone would not turn it into a question. If the section answers a question, reword the heading as the question a reader would ask, such as "How does it work?". Rewording is left to you. ${NOTE}`,
       });
       continue;
     }
@@ -157,8 +164,7 @@ export const check: CheckFn = (a) => {
           range: h.range,
           message: 'This heading asks a question but does not end with "?".',
           title: 'End this question heading with "?"',
-          rationale:
-            'The heading is already phrased as a question. A question mark makes that explicit for readers and for tools that match headings to the questions people ask.',
+          rationale: `The heading is already phrased as a question. A question mark makes that explicit for readers and for tools that match headings to the questions people ask. ${NOTE}`,
           after,
         });
       } else {
@@ -166,8 +172,7 @@ export const check: CheckFn = (a) => {
           range: h.range,
           message: 'This heading starts with a question word but does not end with "?".',
           title: 'End this heading with "?", or reword it as a question',
-          rationale:
-            'The heading opens with a question word, so a question mark marks it as the question the section answers. It does not read as a full question yet ("How to fix bitter espresso" rather than "How do I fix bitter espresso"), so if "?" alone reads oddly, reword it into the question a reader would ask instead of applying this edit.',
+          rationale: `The heading opens with a question word, so a question mark marks it as the question the section answers. It does not read as a full question yet ("How to fix bitter espresso" rather than "How do I fix bitter espresso"), so if "?" alone reads oddly, reword it into the question a reader would ask instead of applying this edit. ${NOTE}`,
           after,
         });
       }
@@ -177,8 +182,7 @@ export const check: CheckFn = (a) => {
       range: h.range,
       message: `"${h.text}" is a statement, not a question.`,
       title: 'Phrase this heading as a question',
-      rationale:
-        'Headings phrased as the question a reader would ask, such as "How do I fix bitter espresso?", line up the section with the queries people type. Rewording is left to you, since a template cannot know which question the section answers.',
+      rationale: `Headings phrased as the question a reader would ask, such as "How do I fix bitter espresso?", line up the section with the queries people type. Rewording is left to you, since a template cannot know which question the section answers. ${NOTE}`,
     });
   }
 

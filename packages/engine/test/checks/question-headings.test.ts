@@ -8,6 +8,16 @@ const run = (md: string) => check(gather(parseDraft(md)));
 const slice = (md: string, r: { start: number; end: number }) => md.slice(r.start, r.end);
 
 describe('question-headings', () => {
+  it('still suggests, its heading edit included, and says every suggestion is not scored and why', () => {
+    const note =
+      'Not scored in Standard or By evidence: our own test (E3) found no effect larger than 0.03 (d -0.016, 90% CI [-0.028, -0.004], n 57, Holm p 0.164).';
+    const md = '# Espresso\n\n## How to fix bitter espresso\n\nText.\n\n## Grind size\n\nText.\n';
+    const r = run(md);
+    expect(r.suggestions.length).toBe(2);
+    expect(r.suggestions.some((s) => s.kind === 'edit' && s.after !== undefined)).toBe(true);
+    for (const s of r.suggestions) expect(s.rationale).toContain(note);
+  });
+
   it('passes H2/H3 headings phrased as questions', () => {
     const r = run(pass);
     expect(r.checkId).toBe('question-headings');

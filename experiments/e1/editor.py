@@ -31,6 +31,11 @@ P6, P7, P8, P10, P12, ALL and P_ALL.
   excluded_reason starting "not applicable" (an ALL step 7 that answers NONE is skipped instead).
   Neither "not applicable" reason is a validity exclusion (r3 amendments 5 and 9).
 
+E3 (experiments/PLAN_E3.md) adds two options; without them the editor is E1's, byte for byte.
+`--max-attempts N` (default 2, E1's) allows N attempts per LLM edit (a first try plus N - 1
+regenerates, each with the validator's messages). `--retry-from <E1 versions.jsonl>` gives E1's
+failed pairs their next attempt (run_retry) and writes only the edits made now.
+
 Run on Explorer (edit.sbatch) with --backend vllm, or locally with --backend fake (a fake editor
 that returns fixed replacements) for the smoke set. The engine runs as a subprocess
 (common.run_engine; set E1_ENGINE to override the command).
@@ -50,6 +55,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import common  # noqa: E402
 import deterministic_arms as da  # noqa: E402
+import e1_common  # noqa: E402
 import validate  # noqa: E402
 from validate import ENGINE_CHECK, splice  # noqa: E402
 
@@ -63,6 +69,7 @@ DONOR_ARMS = {"5", "6", "7"}
 PROMPT_NAMES = [f"arm{a}" for a in LLM_ARMS] + [f"p{a}" for a in PLACEBO_ARMS] + ["p_all"]
 EDITOR_MODEL = "google/gemma-4-31B-it"
 MAX_NEW_TOKENS = 4096
+MAX_ATTEMPTS = 2  # E1: one first try and one regenerate (E3 passes --max-attempts 3)
 QUOTE_MAX_WORDS = 40
 OPENER_FINDING = "points back to earlier text"
 # The engine's opener list (standalone-paragraphs.ts, UNRESOLVED_OPENER) and the marks that may
@@ -459,20 +466,24 @@ def _engine_items(pairs):
     return [{"id": key, "markdown": version[1], "question": query} for key, version, query in pairs]
 
 
-def edit_round(tasks: list[dict], backend, engine, log: list) -> dict:
-    """Generates, splices and validates each task, regenerating a failure once.
+def edit_round(tasks: list[dict], backend, engine, log: list, max_attempts: int = MAX_ATTEMPTS) -> dict:
+    """Generates, splices and validates each task, regenerating a failure until it has had
+    `max_attempts` attempts (E1: 2, one first try and one regenerate).
+    A task may carry `done` (attempts already made, as in a --retry-from run) and `resume_prompt`
+    (the prompt of its next attempt); by default it starts at attempt 1 with its own prompt.
     Returns {key: {status: valid|excluded|none, attempts, edited, edits, eng, failures}}."""
     results, pending = {}, []
     for t in tasks:
-        t["prompt_now"] = t["prompt"]
+        t["prompt_now"] = t.get("resume_prompt") or t["prompt"]
+        t["attempt"] = t.get("done", 0)
         pending.append(t)
-    for attempt in (1, 2):
-        if not pending:
-            break
+    while pending:
         outs = backend.generate([{"key": t["key"], "arm": t["arm"], "spans": t["spans"], "prompt": t["prompt_now"]}
                                  for t in pending])
         failed, candidates = [], []
         for t, (answer, finish) in zip(pending, outs):
+            t["attempt"] += 1
+            attempt = t["attempt"]
             log.append({"key": t["key"], "attempt": attempt, "prompt": t["prompt_now"], "answer": answer,
                         "finish_reason": finish})
             if finish == "length":
@@ -487,8 +498,9 @@ def edit_round(tasks: list[dict], backend, engine, log: list) -> dict:
                 failed.append((t, [outcome], None, []))
                 continue
             candidates.append((t, edits, _edited(t["before"], edits)))
-        engs = engine(_engine_items([(f"{t['key']}#{attempt}", ed, t["query"]) for t, _, ed in candidates]))
+        engs = engine(_engine_items([(f"{t['key']}#{t['attempt']}", ed, t["query"]) for t, _, ed in candidates]))
         for t, edits, edited in candidates:
+            attempt = t["attempt"]
             eng = engs[f"{t['key']}#{attempt}"]
             res = validate.validate(arm=t["arm"], original=t["before"], edited=edited, edits=edits, spans=t["spans"],
                                     eng_orig=t["eng_before"], eng_edit=eng, query=t["query"], target=t["target"],
@@ -501,12 +513,13 @@ def edit_round(tasks: list[dict], backend, engine, log: list) -> dict:
         pending = []
         for t, failures, edited, hints in failed:
             t["last_failures"], t["last_edited"] = failures, edited or t.get("last_edited")
-            if attempt == 1:
+            if t["attempt"] < max_attempts:
                 t["prompt_now"] = with_feedback(t["prompt"], failures, hints)
                 pending.append(t)
             else:
-                results[t["key"]] = {"status": "excluded", "attempts": 2, "edited": t["last_edited"] or t["before"],
-                                     "edits": [], "eng": None, "failures": failures}
+                results[t["key"]] = {"status": "excluded", "attempts": t["attempt"],
+                                     "edited": t["last_edited"] or t["before"], "edits": [], "eng": None,
+                                     "failures": failures}
     return results
 
 
@@ -538,59 +551,68 @@ def deterministic_edits(arm: str, text: str, eng: dict, query: str):
     return da.arm14(text, eng)
 
 
-def run(pages: list[dict], applicability: list[dict], backend, arms=None, engine=None, placebos=True,
-        do_all=True, log: list | None = None) -> list[dict]:
-    """All versions for the given pages (any mix of sets); returns versions.jsonl rows."""
-    engine = engine or common.run_engine
-    log = log if log is not None else []
-    arms = list(LLM_ARMS + DETERMINISTIC_ARMS) if arms is None else [str(a) for a in arms]
-    app = {(r["query_id"], str(r["arm"])): r["applicable"] for r in applicability}
-    queries: dict[str, dict] = {}
-    for p in pages:
-        q = queries.setdefault(p["query_id"], {"donor": None})
-        if p["role"] == "target":
-            q["target"] = p
-        elif p["role"] == "donor":
-            q["donor"] = {"title": p["title"], "text": p["text"], "url": p["url"]}
-    queries = {k: v for k, v in queries.items() if "target" in v}
-    eng0 = engine(_engine_items([(qid, (q["target"]["title"], q["target"]["text"]), q["target"]["query"])
-                                 for qid, q in queries.items()]))
+class Pages:
+    """The admitted queries of one editor run (target, donor), the engine on each original, the
+    applicability table, and the row and task builders that run, run_all and run_retry share."""
 
-    rows: list[dict] = []
+    def __init__(self, pages: list[dict], applicability: list[dict], engine):
+        self.app = {(r["query_id"], str(r["arm"])): r["applicable"] for r in applicability}
+        queries: dict[str, dict] = {}
+        for p in pages:
+            q = queries.setdefault(p["query_id"], {"donor": None})
+            if p["role"] == "target":
+                q["target"] = p
+            elif p["role"] == "donor":
+                q["donor"] = {"title": p["title"], "text": p["text"], "url": p["url"]}
+        self.queries = {k: v for k, v in queries.items() if "target" in v}
+        self.eng0 = engine(_engine_items([(qid, (q["target"]["title"], q["target"]["text"]), q["target"]["query"])
+                                          for qid, q in self.queries.items()]))
 
-    def original(qid):
-        t = queries[qid]["target"]
+    def original(self, qid):
+        t = self.queries[qid]["target"]
         return (t["title"], t["text"])
 
-    def row(qid, arm, version, valid, attempts, reason, added=0, skipped=()):
-        t = queries[qid]["target"]
+    def row(self, qid, arm, version, valid, attempts, reason, added=0, skipped=()):
+        t = self.queries[qid]["target"]
         return {"version_id": f"{qid}:{arm}", "query_id": qid, "set": t["set"], "arm": arm, "text": version[1],
                 "title": version[0], "valid": valid, "attempts": attempts, "excluded_reason": reason,
-                **validate.metrics(t["query"], original(qid), version), "added_words": added,
+                **validate.metrics(t["query"], self.original(qid), version), "added_words": added,
                 "skipped_steps": list(skipped)}
 
-    def result_row(qid, arm, res):
+    def result_row(self, qid, arm, res):
         if res["status"] == "valid":
-            return row(qid, arm, res["edited"], True, res["attempts"], None, res.get("added_words", 0))
+            return self.row(qid, arm, res["edited"], True, res["attempts"], None, res.get("added_words", 0))
         if res["status"] == "none":
-            return row(qid, arm, res["edited"], False, res["attempts"], "not applicable: the editor returned NONE")
-        return row(qid, arm, res["edited"], False, res["attempts"], "invalid: " + " | ".join(res["failures"]))
+            return self.row(qid, arm, res["edited"], False, res["attempts"], "not applicable: the editor returned NONE")
+        return self.row(qid, arm, res["edited"], False, res["attempts"], "invalid: " + " | ".join(res["failures"]))
 
-    def llm_task(qid, arm, before, eng_before, spans, step=False):
-        q, t = queries[qid], queries[qid]["target"]
+    def llm_task(self, qid, arm, before, eng_before, spans, step=False):
+        q, t = self.queries[qid], self.queries[qid]["target"]
         name = prompt_name(arm)
         missing = da.missing_terms(t["query"], before[0], before[1], eng_before) if arm == "12" else []
         donor = q["donor"] if arm in DONOR_ARMS else None  # placebos never see the donor
         return {"key": f"{qid}|{arm}" + ("|step" if step else ""), "qid": qid, "arm": arm, "spans": spans,
                 "prompt": render(name, t["query"], before[0], before[1], spans, donor, missing),
-                "before": before, "eng_before": eng_before, "query": t["query"], "target": original(qid),
+                "before": before, "eng_before": eng_before, "query": t["query"], "target": self.original(qid),
                 "donor": donor, "step": step}
 
+    def ok(self, qid, arm):
+        return self.app.get((qid, arm), False) and (arm not in DONOR_ARMS or self.queries[qid]["donor"] is not None)
+
+
+def run(pages: list[dict], applicability: list[dict], backend, arms=None, engine=None, placebos=True,
+        do_all=True, log: list | None = None, max_attempts: int = MAX_ATTEMPTS) -> list[dict]:
+    """All versions for the given pages (any mix of sets); returns versions.jsonl rows."""
+    engine = engine or common.run_engine
+    log = log if log is not None else []
+    arms = list(LLM_ARMS + DETERMINISTIC_ARMS) if arms is None else [str(a) for a in arms]
+    ctx = Pages(pages, applicability, engine)
+    queries, eng0, app = ctx.queries, ctx.eng0, ctx.app
+    original, row, result_row, llm_task, ok = ctx.original, ctx.row, ctx.result_row, ctx.llm_task, ctx.ok
+
+    rows: list[dict] = []
     for qid in queries:
         rows.append(row(qid, "original", original(qid), True, 1, None))
-
-    def ok(qid, arm):
-        return app.get((qid, arm), False) and (arm not in DONOR_ARMS or queries[qid]["donor"] is not None)
 
     # Deterministic arms.
     det = []
@@ -621,7 +643,7 @@ def run(pages: list[dict], applicability: list[dict], backend, arms=None, engine
                 continue
             arm_spans[(qid, arm)] = spans
             tasks.append(llm_task(qid, arm, original(qid), eng0[qid], spans))
-    llm_results = edit_round(tasks, backend, engine, log)
+    llm_results = edit_round(tasks, backend, engine, log, max_attempts)
     for t in tasks:
         rows.append(result_row(t["qid"], t["arm"], llm_results[t["key"]]))
 
@@ -636,16 +658,17 @@ def run(pages: list[dict], applicability: list[dict], backend, arms=None, engine
             spans = placebo_spans(t["arm"], original(qid)[1], eng0[qid], arm_spans[(qid, t["arm"])], res["edits"])
             if spans:
                 ptasks.append(llm_task(qid, f"P{t['arm']}", original(qid), eng0[qid], spans))
-        presults = edit_round(ptasks, backend, engine, log)
+        presults = edit_round(ptasks, backend, engine, log, max_attempts)
         for t in ptasks:
             rows.append(result_row(t["qid"], t["arm"], presults[t["key"]]))
 
     if do_all:
-        rows += run_all(queries, eng0, app, ok, backend, engine, log, row, llm_task, placebos)
+        rows += run_all(queries, eng0, app, ok, backend, engine, log, row, llm_task, placebos, max_attempts)
     return rows
 
 
-def run_all(queries, eng0, app, ok, backend, engine, log, row, llm_task, placebos) -> list[dict]:
+def run_all(queries, eng0, app, ok, backend, engine, log, row, llm_task, placebos,
+            max_attempts: int = MAX_ATTEMPTS) -> list[dict]:
     """ALL (and P_ALL): the applicable tool-check edits in the fixed order, step by step. A step
     that fails validation is skipped and recorded (r3 amendment 9)."""
     state = {}
@@ -680,7 +703,7 @@ def run_all(queries, eng0, app, ok, backend, engine, log, row, llm_task, placebo
                 spans = spans_for_arm(arm, {"title": s["version"][0], "text": s["version"][1]}, s["eng"])
                 if spans:
                     tasks.append(llm_task(qid, arm, s["version"], s["eng"], spans, step=True))
-        results = {**validate_deterministic(det, engine), **edit_round(tasks, backend, engine, log)}
+        results = {**validate_deterministic(det, engine), **edit_round(tasks, backend, engine, log, max_attempts)}
         for t in det + tasks:
             s, res = state[t["qid"]], results[t["key"]]
             if res["status"] == "none":
@@ -714,7 +737,7 @@ def run_all(queries, eng0, app, ok, backend, engine, log, row, llm_task, placebo
             spans = _span_dicts(t["text"], s["llm"])
             if spans:
                 ptasks.append(llm_task(qid, "P_ALL", original, eng0[qid], spans))
-    presults = edit_round(ptasks, backend, engine, log)
+    presults = edit_round(ptasks, backend, engine, log, max_attempts)
     for t in ptasks:
         res = presults[t["key"]]
         reason = None if res["status"] == "valid" else "invalid: " + " | ".join(res["failures"])
@@ -722,7 +745,205 @@ def run_all(queries, eng0, app, ok, backend, engine, log, row, llm_task, placebo
     return rows
 
 
+# --- One more attempt for E1's failed pairs (experiments/PLAN_E3.md, change 3) -------------------
+
+RETRY_ARMS = ["2", "4", "5", "6", "7", "8", "10"]  # the arms E3 judges again
+# Messages about the answer's format (parse_response, the token limit): the edit was not validated,
+# so a regenerate after one of them carries no "What to fix" hints, as in edit_round.
+ANSWER_FAILURES = ("The answer must be one JSON object", "Unknown span id", "Pick exactly one span",
+                   "The value must be {", "Give both the quotation", "Pick a passage that has no double",
+                   "The quotation must be", "The replacement for ", CUT_OFF)
+
+
+def prior_failures(reason: str | None) -> list[str]:
+    """The failures of a version's last attempt, from its excluded_reason ("invalid: a | b")."""
+    return (reason or "").removeprefix("invalid: ").split(" | ")
+
+
+def _guide(before: str, after: str):
+    """Maps an offset of `before` to its place in `after`, by a character diff of the two texts."""
+    ops = difflib.SequenceMatcher(None, before, after, autojunk=False).get_opcodes()
+
+    def to_after(pos: int) -> int:
+        for tag, i1, i2, j1, j2 in ops:
+            if i1 <= pos < i2 or (pos == i2 == len(before)):
+                return j1 + (pos - i1 if tag == "equal" else min(pos - i1, j2 - j1))
+        return len(after)
+
+    return to_after
+
+
+def recover_edits(original: tuple[str, str], edited: tuple[str, str], spans: list[dict]) -> list[dict] | None:
+    """The span replacements (parse_response's form) that turn `original` into `edited`, recovered
+    from the texts alone. The text between spans is unchanged, so each replacement is what lies
+    between those fixed pieces; where a piece occurs more than once (a space between two spans of
+    one paragraph), the occurrence nearest to where a character diff of the two texts puts it is
+    taken. None when `edited` is not `original` with only its spans replaced."""
+    edits = []
+    for field, before, after in (("title", original[0], edited[0]), ("text", original[1], edited[1])):
+        if before == after:
+            continue
+        mine = sorted((s for s in spans if s["field"] == field), key=lambda s: s["start"])
+        if not mine:
+            return None
+        gaps = [before[: mine[0]["start"]]] + [before[a["end"] : b["start"]] for a, b in zip(mine, mine[1:])]
+        gaps.append(before[mine[-1]["end"] :])
+        limit = len(after) - len(gaps[-1])
+        if len(gaps[0]) > limit or not after.startswith(gaps[0]) or not after.endswith(gaps[-1]):
+            return None
+        guide = _guide(before, after) if len(mine) > 1 else None
+        cursor, replacements = len(gaps[0]), []
+        for s, gap in zip(mine, gaps[1:-1]):
+            want, found, q = guide(s["end"]), [], after.find(gap, cursor, limit)
+            while q != -1:
+                found.append(q)
+                q = after.find(gap, q + 1, limit) if gap else -1
+            if not gap:
+                found = [min(max(want, cursor), limit)]
+            if not found:
+                return None
+            q = min(found, key=lambda x: (abs(x - want), x))
+            replacements.append(after[cursor:q])
+            cursor = q + len(gap)
+        if cursor > limit:
+            return None
+        replacements.append(after[cursor:limit])
+        edits += [{"field": field, "start": s["start"], "end": s["end"], "replacement": r}
+                  for s, r in zip(mine, replacements) if r != s["text"]]
+    edits.sort(key=lambda e: (e["field"], e["start"]))
+    return edits if _edited(original, edits) == tuple(edited) else None
+
+
+def resume(task: dict, prior: dict, max_attempts: int, prior_edits: list[dict] | None = None) -> dict | None:
+    """`task` set to continue from E1's last attempt of the same edit (`prior`, its versions row):
+    `done` is E1's attempt count, and the next prompt is the regenerate prompt edit_round would
+    have built after that attempt (the validator's messages, plus hints for a placebo when the
+    answer was validated; `prior_edits` are that answer's edits, recovered from its text).
+    None when E1 already used `max_attempts` attempts."""
+    done = int(prior["attempts"])
+    if done >= max_attempts:
+        return None
+    failures = prior_failures(prior["excluded_reason"])
+    hints: list[str] = []
+    if validate.is_placebo(task["arm"]) and prior_edits and not (
+            len(failures) == 1 and failures[0].startswith(ANSWER_FAILURES)):
+        hints = retry_hints(task, prior_edits, (prior["title"], prior["text"]), None)
+    task["done"] = done
+    task["resume_prompt"] = with_feedback(task["prompt"], failures, hints)
+    return task
+
+
+def run_retry(pages: list[dict], applicability: list[dict], backend, prior: list[dict], arms=None,
+              engine=None, log: list | None = None, max_attempts: int = 3) -> tuple[list[dict], dict]:
+    """E3's extra attempt for E1's pairs (experiments/PLAN_E3.md, change 3). `prior` is E1's
+    versions.jsonl. For each (query, arm) in `arms` that E1 found applicable:
+
+    - an LLM arm whose E1 edit ended invalid gets its next attempt (attempt 3 with max_attempts 3),
+      from E1's last failure; if it now passes, its placebo is built from the start, with up to
+      `max_attempts` attempts;
+    - an arm valid in E1 whose placebo ended invalid: only the placebo gets its next attempt;
+    - a deterministic arm (4) invalid in E1 is built and validated again (no model; it changes only
+      when validate.py does);
+    - pairs that passed in E1, arm 7's NONE, and edits whose check reports no span are untouched.
+
+    Returns (rows, summary): rows only for the edits made now (E1's rows are never rewritten), and
+    the counts per arm of what was retried, skipped and why."""
+    engine = engine or common.run_engine
+    log = log if log is not None else []
+    arms = list(RETRY_ARMS) if arms is None else [str(a) for a in arms]
+    ctx = Pages(pages, applicability, engine)
+    e1 = {(v["query_id"], v["arm"]): v for v in prior if v["query_id"] in ctx.queries}
+    summary = {a: {"arm_retried": 0, "placebo_retried": 0, "placebo_new": 0, "passed_in_e1": 0,
+                   "not_retried": {}} for a in arms}
+
+    def skip(arm, why):
+        n = summary[arm]["not_retried"]
+        n[why] = n.get(why, 0) + 1
+
+    rows, det, first = [], [], []
+    for arm in arms:
+        for qid in ctx.queries:
+            if not ctx.ok(qid, arm):
+                continue
+            v = e1.get((qid, arm))
+            if v is None:
+                skip(arm, "no E1 version")
+                continue
+            if (v.get("excluded_reason") or "").startswith("not applicable"):
+                skip(arm, "not applicable in E1")
+                continue
+            original, eng = ctx.original(qid), ctx.eng0[qid]
+            if not v["valid"]:
+                if arm in DETERMINISTIC_ARMS:
+                    edits, reason = deterministic_edits(arm, original[1], eng, ctx.queries[qid]["target"]["query"])
+                    if edits is None:
+                        rows.append(ctx.row(qid, arm, original, False, 1, f"invalid: {reason}"))
+                    else:
+                        det.append({"key": f"{qid}|{arm}", "qid": qid, "arm": arm, "edits": edits, "before": original,
+                                    "edited": _edited(original, edits), "eng_before": eng,
+                                    "query": ctx.queries[qid]["target"]["query"], "target": original, "donor": None})
+                    summary[arm]["arm_retried"] += 1
+                    continue
+                spans = spans_for_arm(arm, ctx.queries[qid]["target"], eng)
+                task = resume(ctx.llm_task(qid, arm, original, eng, spans), v, max_attempts) if spans else None
+                if task is None:
+                    skip(arm, "no span to edit" if not spans else f"E1 used {v['attempts']} attempts")
+                    continue
+                first.append(task)
+                summary[arm]["arm_retried"] += 1
+                continue
+            if arm not in PLACEBO_ARMS:
+                summary[arm]["passed_in_e1"] += 1
+                continue
+            pv = e1.get((qid, f"P{arm}"))
+            if pv is None:
+                skip(arm, "valid in E1, no placebo row")
+                continue
+            if pv["valid"]:
+                summary[arm]["passed_in_e1"] += 1
+                continue
+            spans = spans_for_arm(arm, ctx.queries[qid]["target"], eng)
+            arm_edits = recover_edits(original, (v["title"], v["text"]), spans)
+            if not arm_edits:
+                raise ValueError(f"{qid} arm {arm}: E1's valid version is not the original with its spans replaced; "
+                                 "the pages or the engine are not the ones E1 used")
+            pspans = placebo_spans(arm, original[1], eng, spans, arm_edits)
+            last = (pv["title"], pv["text"])
+            last_edits = recover_edits(original, last, pspans) if pspans and last != original else []
+            if last_edits is None:  # E1's placebo changed text outside these spans: not the same task
+                skip(arm, "placebo: E1's spans could not be rebuilt from its arm version")
+                continue
+            task = (resume(ctx.llm_task(qid, f"P{arm}", original, eng, pspans), pv, max_attempts, last_edits)
+                    if pspans else None)
+            if task is None:
+                skip(arm, "placebo: no span" if not pspans else f"placebo: E1 used {pv['attempts']} attempts")
+                continue
+            first.append(task)
+            summary[arm]["placebo_retried"] += 1
+
+    det_results = validate_deterministic(det, engine)
+    for t in det:
+        rows.append(ctx.result_row(t["qid"], t["arm"], det_results[t["key"]]))
+    results = edit_round(first, backend, engine, log, max_attempts)
+    fresh = []
+    for t in first:
+        res = results[t["key"]]
+        rows.append(ctx.result_row(t["qid"], t["arm"], res))
+        if validate.is_placebo(t["arm"]) or t["arm"] not in PLACEBO_ARMS or res["status"] != "valid":
+            continue
+        qid = t["qid"]
+        pspans = placebo_spans(t["arm"], ctx.original(qid)[1], ctx.eng0[qid], t["spans"], res["edits"])
+        if pspans:
+            fresh.append(ctx.llm_task(qid, f"P{t['arm']}", ctx.original(qid), ctx.eng0[qid], pspans))
+            summary[t["arm"]]["placebo_new"] += 1
+    presults = edit_round(fresh, backend, engine, log, max_attempts)
+    for t in fresh:
+        rows.append(ctx.result_row(t["qid"], t["arm"], presults[t["key"]]))
+    return rows, summary
+
+
 SETS = ["main", "replication", "smoke", "timing"]
+E3_SETS = e1_common.E3_SETS  # E3's new five-page and four-page queries (experiments/e3/README.md)
 
 
 def select_pages(pages: list[dict], sets: list[str] | None) -> list[dict]:
@@ -737,7 +958,7 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--applicability", default=str(common.DATA / "applicability.jsonl"))
     ap.add_argument("--out", default=str(common.DATA / "versions.jsonl"))
     ap.add_argument("--log", default=str(common.DATA / "editor_log.jsonl"), help="every prompt and answer (local only)")
-    ap.add_argument("--set", action="append", choices=SETS,
+    ap.add_argument("--set", action="append", choices=SETS + E3_SETS,
                     help="sets to edit (repeatable; default all but timing, which runs only when named)")
     ap.add_argument("--arms", help="comma-separated arms to run (default all); placebos follow their arm")
     ap.add_argument("--no-placebos", action="store_true")
@@ -747,18 +968,37 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--tp", type=int, default=1)
     ap.add_argument("--max-model-len", type=int, default=20480)
     ap.add_argument("--thinking", action="store_true", help="leave the chat template's thinking mode on")
+    ap.add_argument("--max-attempts", type=int, default=MAX_ATTEMPTS,
+                    help=f"attempts per LLM edit: a first try plus regenerates (default {MAX_ATTEMPTS}, E1's; E3: 3)")
+    ap.add_argument("--retry-from", metavar="VERSIONS",
+                    help="E3: E1's versions.jsonl; give E1's failed pairs their next attempt (up to --max-attempts) "
+                         "and write only the edits made now to --out")
     return ap
 
 
 def main(argv: list[str] | None = None) -> None:
-    args = parser().parse_args(argv)
+    ap = parser()
+    args = ap.parse_args(argv)
+    if args.max_attempts < 1:
+        ap.error("--max-attempts must be 1 or more")
+    if args.retry_from:
+        if Path(args.retry_from).resolve() == Path(args.out).resolve():
+            ap.error("--out is the --retry-from file; the retried edits go to their own versions.jsonl")
+        if args.no_placebos:
+            ap.error("--retry-from builds the placebos of the pairs it retries; --no-placebos does not apply")
     pages = select_pages(common.read_jsonl(args.pages), args.set)
     applicability = common.read_jsonl(args.applicability)
     backend = FakeBackend() if args.backend == "fake" else VllmBackend(
         args.model, args.tp, args.max_model_len, no_thinking=not args.thinking)
     t0, log = time.time(), []
-    rows = run(pages, applicability, backend, arms=args.arms.split(",") if args.arms else None,
-               placebos=not args.no_placebos, do_all=not args.no_all, log=log)
+    arms = args.arms.split(",") if args.arms else None
+    retried = None
+    if args.retry_from:
+        rows, retried = run_retry(pages, applicability, backend, common.read_jsonl(args.retry_from), arms=arms,
+                                  log=log, max_attempts=args.max_attempts)
+    else:
+        rows = run(pages, applicability, backend, arms=arms, placebos=not args.no_placebos, do_all=not args.no_all,
+                   log=log, max_attempts=args.max_attempts)
     common.write_jsonl(args.out, rows)
     common.write_jsonl(args.log, log)
     summary: dict[str, dict] = {}
@@ -768,8 +1008,14 @@ def main(argv: list[str] | None = None) -> None:
         s["valid"] += r["valid"]
         s["not_applicable"] += bool(r["excluded_reason"] and r["excluded_reason"].startswith("not applicable"))
         s["attempts_2"] += r["attempts"] == 2
+        for n in range(3, args.max_attempts + 1):  # E3 only: E1's summary is unchanged
+            s[f"attempts_{n}"] = s.get(f"attempts_{n}", 0) + (r["attempts"] == n)
+    extra = {} if retried is None else {"retry_from": args.retry_from, "retried": retried}
+    if args.max_attempts != MAX_ATTEMPTS:
+        extra["max_attempts"] = args.max_attempts
     print(json.dumps({"backend": args.backend, "model": args.model if args.backend == "vllm" else None,
-                      "seconds": round(time.time() - t0, 1), "prompts": len(log), "per_arm": summary}, indent=1))
+                      "seconds": round(time.time() - t0, 1), "prompts": len(log), "per_arm": summary, **extra},
+                     indent=1))
 
 
 if __name__ == "__main__":

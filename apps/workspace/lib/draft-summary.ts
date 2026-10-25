@@ -3,9 +3,9 @@
 // The draft view keeps the summary current after each analysis; this covers the
 // moment of the switch, before the view has analyzed anything.
 
-import { analyze } from '@citation-equity/engine';
+import { analyze, START_HERE_COUNT } from '@citation-equity/engine';
 import { loadBaseline } from './baseline';
-import { initialQuestions } from './questions';
+import { authorQuestionTexts, initialQuestions } from './questions';
 import { MY_DRAFT_SLUG, SAMPLES, sampleFor, startingText } from './samples';
 import { loadDraft, loadQuestions, loadStatuses } from './storage';
 import {
@@ -17,8 +17,8 @@ import {
   setSummary,
 } from './store';
 
-/** Start here shows the top 3 open fixes. */
-export const START_HERE_COUNT = 3;
+/** Start here shows the top 3 open fixes, at most one per check. */
+export { START_HERE_COUNT };
 
 /** The storage key of a store slot: an example's slug, else the My post key (`my-draft`). */
 export function draftKeyFor(slot: string): string {
@@ -38,17 +38,19 @@ export function draftSummaryFor(slot: string, at: Date = new Date()): DraftSumma
   const key = draftKeyFor(slot);
   const text = loadDraft(key) ?? startingText(key);
   if (text.trim() === '') return null;
-  const questions = (loadQuestions(key) ?? initialQuestions(sampleFor(key), text)).map(
-    (q) => q.text,
-  );
-  const result = analyze(text, { questions });
+  const saved = loadQuestions(key) ?? initialQuestions(sampleFor(key), text);
+  const result = analyze(text, {
+    questions: saved.map((q) => q.text),
+    authorQuestions: authorQuestionTexts(saved),
+  });
   const standard = result.scores.foundation;
   const evidence = result.scores.evidence;
   if (standard === null || evidence === null) return null;
   const statuses = loadStatuses(key);
-  const open = result.checks
-    .flatMap((c) => c.suggestions)
-    .filter((s) => (statuses[s.id] ?? 'pending') === 'pending').length;
+  // Start here takes at most one fix per check, so it counts the checks with an open fix.
+  const open = result.checks.filter((c) =>
+    c.suggestions.some((s) => (statuses[s.id] ?? 'pending') === 'pending'),
+  ).length;
   const previous = getSummary('draft');
   const s = slotFor(key);
   return {

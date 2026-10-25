@@ -118,7 +118,7 @@ describe('/cited', () => {
     expect(results().textContent).not.toContain('Paste a few more answers.');
   });
 
-  it('gives each kind one Do line and one Avoid line, with the studies on expand', () => {
+  it('gives each kind one Do line and one Avoid line, and Learn more links its Research section', () => {
     render(<CitedPage />);
     paste(1, PERPLEXITY);
     for (const kind of ['forum', 'wiki'] as const) {
@@ -126,18 +126,12 @@ describe('/cited', () => {
       const group = within(results()).getByRole('region', { name: card.title });
       expect(within(group).getByText(card.short.do)).toBeTruthy();
       expect(within(group).getByText(card.short.avoid)).toBeTruthy();
-      const studies = group.querySelector('details');
-      expect(studies).not.toBeNull();
-      expect(studies?.open).toBe(false);
-      expect(studies?.querySelector('summary')?.textContent).toBe('What the studies say');
-      expect(studies?.textContent).toContain(card.evidence.summary);
-      for (const s of card.evidence.sources) {
-        const link = within(studies as HTMLElement).getByRole('link', { name: s.citation });
-        expect(link.getAttribute('href')).toBe(s.url);
-      }
-      expect(group.textContent).toContain(
-        card.evidence.grade === 'mixed' ? 'Mixed evidence' : 'Moderate evidence',
-      );
+      // The studies and the grade live on /research, not here.
+      expect(group.querySelector('details')).toBeNull();
+      expect(group.textContent).not.toMatch(/evidence|Untested/i);
+      for (const s of card.evidence.sources) expect(group.textContent).not.toContain(s.citation);
+      const more = within(group).getByRole('link', { name: `Learn more: ${card.title}` });
+      expect(more.getAttribute('href')).toMatch(new RegExp(`/research/?#offpage-${kind}$`));
     }
     expect(
       within(results()).queryByRole('region', { name: OFFPAGE_ADVICE.commerce.title }),

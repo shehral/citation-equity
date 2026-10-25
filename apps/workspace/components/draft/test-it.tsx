@@ -188,14 +188,13 @@ const points = (x: number) => {
   return `${v >= 0 ? '+' : ''}${v} points`;
 };
 const signed3 = (x: number) => `${x >= 0 ? '+' : ''}${x.toFixed(3)}`;
-const pValue = (p: number) => `p = ${p.toFixed(2)}`;
 
 function RateCell({ rate }: { rate: Rate }) {
   return (
     <td className="px-2 py-1.5 align-top tabular-nums">
       <span className="font-medium">{pct(rate.p)}</span>{' '}
       <span className="block text-ink-soft text-xs">
-        {rate.k} of {rate.n}; 95% CI {pct(rate.lo)} to {pct(rate.hi)}
+        {rate.k} of {rate.n}
       </span>
     </td>
   );
@@ -216,13 +215,10 @@ function ValidCell({ report }: { report: ReportView }) {
 }
 
 function ShareCell({ report }: { report: ReportView }) {
-  const { mean, interval } = report.summary.pawcAmongValid;
+  const { mean } = report.summary.pawcAmongValid;
   return (
     <td className="px-2 py-1.5 align-top tabular-nums">
       <span className="font-medium">{mean.toFixed(3)}</span>{' '}
-      <span className="block text-ink-soft text-xs">
-        {interval[0].toFixed(3)} to {interval[1].toFixed(3)}
-      </span>{' '}
       <span className="block text-ink-soft text-xs">{chanceLevel(report.summary.chanceShare)}</span>
     </td>
   );
@@ -232,8 +228,8 @@ const th = 'px-2 py-1.5 text-left font-medium';
 
 /**
  * Two drafts, in this order: valid answers and format failures, cited among valid answers, the
- * draft's share among valid answers next to the chance level, then retrieved; with intervals,
- * deltas and p-values.
+ * draft's share among valid answers next to the chance level, then retrieved, with the change.
+ * Plain counts only: the intervals and p-values stay in the CLI's report.
  */
 function ResultsTable({
   before,
@@ -247,10 +243,6 @@ function ResultsTable({
   labels: [string, string];
 }) {
   const s = before.settings;
-  const n = comparison.nQueries;
-  // With no question valid on both sides there is no paired test, so no p-value to show.
-  const paired = n > 0;
-  const pCell = (p: number) => (paired ? pValue(p) : 'no paired test possible');
   const excluded = comparison.excludedQueries;
   const questions = new Set(before.runs.map((r) => r.queryId)).size;
   return (
@@ -295,10 +287,7 @@ function ResultsTable({
               <RateCell rate={before.summary.citedAmongValid} />
               <RateCell rate={after.summary.citedAmongValid} />
               <td className="px-2 py-1.5 align-top tabular-nums">
-                {points(comparison.delta.citedAmongValid)}{' '}
-                <span className="block text-ink-soft text-xs">
-                  {pCell(comparison.pValue.citedAmongValid)}
-                </span>
+                {points(comparison.delta.citedAmongValid)}
               </td>
             </tr>
             <tr>
@@ -308,10 +297,7 @@ function ResultsTable({
               <ShareCell report={before} />
               <ShareCell report={after} />
               <td className="px-2 py-1.5 align-top tabular-nums">
-                {signed3(comparison.delta.pawcAmongValid)}{' '}
-                <span className="block text-ink-soft text-xs">
-                  {pCell(comparison.pValue.pawcAmongValid)}
-                </span>
+                {signed3(comparison.delta.pawcAmongValid)}
               </td>
             </tr>
             <tr>
@@ -329,19 +315,8 @@ function ResultsTable({
       </div>
       <p className="text-ink-soft text-xs">
         Model {s.model}, {questions} questions, {s.runs} runs each, top {s.k} pages retrieved,
-        temperature {s.temperature}. Run on {before.createdAt.slice(0, 10)} (UTC).{' '}
-        {paired ? (
-          <>
-            p is a two-sided sign-flip test over the {n} question{n === 1 ? '' : 's'} with a valid
-            answer on both sides
-            {n <= 12
-              ? `; with ${n} question${n === 1 ? '' : 's'} it cannot go below ${formatNumber(2 / 2 ** n, 3)}`
-              : ''}
-          </>
-        ) : (
-          'No question has a valid answer on both sides, so no paired test was possible'
-        )}
-        {excluded.length > 0 ? `; left out: ${excluded.join(', ')}` : ''}.
+        temperature {s.temperature}. Run on {before.createdAt.slice(0, 10)} (UTC).
+        {excluded.length > 0 ? ` Left out: ${excluded.join(', ')}.` : ''}
       </p>
       <details className="text-sm">
         <summary className="cursor-pointer rounded-sm text-ink-soft text-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring">
@@ -358,9 +333,8 @@ function ResultsTable({
           <dd className="text-ink-soft">The valid answer cited the draft at least once.</dd>
           <dt className="font-medium">Draft share among valid answers</dt>
           <dd className="text-ink-soft">
-            Position-adjusted word count: the share of the answer's words attributed to the draft,
-            with earlier sentences counting more (the measure of the GEO paper, Aggarwal et al.
-            2024). Averaged per question. The chance level is the share the draft would get, when it
+            The share of the answer's words attributed to the draft, with earlier sentences counting
+            more. Averaged per question. The chance level is the share the draft would get, when it
             is among the sources, if the answer split its credit evenly over them; a small model
             that cites nearly every source lands close to it whatever the draft says. Runs where the
             draft was not retrieved count as 0 in the draft's share, so when Retrieved is below 100%

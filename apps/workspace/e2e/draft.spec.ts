@@ -1,13 +1,19 @@
 import { expect, test } from '@playwright/test';
 import {
   ADVICE,
+  ADVICE_GROUP,
+  allFixes,
+  basePath,
   CAVEAT,
   CHANCE,
   card,
   draftText,
   freshVisit,
   go,
+  groupCard,
   HEADING_EDIT,
+  HEADING_GROUP,
+  headingEdit,
   openExample,
   pick,
   startHere,
@@ -71,6 +77,22 @@ test('draft flow: Preview, Apply, Undo, Done and Skip, and a reload keeps them',
 }) => {
   await openExample(page);
   await expect(page.getByRole('img', { name: /^AI-ready score: \d+ out of 100$/ })).toBeVisible();
+  // Start here: one fix per check, the measured reader-question advice first; the top three are
+  // all advice, so the third slot keeps the draft's one ready edit, the question-heading edit.
+  const titles = await startHere(page).getByRole('article').getByRole('heading').allTextContents();
+  expect(titles).toEqual([ADVICE, expect.stringMatching(/^Use the words of ".+"$/), HEADING_EDIT]);
+  await expect(card(page, HEADING_EDIT).getByRole('button', { name: 'Preview' })).toBeVisible();
+  // Its group says only "Not scored", and links the check's research for the curious.
+  await expect(await groupCard(page, HEADING_GROUP, HEADING_EDIT)).toBeVisible();
+  const group = allFixes(page).getByRole('listitem').filter({ hasText: HEADING_GROUP }).first();
+  await expect(group.getByText('Not scored', { exact: true })).toHaveAttribute(
+    'title',
+    'Our tests found no clear effect on AI citation.',
+  );
+  await expect(group.getByRole('link', { name: /^Learn more/ })).toHaveAttribute(
+    'href',
+    `${basePath()}research/#check-question-headings`,
+  );
   // Nothing has Apply until a preview is open.
   await expect(page.getByRole('button', { name: 'Apply' })).toHaveCount(0);
   const toast = page.getByRole('status', { name: 'Last action' });
@@ -78,20 +100,21 @@ test('draft flow: Preview, Apply, Undo, Done and Skip, and a reload keeps them',
   // Preview, then Apply: one heading changes, and only that one.
   const before = await draftText(page);
   expect(before).toContain('## Why espresso turns bitter\n');
-  await card(page, HEADING_EDIT).getByRole('button', { name: 'Preview' }).click();
+  const edit = await headingEdit(page);
+  await edit.getByRole('button', { name: 'Preview' }).click();
   const dialog = page.getByRole('dialog', { name: HEADING_EDIT });
   await expect(dialog).toContainText('Nothing changes until you click Apply.');
   await dialog.getByRole('button', { name: 'Apply' }).click();
   await expect
     .poll(() => draftText(page))
     .toBe(before.replace('## Why espresso turns bitter\n', '## Why espresso turns bitter?\n'));
-  await expect(card(page, HEADING_EDIT)).toHaveCount(0);
+  await expect(edit).toHaveCount(0);
   await expect(toast).toContainText('Applied.');
 
   // Undo in the toast puts the text back; apply it again.
   await toast.getByRole('button', { name: 'Undo' }).click();
   await expect.poll(() => draftText(page)).toBe(before);
-  await card(page, HEADING_EDIT).getByRole('button', { name: 'Preview' }).click();
+  await (await headingEdit(page)).getByRole('button', { name: 'Preview' }).click();
   await page
     .getByRole('dialog', { name: HEADING_EDIT })
     .getByRole('button', { name: 'Apply' })
@@ -129,7 +152,7 @@ test('draft flow: Preview, Apply, Undo, Done and Skip, and a reload keeps them',
   await expect(card(page, ADVICE)).toHaveCount(0);
   await expect(card(page, doneTitle)).toHaveCount(0);
   const groups = page.getByRole('region', { name: 'All fixes' });
-  await groups.getByRole('button', { name: /^Real numbers/ }).click();
+  await groups.getByRole('button', { name: new RegExp(`^${ADVICE_GROUP}`) }).click();
   await expect(groups).toContainText('Skipped:');
 });
 
@@ -145,7 +168,9 @@ test('keyboard: Tab reaches the first Preview button and its focus ring is visib
   page,
 }) => {
   await openExample(page);
-  await expect(card(page, HEADING_EDIT)).toBeVisible();
+  // Start here keeps one ready edit: the question-heading edit, its first Preview.
+  const edit = await headingEdit(page);
+  await expect(edit).toBeVisible();
   // Buttons animate their ring (transition-all); measure end states, not a frame mid-transition.
   await page.addStyleTag({ content: '*, *::before, *::after { transition: none !important; }' });
   let reached = false;
@@ -157,7 +182,7 @@ test('keyboard: Tab reaches the first Preview button and its focus ring is visib
     });
   }
   expect(reached, 'Tab never reached a Preview button').toBe(true);
-  const firstPreview = startHere(page).getByRole('button', { name: 'Preview' }).first();
+  const firstPreview = edit.getByRole('button', { name: 'Preview' });
   await expect(firstPreview).toBeFocused();
   const ringStyle = (el: Element) => {
     const s = getComputedStyle(el);

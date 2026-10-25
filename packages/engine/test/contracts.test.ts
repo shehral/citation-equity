@@ -4,8 +4,8 @@ import { CHECK_IDS, EVIDENCE, type EvidenceGrade } from '../src/index';
 const GRADES: EvidenceGrade[] = ['strong', 'moderate', 'mixed', 'untested'];
 
 describe('engine contracts', () => {
-  it('defines the ten checks in registry order', () => {
-    expect(CHECK_IDS.length).toBe(10);
+  it('defines the eleven checks in registry order', () => {
+    expect(CHECK_IDS.length).toBe(11);
     expect([...CHECK_IDS]).toEqual([
       'standalone-paragraphs',
       'question-headings',
@@ -17,6 +17,7 @@ describe('engine contracts', () => {
       'direct-answer-lead',
       'question-coverage',
       'comparisons',
+      'reader-words',
     ]);
   });
 

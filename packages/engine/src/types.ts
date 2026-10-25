@@ -10,6 +10,7 @@ export const CHECK_IDS = [
   'direct-answer-lead',
   'question-coverage',
   'comparisons',
+  'reader-words',
 ] as const;
 export type CheckId = (typeof CHECK_IDS)[number];
 export interface SourceRef {
@@ -23,7 +24,19 @@ export interface SourceRef {
  * `helps`, `no-effect` (no effect larger than δ), `insufficient-n`, `not-run`, or `descriptive`
  * (reported, no verdict by design).
  */
-export type E1Label = 'helps' | 'no-effect' | 'insufficient-n' | 'not-run' | 'descriptive';
+export type E1Label =
+  | 'helps'
+  | 'no-effect'
+  | 'insufficient-n'
+  | 'inconclusive'
+  | 'not-run'
+  | 'descriptive';
+/**
+ * Which of our own tests a check's result comes from: E1 (experiments/RESULTS_E1.md), or E3
+ * (experiments/RESULTS_E3.md), which asked E1's question again with more pages for the seven checks
+ * E1 could not judge; its pooled result replaces E1's for those checks.
+ */
+export type OwnTest = 'E1' | 'E3';
 /** One E1 contrast: mean change d in citation-score units, its interval, and the query count. */
 export interface E1Effect {
   d: number;
@@ -31,15 +44,22 @@ export interface E1Effect {
   /** The interval's level: 95, or 90 for the equivalence (no-effect) verdict. */
   level: 90 | 95;
   n: number;
-  /** Holm-adjusted p, shown for a verdict that rests on it. */
+  /** Holm-adjusted p, shown for a check in the test's corrected family. */
   holmP?: number;
 }
 export interface E1Result {
+  /** The test the label and numbers come from. */
+  test: OwnTest;
   label: E1Label;
-  /** The main set's primary contrast; null when the arm did not run. */
+  /** The primary contrast (E1's main set, or E3's pooled set); null when the arm did not run. */
   effect: E1Effect | null;
   /** The replication set's contrast, when there is one worth showing. */
   replication?: E1Effect;
+  /**
+   * What the follow-up test (E2, experiments/RESULTS_E2.md) found for the check, in one sentence
+   * with its numbers; absent where E2 did not test it.
+   */
+  followUp?: string;
 }
 export interface Evidence {
   grade: EvidenceGrade;
@@ -103,6 +123,12 @@ export interface AnalysisResult {
 export interface AnalyzeOptions {
   format?: 'markdown' | 'html';
   weights?: Weights;
-  /** Target questions readers ask; only the question-coverage check reads them. */
+  /** Target questions readers ask; the question-coverage check reads them all. */
   questions?: string[];
+  /**
+   * The author's own questions, typed or imported (not generated). The reader-words check
+   * measures exactly these when there are any; otherwise the page's own title and topic
+   * questions (`pageQuestions`), never a section's.
+   */
+  authorQuestions?: string[];
 }

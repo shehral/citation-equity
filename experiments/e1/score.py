@@ -21,6 +21,7 @@ Outputs: out/scores.jsonl, out/cells.jsonl, out/score_summary.json (answers miss
 
 Only the sets named by --sets are scored (default main,replication,smoke). The timing-smoke set
 (r3 amendment 8) is left out unless named: its outcomes are discarded and never reach the cells.
+E3's sets (e3, e3-four; experiments/e3/README.md) are scored only when named.
 
 Usage: python3 -I experiments/e1/score.py [--data DIR] [--out DIR] [--sets main,replication,smoke]
        python3 -I experiments/e1/score.py --twin answers.json [--twin-out out.json]
@@ -40,7 +41,17 @@ from pathlib import Path
 sys.dont_write_bytecode = True  # keep __pycache__ out of experiments/e1
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from e1_common import JS_WHITESPACE, MIN_VALID, N_SOURCES, SETS, TIMING, read_jsonl, write_json, write_jsonl  # noqa: E402
+from e1_common import (  # noqa: E402
+    E3_SETS,
+    JS_WHITESPACE,
+    MIN_VALID,
+    N_SOURCES,
+    SETS,
+    TIMING,
+    read_jsonl,
+    write_json,
+    write_jsonl,
+)
 
 # JavaScript's \s, written out, since Python's \s also matches U+001C..U+001F and U+0085.
 _WS = r"\t\n\x0b\x0c\r \xa0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff"
@@ -172,8 +183,8 @@ def main(argv: list[str] | None = None) -> None:
                     help="comma-separated sets to score (timing only when named)")
     args = ap.parse_args(argv)
     sets = args.sets.split(",")
-    if unknown := [s for s in sets if s not in SETS]:
-        ap.error(f"unknown set(s) {unknown}; known: {SETS}")
+    if unknown := [s for s in sets if s not in SETS + E3_SETS]:
+        ap.error(f"unknown set(s) {unknown}; known: {SETS + E3_SETS}")
 
     if args.twin:
         answers = json.loads(Path(args.twin).read_text(encoding="utf-8"))

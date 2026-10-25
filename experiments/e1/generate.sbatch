@@ -8,10 +8,11 @@
 # One job per (set, judge, tier). Run plan: tiers in order, Gemma before Qwen within each tier.
 #
 # Submit from $CE_ROOT/code/e1 on the cluster (batch_generate.py in $CE_ROOT/code, batch files in
-# $CE_ROOT/e1/batches):
+# $CE_ROOT/$RUN/batches, RUN defaulting to e1; E2 uses RUN=e2/a and RUN=e2/b, experiments/e2/README.md):
 #   . ./local.env && JUDGE=gemma-4-12b BATCH=main.gemma-4-12b.tier1 sbatch --gres=gpu:a100:1 generate.sbatch
 #   . ./local.env && JUDGE=qwen3.8-27b BATCH=main.qwen3.8-27b.tier1 sbatch --gres=gpu:h200:1 generate.sbatch
-# Answers land in $CE_ROOT/e1/answers/<BATCH>.jsonl; copy them to experiments/e1/data/answers/ for score.py.
+# Answers land in $CE_ROOT/$RUN/answers/<BATCH>.jsonl; copy them to experiments/e1/data/answers/ for score.py.
+# E2b's second judge (experiments/PLAN_E2.md) is JUDGE=qwen3.5-9b, Qwen3.5-9B.
 # Check the settings first with CE_DRY_RUN=1 JUDGE=... BATCH=... bash generate.sbatch
 #SBATCH --job-name=ce-e1-gen
 #SBATCH --partition=gpu
@@ -24,11 +25,12 @@
 #SBATCH --export=ALL
 set -e
 set -o pipefail
-: "${JUDGE:?set JUDGE to gemma-4-12b or qwen3.8-27b}"
+: "${JUDGE:?set JUDGE to gemma-4-12b, qwen3.8-27b or qwen3.5-9b}"
 : "${BATCH:?set BATCH to a batch name from build_prompts.py, such as main.gemma-4-12b.tier1}"
 case "$JUDGE" in
   gemma-4-12b) MODEL=google/gemma-4-12B-it ;;
   qwen3.8-27b) MODEL=Qwen/Qwen3.8-27B ;;
+  qwen3.5-9b) MODEL=Qwen/Qwen3.5-9B ;;
   *) echo "FATAL: unknown JUDGE $JUDGE (the editor Gemma-4-31B is never a judge)"; exit 2 ;;
 esac
 case "$BATCH" in
@@ -55,8 +57,9 @@ LOCAL_ENV="${SLURM_SUBMIT_DIR:-.}/local.env"
 : "${CE_PYTHON:?set CE_PYTHON to the Python of an env with vLLM (see local.env.example)}"
 : "${HF_HOME:?set HF_HOME to the Hugging Face cache that holds the judge models (see local.env.example)}"
 PROJ=$CE_ROOT
-PROMPTS=$PROJ/e1/batches/$BATCH.prompts.jsonl
-OUT=$PROJ/e1/answers/$BATCH.jsonl
+RUN=${RUN:-e1}
+PROMPTS=$PROJ/$RUN/batches/$BATCH.prompts.jsonl
+OUT=$PROJ/$RUN/answers/$BATCH.jsonl
 MODULES=${CE_MODULES-miniconda3/24.11.1}
 if [ -n "${CE_DRY_RUN:-}" ]; then
   echo "ce-e1-gen dry run: resolved settings (nothing loaded or run)"

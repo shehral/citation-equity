@@ -1,10 +1,10 @@
 # Evidence behind the checks
 
-Citation Equity scores a draft on ten checks. Six come from Prof. Akram Bayat's design for the project (her concept-level list of what makes content easy for AI answer engines to use); four more were added because the research literature tests them: cited sources, a direct-answer lead, answers to the author's target questions, and explicit comparisons. This page says, for each check, how strong the evidence is, what the studies actually did, and where to read them. Every source listed here was opened and read on 2026-10-23; the working notes with quotes are in [research/evidence-notes.md](research/evidence-notes.md).
+Citation Equity scores a draft on eleven checks. Six come from Prof. Akram Bayat's design for the project (her concept-level list of what makes content easy for AI answer engines to use); four more were added because the research literature tests them: cited sources, a direct-answer lead, answers to the author's target questions, and explicit comparisons; and one, your reader's words up top, was added because it helped in this project's own test (E1). This page says, for each check, how strong the evidence is, what the studies actually did, and where to read them. Every source listed here was opened and read on 2026-10-23; the working notes with quotes are in [research/evidence-notes.md](research/evidence-notes.md).
 
 ## Why the score is not a prediction
 
-The GEO Score is a content check. It counts things in your draft that some studies have linked to being cited or used by AI answer engines. It is not a prediction of whether ChatGPT, Perplexity or Google will cite your page, for four reasons:
+The AI-ready score is a content check. It counts things in your draft that some studies have linked to being cited or used by AI answer engines. It is not a prediction of whether ChatGPT, Perplexity or Google will cite your page, for four reasons:
 
 1. **Most results come from fixed test setups.** The best-known numbers come from experiments where the page was already one of a handful of sources pasted into the model's prompt. Whether a page gets found in the first place (crawling, search, ranking) was not part of the test. When SAGEO Arena put retrieval back in, rewrites that helped in the fixed setup often made pages harder to find.
 2. **The studies disagree.** The rewrites that looked best in the original GEO paper (adding statistics, quotations and citations) mostly showed no gain, or a loss, in the larger C-SEO Bench study, which measured citation rank instead of share of answer text.
@@ -31,26 +31,45 @@ Rules we followed:
 - Observational studies (which compare pages that happen to differ) can support a grade but cannot by themselves make it strong, because better pages may differ in many ways at once.
 - A study that tests a nearby practice (for example, a whole-page summary rather than a per-section answer) counts as indirect evidence, and the summary says so.
 
-No check is graded strong or moderate today. Eight are mixed and two are untested.
+No check is graded strong or moderate today. Nine are mixed and two are untested. Seven of the eleven checks count toward the score; four (question headings, lists, cited sources and direct answer first) are notes that are not scored, because our own tests found no effect larger than 0.03 for them. Our tests change no grade.
 
 ## Our own test (E1)
 
-E1 is this project's pre-registered test of the checks ([experiments/PREREG_E1.md](../experiments/PREREG_E1.md), results in [experiments/RESULTS_E1.md](../experiments/RESULTS_E1.md)). Each check's fix was applied to real pages, and two local models (Gemma-4-12B and Qwen3.8-27B judges, Gemma-edited) answered each query from a fixed set of four sources. d is the change in citation score, where a page cited first scores 1 and an uncited page 0, against a paraphrase of the same passages (or the original page where the plan says so). Labels below are for the main set's primary contrast. E1 changes no grade.
+E1 is this project's pre-registered test of the checks ([experiments/PREREG_E1.md](../experiments/PREREG_E1.md), results in [experiments/RESULTS_E1.md](../experiments/RESULTS_E1.md)). Each check's fix was applied to real pages, and two local models (Gemma-4-12B and Qwen3.8-27B judges, Gemma-edited) answered each query from a fixed set of four sources. d is the change in citation score, where a page cited first scores 1 and an uncited page 0, against a paraphrase of the same passages (or the original page where the plan says so). Labels below are for the main set's primary contrast. E1 changes no grade. For seven checks E1 had too few pages for a verdict; E3 (below) asked again with more pages, and its pooled result is the one the tool now uses for them. E1's numbers stay here as the record of what E1 found.
 
 | Check | E1 label | d and interval | What the tool does |
 |---|---|---|---|
 | `standalone-paragraphs` | descriptive, no verdict by design | d +0.007, 95% CI [-0.008, +0.023], n 24 | Grade kept, E1 shown |
-| `question-headings` | insufficient n | d -0.015, 95% CI [-0.031, +0.000], n 17 | Grade kept, E1 shown |
+| `question-headings` | insufficient n | d -0.015, 95% CI [-0.031, +0.000], n 17 | Replaced by E3 |
 | `lists` | no effect larger than 0.03 | d -0.007, 90% CI [-0.027, +0.013], n 33 | Not scored: weight 0 in both presets; still reported and still suggests |
-| `tables` | not run (no valid edit) | none | Grade kept |
-| `statistics` | insufficient n | d +0.023, 95% CI [-0.020, +0.062], n 4 | Grade kept, E1 shown |
-| `expert-quotes` | insufficient n | d +0.029, 95% CI [-0.008, +0.075], n 26 | Grade kept, E1 shown |
-| `cited-sources` | insufficient n | d -0.013, 95% CI [-0.038, +0.009], n 25 | Grade kept, E1 shown |
-| `direct-answer-lead` | insufficient n | d +0.008, 95% CI [-0.016, +0.030], n 20 | Grade kept, E1 shown |
+| `tables` | not run (no valid edit) | none | Replaced by E3 |
+| `statistics` | insufficient n | d +0.023, 95% CI [-0.020, +0.062], n 4 | Replaced by E3 |
+| `expert-quotes` | insufficient n | d +0.029, 95% CI [-0.008, +0.075], n 26 | Replaced by E3 |
+| `cited-sources` | insufficient n | d -0.013, 95% CI [-0.038, +0.009], n 25 | Replaced by E3 |
+| `direct-answer-lead` | insufficient n | d +0.008, 95% CI [-0.016, +0.030], n 20 | Replaced by E3 |
 | `question-coverage` | helps, possibly through length or query-term overlap | d +0.027, 95% CI [+0.010, +0.043], n 54, Holm p 0.006; replication d +0.036, 95% CI [+0.016, +0.059], n 52 | Weight kept; the measured label is shown on the check and its suggestions |
-| `comparisons` | insufficient n | d +0.004, 95% CI [-0.016, +0.027], n 8 | Grade kept, E1 shown |
+| `comparisons` | insufficient n | d +0.004, 95% CI [-0.016, +0.027], n 8 | Replaced by E3 |
+| `reader-words` | helps, possibly through length or query-term overlap | d +0.035, 95% CI [+0.008, +0.066], n 33, Holm p 0.037 (the candidate check for query wording) | Added as a check at the usual weight; the measured label is shown on the check and its suggestions |
 
-Applying every applicable fix together raised the citation score by +0.049 (95% CI [+0.024, +0.076], n 78) against the original page and by +0.071 against a paraphrase of the same passages, possibly through length or query-term overlap. A candidate check for query wording (working the query's missing key terms into the title, the first heading and the first paragraph) also helped, by d +0.035 against its paraphrase (Holm p 0.037), possibly through query-term overlap; it is proposed in the [roadmap](roadmap.md), not added. These are local models in a fixed context of four sources, not ChatGPT, Perplexity or Google.
+Applying every applicable fix together raised the citation score by +0.049 (95% CI [+0.024, +0.076], n 78) against the original page and by +0.071 against a paraphrase of the same passages, possibly through length or query-term overlap. A candidate check for query wording (working the query's missing key terms into the title, the first heading and the first paragraph) also helped, by d +0.035 against its paraphrase (Holm p 0.037), possibly through query-term overlap; it is now the `reader-words` check. These are local models in a fixed context of four sources, not ChatGPT, Perplexity or Google.
+
+A follow-up test, E2 ([experiments/RESULTS_E2.md](../experiments/RESULTS_E2.md)), asked why the question-coverage fix helped. The heading form adds nothing: a question heading against the same words as plain text gave d +0.003 on the main set and -0.001 on the replication set, no effect larger than 0.03 on either. The question's words carry the gain: against a heading of the same size without them, d +0.048 on the replication set (helps) and +0.017 on the main set (inconclusive). So the question-coverage advice asks for the reader's question in your own words near the top, with a heading optional. With a different editor (Qwen3.8-27B) and judges, the query-wording gain kept its sign (d +0.029, 95% CI [+0.003, +0.061], n 29).
+
+## E3: seven checks, more pages
+
+E3 asked E1's question again for the seven checks E1 could not judge ([experiments/PLAN_E3.md](../experiments/PLAN_E3.md), results in [experiments/RESULTS_E3.md](../experiments/RESULTS_E3.md)). It used E1's editor, prompts, judges (Gemma-4-12B and Qwen3.8-27B, Gemma-edited), seeds, score and statistics, and added pages: 260 queries in all, 80 from E1 and 180 new, with one more attempt for each edit to pass E1's validity checks. A check gets a verdict when at least 30 queries have a valid edit and placebo; four did, and they were tested together with Holm's correction. A "no effect larger than 0.03" verdict means the 90% interval lies within ±0.03. E3 changes no grade either.
+
+| Check | E3 label | d and interval | What the tool does |
+|---|---|---|---|
+| `question-headings` | no effect larger than 0.03 | d -0.016, 90% CI [-0.028, -0.004] (95% CI [-0.030, -0.002]), n 57, Holm p 0.164 | Not scored: weight 0 in both presets; still reported and still suggests, its "?" edit included |
+| `tables` | insufficient n | d -0.027, 95% CI [-0.054, -0.001], n 11 | Grade kept, E3 shown |
+| `statistics` | insufficient n | d -0.007, 95% CI [-0.045, +0.026], n 11 | Grade kept, E3 shown |
+| `expert-quotes` | inconclusive | d +0.026, 95% CI [+0.001, +0.053], n 62, Holm p 0.179 | Grade kept, E3 shown ("unclear, leaning positive") |
+| `cited-sources` | no effect larger than 0.03 | d -0.010, 90% CI [-0.023, +0.002] (95% CI [-0.026, +0.004]), n 49, Holm p 0.228 | Not scored: weight 0 in both presets; still reported and still suggests |
+| `direct-answer-lead` | no effect larger than 0.03 | d +0.012, 90% CI [+0.002, +0.022] (95% CI [+0.000, +0.023]), n 66, Holm p 0.179 | Not scored: weight 0 in both presets; still reported and still suggests |
+| `comparisons` | insufficient n | d +0.003, 95% CI [-0.020, +0.026], n 24 | Grade kept, E3 shown |
+
+"No effect larger than 0.03" is not "no effect": an effect smaller than that, either way, cannot be ruled out. Attributed quotes leaned positive, but not by enough to survive the correction for testing four checks at once. Tables, statistics and comparisons still had too few valid pages for a verdict. In Start here, fixes of an unscored check come after those of the scored checks, and a custom weight can count any of them again. As with E1, these are local models in a fixed context of four sources, not ChatGPT, Perplexity or Google.
 
 ## The studies
 
@@ -217,9 +236,28 @@ In a controlled study, product pages with no comparison to alternatives lost the
 - Zhang, He, Yao 2026, [From Citation Selection to Citation Absorption](https://arxiv.org/abs/2604.25707): comparison content, 55.28% higher mean influence; observational.
 - Martinez 2026, [critical survey](https://arxiv.org/abs/2607.14035): "verifiable figures, definitions, and comparisons" have "moderate to strong" support, given "compatible truthfulness, attribution, and intent".
 
+## Your reader's words up top (`reader-words`)
+
+Grade: **mixed**
+
+Using your reader's own words where the page opens can help it get picked, but piling in query words is not the same thing. In an early controlled study, a rewrite that added more of the query's keywords lowered the page's share of the answer, and in the largest controlled study, pages missing the query's terms lost the first citation in only four of six models. Work the reader's words into the title or opening where they fit naturally, and leave them out where they do not.
+
+**What the check looks for.** It measures the questions you typed or imported when there are any; otherwise the page's own questions, made from its title (when the title is a question) and its topic ("What is ...?", "How does ... work?"). It never uses a question made from a section heading, and without any question it does not apply. For each question it takes the same key words as the question-coverage check, leaving out common verbs ("work", "use", "take", "make"), and counts how many appear in the title (the first H1), the first heading after it or the first paragraph. A question section does not push those down: the check reads every heading down to the first one that is not a question, and every paragraph down to the first one outside a question section, so with the same questions, adding a question section never lowers the score. On a page whose sections are all questions, this reaches further down than the title, first heading and first paragraph that our test edited. A question asked twice counts once. The score is that share, averaged over the questions. The advice names up to three missing words per question and says where they could go; it never names a word that is already there and never writes the words in for you.
+
+**What the studies did.** GEO's Keyword Stuffing rewrite ("Modifies content to include more keywords from the query, as expected in classical SEO optimization") lowered the source's position-weighted share of the answer from 19.3 at baseline to 17.7, and the authors find such methods offer "little to no improvement"; it added keywords anywhere in the page, not into the title and opening. What Gets Cited tested pages missing query terms that the competing page had: the page with the terms won the first citation, significantly in four of six models and not in Gemini 2.5 Flash or Claude 3.5 Sonnet. In SAGEO Arena, rewrites that mentioned the query's terms without addressing the question did well at retrieval but lost at reranking and generation. ConflictingQA found that opening a page with a line naming the question it answers substantially raised how often models sided with it. The rubric counts the stuffing result and the two null models as null or negative findings, so the grade is mixed.
+
+**Our own test.** E1's candidate check for query wording worked the query's missing key terms into the title, the first heading and the first paragraph, adding only key terms and function words. Against a paraphrase of the same spans it raised the citation score by d +0.035 (95% CI [+0.008, +0.066], n 33, Holm p 0.037), possibly through query-term overlap; the replication set had too few valid edits for a verdict (n 12). In E2, with a different editor (Qwen3.8-27B) and different judges, the gain kept its sign (d +0.029, 95% CI [+0.003, +0.061], n 29). These are local models in a fixed context of four sources.
+
+**Sources**
+
+- Aggarwal et al. 2024, [GEO](https://arxiv.org/abs/2311.09735): Keyword Stuffing, 17.7 versus 19.3 at baseline, five-source fixed setup.
+- Vishwakarma et al. 2026, [What Gets Cited](https://arxiv.org/abs/2605.25517): pages missing query terms lost the first citation, significant in four of six models.
+- Kim et al. 2026, [SAGEO Arena](https://arxiv.org/abs/2602.12187): query terms without an answer did well at retrieval, lost at reranking and generation.
+- Wan et al. 2024, [ConflictingQA](https://aclanthology.org/2024.acl-long.403/): a question prefix substantially raised win rate.
+
 ## Site readiness
 
-Site readiness is a separate report about the published page and its site, not the draft. It is not part of any GEO Score: no readiness item changes a score, and the score never looks at readiness. Five items read the page's HTML (or the draft's front matter) and run in the browser on the workspace's Site readiness page (`/site`), which sends nothing anywhere; two need a fetch of the live site and run from the command line with `ce site <url>`.
+Site readiness is a separate report about the published page and its site, not the draft. It is not part of the AI-ready score: no readiness item changes a score, and the score never looks at readiness. Five items read the page's HTML (or the draft's front matter) and run in the browser on the workspace's Your site page (`/site`), which sends nothing anywhere; two need a fetch of the live site and run from the command line with `ce site <url>`.
 
 The grades use the same four words, with one difference: for readiness, the documentation an answer engine publishes about its own crawlers and AI features counts as evidence, because it says what that engine does with a page. The rules:
 
@@ -342,7 +380,7 @@ A large measurement of crawler traffic found that the AI crawlers of OpenAI, Ant
 
 ## Off-page
 
-AI answers cite third-party pages heavily, so part of being cited happens off your own page: being present, accurately and openly, where answer engines already look. The workspace's Off-page page (`/off-page`) and `ce sources` show which sites the answers to your own questions cite, grouped by kind, and give one advice card per kind: what to do, what to avoid, and how well the advice is supported. Like site readiness, this is not part of any GEO Score.
+AI answers cite third-party pages heavily, so part of being cited happens off your own page: being present, accurately and openly, where answer engines already look. The workspace's Who gets cited page (`/cited`) and `ce sources` show which sites the answers to your own questions cite, grouped by kind, and give one advice card per kind: what to do, what to avoid, and how well the advice is supported. Like site readiness, this is not part of the AI-ready score.
 
 The answers come from `ce live` (the Gemini API with Google Search) or from answers you copy by hand out of ChatGPT, Perplexity, Gemini or Copilot and paste in. Pasted text is parsed in your browser and sent nowhere. The tool never posts, contacts anyone, writes reviews or reads consumer AI apps for you.
 
@@ -481,4 +519,4 @@ Medium, a blogging platform, is in Google AI Overviews' top ten in Profound's da
 
 ## Keeping this current
 
-The registry behind this page lives in `packages/engine/src/evidence.ts` (checks, with their E1 outcomes from `packages/engine/src/e1.ts`), `packages/engine/src/readiness.ts` (site readiness) and `packages/engine/src/offpage.ts` (off-page). When a new study changes a grade, update the registry, this page and the notes together; the engine tests check that every graded check has a linked source and that this page states the same grade as the registry.
+The registry behind this page lives in `packages/engine/src/evidence.ts` (checks, with their E1 and E3 outcomes from `packages/engine/src/e1.ts`), `packages/engine/src/readiness.ts` (site readiness) and `packages/engine/src/offpage.ts` (off-page). When a new study changes a grade, update the registry, this page and the notes together; the engine tests check that every graded check has a linked source and that this page states the same grade as the registry.

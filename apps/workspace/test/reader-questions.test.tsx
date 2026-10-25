@@ -22,10 +22,12 @@ function Harness({
   initial = START,
   localModel = null,
   onChange,
+  pageQuestions,
 }: {
   initial?: WorkspaceQuestion[];
   localModel?: string | null;
   onChange?: (q: WorkspaceQuestion[]) => void;
+  pageQuestions?: string[];
 }) {
   const [questions, setQuestions] = useState(initial);
   return (
@@ -33,6 +35,7 @@ function Harness({
       questions={questions}
       markdown={DRAFT}
       localModel={localModel}
+      pageQuestions={pageQuestions}
       onChange={(q) => {
         setQuestions(q);
         onChange?.(q);
@@ -204,5 +207,30 @@ describe('Reader questions', () => {
     });
     expect(panel().getByRole('status').textContent).toContain("Can't reach Ollama");
     expect(inputs()).toHaveLength(2);
+  });
+
+  it("lists the page questions the reader's-words check uses, in plain words, when given", () => {
+    const page = ['What is cold brew?', 'How does cold brew work?'];
+    render(<Harness initial={[]} pageQuestions={page} />);
+    const list = panel().getByRole('list', {
+      name: 'Page questions used for "Your reader\'s words up top"',
+    });
+    expect(
+      within(list)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(page);
+    expect(panel().getByText(/made from your title and topic/i)).toBeTruthy();
+    // Shown, not editable: no field and no Remove button for them.
+    expect(panel().queryAllByRole('textbox', { name: /^Question \d/ })).toEqual([]);
+    expect(panel().queryByRole('button', { name: /Remove question/ })).toBeNull();
+  });
+
+  it('shows no page questions list without any', () => {
+    render(<Harness pageQuestions={[]} />);
+    expect(panel().queryByRole('list', { name: /Page questions used/ })).toBeNull();
+    cleanup();
+    render(<Harness />);
+    expect(panel().queryByRole('list', { name: /Page questions used/ })).toBeNull();
   });
 });

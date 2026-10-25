@@ -1,5 +1,6 @@
 """E1 deterministic and extractive arms 4, 9, 11, 13 and 14 (PREREG_E1.md, Arms), and the
-"feature already present" rules of arms 11-14 that the applicability table uses.
+"feature already present" rules of arms 11-14 that the applicability table uses. E2a's versions
+9W and 9P of arm 9 (experiments/PLAN_E2.md) share arm 9's sentence choice and position.
 
 Each arm function takes the page text (Markdown), its engine output (engine_cli JSON) and, where
 needed, the query, and returns (edits, None) or (None, reason it does not apply). An edit is
@@ -58,18 +59,84 @@ def arm4(text: str, eng: dict):
 
 # --- Arm 9: the query as an H2 under the title, with the best-overlap sentence --------------------
 
+NO_SENTENCE = "the page has no prose sentence"
 
-def arm9(text: str, eng: dict, query: str):
+
+def arm9_sentence(text: str, eng: dict, query: str) -> str | None:
+    """The prose sentence with the most distinct query key terms (the earliest wins a tie)."""
     terms = common.content_terms(query)
     best, best_n = None, -1
     for sentence in prose_sentences(text, eng):
         n = len(common.terms_present(terms, sentence))
         if n > best_n:  # strictly greater: the earliest sentence wins a tie
             best, best_n = sentence, n
+    return best
+
+
+def arm9(text: str, eng: dict, query: str):
+    best = arm9_sentence(text, eng, query)
     if best is None:
-        return None, "the page has no prose sentence"
+        return None, NO_SENTENCE
     pos = top_position(text)
     return [_edit(pos, pos, f"## {query.strip()}\n\n{best.strip()}\n\n")], None
+
+
+# --- E2a (experiments/PLAN_E2.md): two versions of arm 9 at arm 9's position ----------------------
+
+
+def arm9w(text: str, eng: dict, query: str):
+    """9W, words without a heading: the query as a plain paragraph, then arm 9's sentence."""
+    best = arm9_sentence(text, eng, query)
+    if best is None:
+        return None, NO_SENTENCE
+    pos = top_position(text)
+    return [_edit(pos, pos, f"{query.strip()}\n\n{best.strip()}\n\n")], None
+
+
+def arm9p_sentence(text: str, eng: dict, query: str) -> str | None:
+    """Sentence S of 9P: the prose sentence with the fewest distinct query key terms; ties go to the
+    one closest in word count to arm 9's sentence, then to the earliest."""
+    best = arm9_sentence(text, eng, query)
+    if best is None:
+        return None
+    terms = common.content_terms(query)
+    target = common.count_words(best)
+    sentences = [s for s in prose_sentences(text, eng) if is_body_sentence(s)]
+    if not sentences:
+        return None
+    return min(sentences, key=lambda s: (len(common.terms_present(terms, s)), abs(common.count_words(s) - target)))
+
+
+NO_BODY_SENTENCE = "the page has no body sentence for 9P (PLAN_E2.md amendment 1)"
+_BODY_START = re.compile(r"^[\"'(\u201c]?[A-Z0-9]")
+_BODY_END = re.compile(r"[.!?][\"')\u201d]?$")
+
+
+def is_body_sentence(sentence: str) -> bool:
+    """PLAN_E2.md amendment 1: S must read as body text, not page furniture: one line, at least 8
+    words, starting with a capital letter or digit and ending with ., ! or ?."""
+    s = sentence.strip()
+    return ("\n" not in s and common.count_words(s) >= 8 and bool(_BODY_START.match(s))
+            and bool(_BODY_END.search(s)))
+
+
+def first_words(text: str, n: int) -> str:
+    """The first n words of `text` as the pipeline counts them (common.count_words), space-joined:
+    no markup, link destinations or punctuation between words."""
+    return " ".join(common.WORD.findall(common.strip_markup(text))[:n])
+
+
+def arm9p(text: str, eng: dict, query: str):
+    """9P, a section without the query's words: `## <first N words of S>` then S, N the query's
+    word count."""
+    if arm9_sentence(text, eng, query) is None:
+        return None, NO_SENTENCE
+    s = arm9p_sentence(text, eng, query)
+    if s is None:
+        return None, NO_BODY_SENTENCE
+    pos = top_position(text)
+    heading = first_words(s, common.count_words(query))
+    return [_edit(pos, pos, f"## {heading}\n\n{s.strip()}\n\n")], None
 
 
 # --- Arm 11: the first "<key term> is/are ..." sentence under the title ----------------------------

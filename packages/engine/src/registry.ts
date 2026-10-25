@@ -12,7 +12,8 @@ type CheckMeta = Pick<CheckDefinition, 'title' | 'category' | 'inFoundationDesig
 
 /**
  * What each check looks at. `inFoundationDesign` marks the six checks of
- * Prof. Akram Bayat's foundation design; the other four come from the literature.
+ * Prof. Akram Bayat's foundation design; four come from the literature and one
+ * (reader-words) from the project's own test, E1.
  */
 const META: Record<CheckId, CheckMeta> = {
   'standalone-paragraphs': {
@@ -85,11 +86,18 @@ const META: Record<CheckId, CheckMeta> = {
     description:
       'Where readers choose between options, the draft compares them in so many words, such as "X vs Y", "brighter than", "unlike" or "instead of". Applies to drafts of 300 words or more.',
   },
+  'reader-words': {
+    title: "Your reader's words up top",
+    category: 'clarity',
+    inFoundationDesign: false,
+    description:
+      'The key words of the page\'s questions appear in the title, the first heading or the first paragraph (a question section above them does not push them down); the score is the share found, averaged over questions. The questions are the ones you typed or imported, else the page\'s title and topic questions, never a section\'s. Common verbs such as "work" and "use" do not count. It names missing words as advice and never adds them for you.',
+  },
 };
 
 /**
- * Checks that are unscored notes: E1 found no effect larger than δ, so the pre-registration makes
- * them weight 0 in every preset. They are still analyzed and still suggest; a custom weight the
+ * Checks that are unscored notes: our own test (E1, or E3 for the checks it asked again) found no
+ * effect larger than δ, so E1's rule table makes them weight 0 in every preset. They are still analyzed and still suggest; a custom weight the
  * author sets still counts them.
  */
 export const UNSCORED_CHECKS: CheckId[] = CHECK_IDS.filter(
@@ -110,8 +118,8 @@ const presetFrom = (weightOf: (id: CheckId) => number): Weights =>
   Object.fromEntries(CHECK_IDS.map((id) => [id, weightOf(id)])) as Weights;
 
 /**
- * `foundation`: the foundation design's six checks at equal weight, the four
- * added checks at half weight. `evidence`: each check weighted by its grade.
+ * `foundation`: the foundation design's checks at equal weight, the added checks at half weight.
+ * `evidence`: each check weighted by its grade.
  * An unscored check is 0 in both.
  */
 export const PRESET_WEIGHTS: Record<PresetId, Weights> = {

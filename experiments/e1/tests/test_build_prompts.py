@@ -196,5 +196,85 @@ class Cli(unittest.TestCase):
             self.assertEqual(json.loads(out.read_text()), [bp.build_prompt("q?", [{"title": "a", "text": "b"}])])
 
 
+
+class SelectedJudgesTokenizers(unittest.TestCase):
+    def test_hf_counting_loads_the_tokenizers_of_the_judges_selected(self):
+        seen = []
+
+        def fake_hf_counter(judges):
+            seen.append(list(judges))
+            return utf8_tokens
+
+        original = bp.hf_counter
+        bp.hf_counter = fake_hf_counter
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                fixtures.write_fixture(Path(tmp))
+                with contextlib.redirect_stdout(io.StringIO()):
+                    bp.main(["--data", tmp, "--sets", "smoke", "--judges", "gemma-4-12b,qwen3.5-9b"])
+                    bp.main(["--data", tmp, "--sets", "smoke"])
+                lines = (Path(tmp) / "batches" / "smoke.qwen3.5-9b.tier1.prompts.jsonl").read_text().splitlines()
+                self.assertEqual({json.loads(x)["model"] for x in lines}, {"Qwen/Qwen3.5-9B"})
+        finally:
+            bp.hf_counter = original
+        self.assertEqual(seen, [["gemma-4-12b", "qwen3.5-9b"], ["gemma-4-12b", "qwen3.8-27b"]])
+
+
+def e2_versions(arms=("9W", "9P")) -> list[dict]:
+    """E2 rows (experiments/PLAN_E2.md) for the fixture: each carries the text of the fixture's arm 9."""
+    rows = []
+    for v in fixtures.versions():
+        if v["arm"] == "9":
+            for arm in arms:
+                rows.append(dict(v, version_id=f"{v['query_id']}:{arm}", arm=arm))
+    return rows
+
+
+class E2DataDir(unittest.TestCase):
+    def test_prompts_for_e2_versions_only_with_the_original_left_to_e1(self):
+        rows, refused = bp.build_all(fixtures.pages(), e2_versions(), fixtures.applicability(), sets={"smoke"},
+                                     judges=["gemma-4-12b"], count_tokens=utf8_tokens, require_original=False)
+        self.assertEqual(refused, [])
+        self.assertEqual({r["arm"] for r in rows}, {"9W", "9P"})
+        self.assertEqual(len(rows), 4 * 2 * 8)
+        self.assertEqual({r["tier"] for r in rows}, {1})
+        with self.assertRaises(ValueError):
+            bp.build_all(fixtures.pages(), e2_versions(), fixtures.applicability(), sets={"smoke"},
+                         judges=["gemma-4-12b"], count_tokens=utf8_tokens)
+
+    def test_an_e2_prompt_is_byte_identical_to_the_e1_prompt_for_the_same_text(self):
+        e1, _ = bp.build_all(fixtures.pages(), fixtures.versions(), fixtures.applicability(), sets={"smoke"},
+                             judges=["gemma-4-12b"], count_tokens=utf8_tokens)
+        e2, _ = bp.build_all(fixtures.pages(), e2_versions(), fixtures.applicability(), sets={"smoke"},
+                             judges=["gemma-4-12b"], count_tokens=utf8_tokens, require_original=False)
+        nine = {(r["query_id"], r["seed"]): r for r in e1 if r["arm"] == "9"}
+        for r in e2:
+            other = nine[(r["query_id"], r["seed"])]
+            self.assertEqual(r["prompt"], other["prompt"])
+            self.assertEqual(r["slot"], other["slot"])
+            self.assertEqual(r["key"], f"gemma-4-12b|{r['query_id']}:{r['arm']}|{r['seed']}")
+
+    def test_versions_of_a_query_whose_arm_9_is_not_applicable_are_never_prompted(self):
+        appl = [dict(a, applicable=False) if (a["query_id"], a["arm"]) == ("s1", "9") else a
+                for a in fixtures.applicability()]
+        rows, _ = bp.build_all(fixtures.pages(), e2_versions(), appl, sets={"smoke"}, judges=["gemma-4-12b"],
+                               count_tokens=utf8_tokens, require_original=False)
+        self.assertNotIn("s1", {r["query_id"] for r in rows})
+
+    def test_the_cli_builds_an_e2_folder_of_pages_and_e2_versions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data = Path(tmp)
+            fixtures.write_jsonl(data / "pages.jsonl", fixtures.pages())
+            fixtures.write_jsonl(data / "versions.jsonl", e2_versions())
+            # An E1 build still needs applicability.jsonl and an original for every query.
+            with self.assertRaises(FileNotFoundError), contextlib.redirect_stdout(io.StringIO()):
+                bp.main(["--data", tmp, "--sets", "smoke", "--tokens", "utf8"])
+            with contextlib.redirect_stdout(io.StringIO()) as printed:
+                bp.main(["--data", tmp, "--sets", "smoke", "--tokens", "utf8", "--without-original"])
+            self.assertIn("no applicability.jsonl", printed.getvalue())
+            summary = json.loads((data / "prompt_build.json").read_text())
+            self.assertEqual(summary["batches"], {"smoke.gemma-4-12b.tier1": 64, "smoke.qwen3.8-27b.tier1": 64})
+            self.assertTrue(summary["without_original"])
+
 if __name__ == "__main__":
     unittest.main()

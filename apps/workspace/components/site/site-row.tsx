@@ -6,9 +6,10 @@ import {
   type LucideIcon,
   TriangleAlert,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useId } from 'react';
-import { GradeLabel } from '@/components/grade-label';
 import { cn } from '@/lib/utils';
+import { RESEARCH_HREF } from '@/lib/views';
 import type { RowStatus, SiteRow } from './site-check';
 
 const STATUS: Record<RowStatus, { label: string; icon: LucideIcon; className: string }> = {
@@ -50,10 +51,7 @@ export function StatusChip({ status }: { status: RowStatus }) {
   );
 }
 
-/** Source titles without the "Read <date>." stamp, which stays in docs. */
-const title = (citation: string) => citation.replace(/\s*Read \d{4}-\d{2}-\d{2}\.\s*$/, '');
-
-/** One compact result row: status, name and finding; Why it matters on tap. */
+/** One compact result row: status, name and finding; Why it matters on tap, with Learn more. */
 export function SiteRowItem({ row, id }: { row: SiteRow; id?: string }) {
   const nameId = useId();
   return (
@@ -76,22 +74,15 @@ export function SiteRowItem({ row, id }: { row: SiteRow; id?: string }) {
             {row.what} {row.why}
           </p>
           <p>
-            <GradeLabel grade={row.evidence.grade} />
+            <Link
+              href={`${RESEARCH_HREF}#site-${row.id}`}
+              prefetch={false}
+              className="rounded-sm font-medium text-brand underline-offset-2 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring"
+            >
+              Learn more
+              <span className="sr-only">: {row.name}</span>
+            </Link>
           </p>
-          <ul className="space-y-1">
-            {row.evidence.sources.map((s) => (
-              <li key={s.id}>
-                <a
-                  href={s.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="break-words rounded-sm text-ink-soft underline underline-offset-2 outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring"
-                >
-                  {title(s.citation)}
-                </a>
-              </li>
-            ))}
-          </ul>
         </div>
       </details>
     </li>

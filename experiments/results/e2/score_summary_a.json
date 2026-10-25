@@ -1,0 +1,73 @@
+{
+ "answers": 3392,
+ "prompts": 3392,
+ "unknown_answer_keys": 0,
+ "valid": 3391,
+ "dropped_cells": 0,
+ "completion": [
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "9P",
+   "prompts": 432,
+   "answered": 432,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "9W",
+   "prompts": 432,
+   "answered": 432,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "9P",
+   "prompts": 432,
+   "answered": 432,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "9W",
+   "prompts": 432,
+   "answered": 432,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "gemma-4-12b",
+   "arm": "9P",
+   "prompts": 416,
+   "answered": 416,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "gemma-4-12b",
+   "arm": "9W",
+   "prompts": 416,
+   "answered": 416,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "qwen3.8-27b",
+   "arm": "9P",
+   "prompts": 416,
+   "answered": 416,
+   "missing": 0
+  },
+  {
+   "set": "replication",
+   "judge": "qwen3.8-27b",
+   "arm": "9W",
+   "prompts": 416,
+   "answered": 416,
+   "missing": 0
+  }
+ ]
+}

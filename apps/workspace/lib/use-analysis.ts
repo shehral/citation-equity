@@ -39,6 +39,7 @@ export function useAnalysis(
   preset: ActivePreset,
   weights: Weights,
   questions: string[] = NO_QUESTIONS,
+  authorQuestions: string[] = NO_QUESTIONS,
 ): { result: AnalysisResult | null; pending: boolean; refresh: () => void } {
   const safeWeights = useMemo(() => sanitizeWeights(weights), [weights]);
   const weightsRef = useRef(safeWeights);
@@ -46,9 +47,9 @@ export function useAnalysis(
   const latest = useRef(markdown);
   latest.current = markdown;
   // Compared by content, so a new array with the same questions does not re-run the analysis.
-  const questionsKey = JSON.stringify(questions);
-  const latestQuestions = useRef(questions);
-  latestQuestions.current = questions;
+  const questionsKey = JSON.stringify([questions, authorQuestions]);
+  const latestQuestions = useRef({ questions, authorQuestions });
+  latestQuestions.current = { questions, authorQuestions };
 
   const [analysis, setAnalysis] = useState<{
     source: string;
@@ -57,7 +58,7 @@ export function useAnalysis(
   }>(() => ({
     source: markdown,
     questionsKey,
-    result: analyze(markdown, { weights: safeWeights, questions }),
+    result: analyze(markdown, { weights: safeWeights, questions, authorQuestions }),
   }));
 
   const refresh = useCallback(() => {
@@ -65,8 +66,8 @@ export function useAnalysis(
     const qs = latestQuestions.current;
     setAnalysis({
       source,
-      questionsKey: JSON.stringify(qs),
-      result: analyze(source, { weights: weightsRef.current, questions: qs }),
+      questionsKey: JSON.stringify([qs.questions, qs.authorQuestions]),
+      result: analyze(source, { weights: weightsRef.current, ...qs }),
     });
   }, []);
 

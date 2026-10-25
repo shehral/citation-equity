@@ -2,6 +2,7 @@ export { analyze } from './analyze';
 export { type BingAiSignals, parseBingAiPerformanceCsv } from './bing-ai';
 export { CHECKS } from './checks/index';
 export { type QuestionCoverage, questionCoverage } from './checks/question-coverage';
+export { type ReaderWords, readerWords } from './checks/reader-words';
 export type { CheckContext, CheckFn } from './checks/types';
 export {
   E1_COMBINED,
@@ -12,6 +13,7 @@ export {
   formatE1,
   formatE1Effect,
   measuredNote,
+  OWN_TEST_RESULTS,
   signed3,
   unscoredNote,
 } from './e1';
@@ -53,12 +55,21 @@ export {
 export type { ParsedDraft } from './parse';
 export { parseDraft } from './parse';
 export {
+  type GeneratedQuestion,
   generateQuestions,
+  pageQuestions,
+  type QuestionOrigin,
   type QuestionSource,
   questionContext,
   type TargetQuestion,
 } from './questions';
-export { groupFixes, type RankedFix, rankFixes } from './rank';
+export {
+  groupFixes,
+  type RankedFix,
+  rankFixes,
+  START_HERE_COUNT,
+  startHereFixes,
+} from './rank';
 export {
   analyzeReadiness,
   READINESS_EVIDENCE,

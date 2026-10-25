@@ -5,7 +5,10 @@
 2. The arm's own engine check value rises (arms 2-10), or its feature is present (1, 11-14).
    Two arms of 2-10 are judged by their feature instead (see the README): arm 9 (the query as an
    H2 directly under the title, then a page sentence copied verbatim), and arm 7 when the donor
-   has no URL (replication set), where every edited claim must name the donor.
+   has no URL (replication set), where every edited claim must name the donor. Arm 4's own
+   version (not an ALL step) also passes when the tables check is not applicable after the edit
+   because each flagged Key: value list is now the table of its own items (PLAN_E3.md
+   amendment 1, `converted_to_table`).
    A placebo instead keeps every engine check within +-0.02 of the original and keeps exactly
    the query key terms its spans contain.
 3. No number token, URL or capitalized multi-word sequence (not counting a sentence's first
@@ -155,9 +158,71 @@ def _query_heading_on_top(query, before, after) -> str | None:
     return None
 
 
-def check_own_feature(arm, eng_before, eng_after, query, before, after, donor=None, edits=()):
+_BOLD_KEY = re.compile(r"^(\*\*|__)([^*_:\n]+?)(:?)\1(:?)[ \t]*(.*)$")
+_PLAIN_KEY = re.compile(r"^([^:\n]+?):[ \t]+(.*)$")
+
+
+def split_key_value(item: str):
+    """The engine's tables-check `splitKeyValue` (packages/engine/src/checks/tables.ts): a one-line
+    `Key: value`, `**Key:** value` or `**Key**: value` item as (key, value), else None."""
+    if "\n" in item:
+        return None
+    bold = _BOLD_KEY.match(item)
+    if bold:
+        if (bold.group(3) == ":") == (bold.group(4) == ":"):
+            return None
+        key, value = bold.group(2), bold.group(5)
+    else:
+        plain = _PLAIN_KEY.match(item)
+        if not plain:
+            return None
+        key, value = plain.group(1), plain.group(2)
+    key, value = key.strip(), value.strip()
+    if not key or not value or len(key) > 40 or len(key.split()) > 5:
+        return None
+    return key, value
+
+
+def key_value_table(pairs) -> str:
+    """The two-column table the tables check proposes for (key, value) pairs (its `toTable`)."""
+    cell = lambda s: re.sub(r"(?<!\\)\|", r"\\|", s)  # noqa: E731
+    return "\n".join(["| Item | Detail |", "| --- | --- |"] + [f"| {cell(k)} | {cell(v)} |" for k, v in pairs])
+
+
+def converted_to_table(eng_before: dict, eng_after: dict, edits) -> bool:
+    """PLAN_E3.md amendment 1, for arm 4: True when every edit replaced exactly a run the tables
+    check flagged (the range of one of its edit suggestions, which is the range of one list) with
+    the two-column table of that list's own Key: value items, every item converted, same order and
+    text, and the edited page's parser reads a table of exactly len(items) + 1 rows (header plus
+    one per item) at exactly the replacement's place."""
+    if not edits or any(e["field"] != "text" for e in edits):
+        return False
+    flagged = {(s["start"], s["end"]) for s in _check(eng_before, ENGINE_CHECK["4"]).get("suggestions", [])
+               if s.get("kind") == "edit"}
+    lists = {(l["start"], l["end"]): l for l in eng_before["artifacts"]["lists"]}
+    tables = {(t["start"], t["end"]): t for t in eng_after["artifacts"]["tables"]}
+    shift = 0
+    for e in sorted(edits, key=lambda e: e["start"]):
+        run = (e["start"], e["end"])
+        if run not in flagged or run not in lists:
+            return False
+        pairs = [split_key_value(i["text"]) for i in lists[run]["items"]]
+        if len(pairs) < 3 or any(p is None for p in pairs) or e["replacement"] != key_value_table(pairs):
+            return False
+        at = e["start"] + shift
+        table = tables.get((at, at + len(e["replacement"])))
+        if table is None or table["rows"] != len(pairs) + 1:
+            return False
+        shift += len(e["replacement"]) - (e["end"] - e["start"])
+    return True
+
+
+def check_own_feature(arm, eng_before, eng_after, query, before, after, donor=None, edits=(),
+                      table_conversion=False):
     """`before`/`after` are (title, text) of the version before and after this edit; `edits` are
-    its {field, start, end, replacement} edits in `before`'s coordinates."""
+    its {field, start, end, replacement} edits in `before`'s coordinates. `table_conversion`
+    (arm 4's own version, not an ALL step; PLAN_E3.md amendment 1): a tables check that is not
+    applicable after the edit passes when `converted_to_table` holds."""
     if arm == "7" and donor and not donor.get("url"):
         return _named_by_attribution(donor, edits, before)
     if arm == "9":
@@ -171,6 +236,8 @@ def check_own_feature(arm, eng_before, eng_after, query, before, after, donor=No
         check_id = ENGINE_CHECK[arm]
         b, a = _check(eng_before, check_id), _check(eng_after, check_id)
         if not a["applicable"]:
+            if arm == "4" and table_conversion and converted_to_table(eng_before, eng_after, edits):
+                return None
             return f"After the edit the {check_id} check is not applicable."
         if a["score"] <= b["score"]:
             return f"The {check_id} check did not rise ({b['score']:.3f} -> {a['score']:.3f})."
@@ -475,7 +542,8 @@ def validate(arm, original, edited, edits, spans, eng_orig, eng_edit, query, tar
         add(check_placebo(eng_orig, eng_edit, query, orig_spans, new_spans))
     else:
         add(check_own_feature(a, eng_orig, eng_edit, query, original, edited,
-                              donor=donor if a in DONOR_ARMS else None, edits=edits))
+                              donor=donor if a in DONOR_ARMS else None, edits=edits,
+                              table_conversion=arm == "4" and not step))
     allowed = corpus(target, donor=None if placebo or a not in DONOR_ARMS else donor,
                      query=None if placebo or a not in QUERY_ARMS else query)
     if step:  # an ALL step may keep what earlier steps added (the query heading, a donor figure)

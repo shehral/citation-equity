@@ -6,6 +6,7 @@ import {
   freshVisit,
   go,
   HEADING_EDIT,
+  headingEdit,
   openExample,
   pick,
   ROUTES,
@@ -151,7 +152,7 @@ test("an edit's Show me leads to Preview in the bar, and Apply stays in the prev
 }) => {
   await openExample(page);
   const before = await draftText(page);
-  await pick(page, HEADING_EDIT, 'Show me');
+  await pick(page, await headingEdit(page), 'Show me');
   await expect(bar(page)).toContainText(HEADING_EDIT);
   await expect(bar(page).getByRole('button', { name: 'Done' })).toHaveCount(0);
   await bar(page).getByRole('button', { name: 'Preview' }).tap();
@@ -188,7 +189,7 @@ test('from the keyboard, Back to fixes, Done and Preview in the bar keep focus o
 
   // Preview: closing it (Escape here) puts focus on the Fixes button too.
   await page.keyboard.press('Enter');
-  await pick(page, HEADING_EDIT, 'Show me');
+  await pick(page, await headingEdit(page), 'Show me');
   await bar(page).getByRole('button', { name: 'Preview' }).focus();
   await page.keyboard.press('Enter');
   const dialog = page.getByRole('dialog', { name: HEADING_EDIT });
@@ -199,7 +200,7 @@ test('from the keyboard, Back to fixes, Done and Preview in the bar keep focus o
 
   // And after Apply.
   await page.keyboard.press('Enter');
-  await pick(page, HEADING_EDIT, 'Show me');
+  await pick(page, await headingEdit(page), 'Show me');
   await bar(page).getByRole('button', { name: 'Preview' }).focus();
   await page.keyboard.press('Enter');
   await dialog.getByRole('button', { name: 'Apply' }).focus();

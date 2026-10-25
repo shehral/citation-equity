@@ -1,4 +1,9 @@
-import { analyze, generateQuestions, type Suggestion } from '@citation-equity/engine';
+import {
+  analyze,
+  generateQuestions,
+  pageQuestions,
+  type Suggestion,
+} from '@citation-equity/engine';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -259,11 +264,16 @@ describe('Draft view, first paint', () => {
 });
 
 describe('Draft view, Start here', () => {
-  it('ranks the edit first and shows at most three cards, each with one reason', () => {
+  it('ranks scored checks first, the unscored heading edit after them, at most three cards, each with one reason', () => {
     renderExample();
     const cards = startHere().getAllByRole('article');
-    expect(cards.length).toBeLessThanOrEqual(3);
-    expect(cards[0]?.getAttribute('aria-label') ?? cards[0]?.textContent).toContain(EDIT);
+    expect(cards.length).toBe(3);
+    // Question headings is an unscored note, so its ready edit follows the scored advice.
+    expect(cards.map((c) => within(c).getByRole('heading').textContent)).toEqual([
+      QUOTE,
+      PARAGRAPH,
+      EDIT,
+    ]);
     expect(within(card(EDIT)).getByText(fixCopy(HEADING_EDIT).reason)).toBeTruthy();
   });
 
@@ -524,12 +534,17 @@ describe('Draft view, phone layout', () => {
 });
 
 describe('Draft view, groups', () => {
-  it('shows one collapsed group per check with its count and grade, and marks nothing on load', () => {
+  it('shows one collapsed group per check with its count and at most one chip, and marks nothing on load', () => {
     renderExample();
-    const groups = within(screen.getByRole('region', { name: 'All fixes' }));
+    const region = screen.getByRole('region', { name: 'All fixes' });
+    const groups = within(region);
     const toggle = groups.getByRole('button', { name: 'Quotes say who said them 1' });
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
-    expect(groups.getAllByRole('button', { name: /evidence|Untested/i }).length).toBe(3);
+    // Only the unscored note's group carries a chip; no grade anywhere.
+    const chips = groups.getAllByText(/^(Helps|Not scored)$/);
+    expect(chips.map((c) => c.textContent)).toEqual(['Not scored']);
+    expect(chips[0]?.closest('li')?.textContent).toContain(CHECK_NAMES['question-headings']);
+    expect(region.textContent).not.toMatch(/evidence|Untested/i);
     expect(shown.highlights).toEqual([]);
     expect(shown.selectedRanges ?? []).toEqual([]);
     fireEvent.click(toggle);
@@ -557,13 +572,11 @@ describe('Draft view, groups', () => {
     expect(card(QUOTE)).toBeTruthy();
   });
 
-  it('opens a grade label to say what it means', async () => {
+  it("ends an open group on Learn more, linking that check's section of Research", () => {
     renderExample();
-    const groups = within(screen.getByRole('region', { name: 'All fixes' }));
-    fireEvent.click(groups.getAllByRole('button', { name: /Mixed evidence/ })[0] as HTMLElement);
-    const pop = await screen.findByRole('dialog');
-    expect(pop.textContent).toContain('Mixed evidence');
-    expect(within(pop).getByRole('link', { name: 'See the studies' })).toBeTruthy();
+    const group = openGroup('expert-quotes');
+    const link = group.getByRole('link', { name: `Learn more: ${CHECK_NAMES['expert-quotes']}` });
+    expect(link.getAttribute('href')).toMatch(/\/research\/?#check-expert-quotes$/);
   });
 
   it('renders no bulk action anywhere, with every group and section open', async () => {
@@ -572,11 +585,11 @@ describe('Draft view, groups', () => {
     for (const toggle of groups.getAllByRole('button', { expanded: false })) {
       if (!/evidence|Untested/i.test(toggle.textContent ?? '')) fireEvent.click(toggle);
     }
-    for (const name of ['Reader questions', 'All 10 checks', 'Test it']) openSection(name);
+    for (const name of ['Reader questions', 'All 11 checks', 'Test it']) openSection(name);
     const labels = [...screen.getAllByRole('button'), ...screen.queryAllByRole('menuitem')].map(
       (b) => b.textContent ?? '',
     );
-    expect(labels.filter((t) => /\b(all|every)\b/i.test(t) && !/^All 10 checks/.test(t))).toEqual(
+    expect(labels.filter((t) => /\b(all|every)\b/i.test(t) && !/^All 11 checks/.test(t))).toEqual(
       [],
     );
     expect(screen.queryByRole('button', { name: /apply/i })).toBeNull();
@@ -885,7 +898,7 @@ describe('Draft view, score and baseline', () => {
     fireEvent.click(pop.getByRole('button', { name: /^By evidence/ }));
     expect(score.getByText('48')).toBeTruthy();
     expect(getSummary('draft')?.score).toBe(62);
-    const checks = openSection('All 10 checks');
+    const checks = openSection('All 11 checks');
     fireEvent.click(checks.getByRole('button', { name: 'Adjust weights' }));
     fireEvent.change(checks.getByLabelText('Weight for Lists, not long sentences'), {
       target: { value: '1.5' },
@@ -896,7 +909,7 @@ describe('Draft view, score and baseline', () => {
 
   it('switches to Custom when a weight moves', () => {
     renderExample();
-    const checks = openSection('All 10 checks');
+    const checks = openSection('All 11 checks');
     fireEvent.click(checks.getByRole('button', { name: 'Adjust weights' }));
     fireEvent.change(checks.getByLabelText('Weight for Lists, not long sentences'), {
       target: { value: '1.5' },
@@ -1033,6 +1046,33 @@ describe('Draft view, Reader questions', () => {
     advance();
     expect(fields(panel).at(-1)).toBe('How long should a shot take?');
     expect(lastQuestions()).toEqual([...GENERATED, 'How long should a shot take?']);
+  });
+
+  const pageList = (panel: ReturnType<typeof openSection>) =>
+    panel.queryByRole('list', { name: /^Page questions used for/ });
+
+  it("lists the page questions the reader's-words check measures until the author has their own", () => {
+    vi.useFakeTimers();
+    renderExample();
+    advance();
+    const panel = openSection('Reader questions');
+    const page = pageQuestions(DRAFT).map((q) => q.text);
+    expect(page.length).toBeGreaterThan(0);
+    const list = pageList(panel);
+    expect(
+      list &&
+        within(list)
+          .getAllByRole('listitem')
+          .map((li) => li.textContent),
+    ).toEqual(page);
+    // Generated questions from "Suggest from my draft" do not replace them.
+    fireEvent.click(panel.getByRole('button', { name: 'Suggest from my draft' }));
+    advance();
+    expect(pageList(panel)).not.toBeNull();
+    // A question of the author's own does.
+    addQuestion(panel, 'How long should a shot take?');
+    advance();
+    expect(pageList(panel)).toBeNull();
   });
 
   it('says which questions the draft answers, with Show in draft', () => {

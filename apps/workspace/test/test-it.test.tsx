@@ -80,12 +80,9 @@ describe('Test it, recorded results', () => {
     expect(cited.textContent).toContain('33%');
     expect(cited.textContent).toContain('75%');
     expect(cited.textContent).toContain('+42 points');
-    expect(cited.textContent).toContain('p = 0.50');
-    // Wilson interval of 1 of 3.
-    expect(cited.textContent).toMatch(/6% to 79%/);
+    expect(cited.textContent).toContain('1 of 3');
     const share = p.getByRole('row', { name: /^Draft share among valid answers/ });
     expect(share.textContent).toContain('0.125');
-    expect(share.textContent).toContain('0.000 to 0.370');
     expect(share.textContent).toContain('0.375');
     expect(share.textContent).toContain('chance level: 1 in 2.6 sources');
     expect(share.textContent).toContain('chance level: 1 in 2.4 sources');
@@ -143,19 +140,23 @@ describe('Test it, recorded results', () => {
     expect(text).not.toContain('for that reason alone');
   });
 
-  it('says no paired test was possible when no question is valid on both sides', () => {
-    const none = { ...COMPARISON, nQueries: 0, excludedQueries: ['q1', 'q2'] };
-    render(
-      <TestIt
-        sample={{ ...RECORDED_SAMPLE, results: { ...RECORDED_SAMPLE.results, comparison: none } }}
-        markdown={RECORDED_SAMPLE.before}
-      />,
-    );
-    const text = panel().textContent ?? '';
-    expect(text).not.toMatch(/p = \d/);
-    expect(text).not.toContain('over the 0 questions');
-    expect(text).toContain('no paired test possible');
-    expect(text).toContain('No question has a valid answer on both sides');
+  it('shows plain counts only: no intervals, p-values or study names, even with no paired test', () => {
+    for (const comparison of [
+      COMPARISON,
+      { ...COMPARISON, nQueries: 0, excludedQueries: ['q1', 'q2'] },
+    ]) {
+      const { unmount } = render(
+        <TestIt
+          sample={{ ...RECORDED_SAMPLE, results: { ...RECORDED_SAMPLE.results, comparison } }}
+          markdown={RECORDED_SAMPLE.before}
+        />,
+      );
+      const text = panel().textContent ?? '';
+      expect(text).not.toMatch(/p = \d|\bCI\b|95%|sign-flip|paired test/);
+      expect(text).not.toMatch(/\bGEO\b|Aggarwal/);
+      if (comparison.nQueries === 0) expect(text).toContain('Left out: q1, q2.');
+      unmount();
+    }
   });
 
   it.each([

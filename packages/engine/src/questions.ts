@@ -20,6 +20,17 @@ export interface TargetQuestion {
   source: QuestionSource;
 }
 
+/**
+ * Where in the draft a generated question comes from: the title (an H1 that reads as a
+ * question), an H2/H3 subheading (as written, or rewritten by a template), or the page's topic
+ * ("What is <topic>?", "How does <topic> work?"). Title and topic questions are about the page
+ * as a whole; subheading questions are about one section.
+ */
+export type QuestionOrigin = 'title' | 'subheading' | 'topic';
+export interface GeneratedQuestion extends TargetQuestion {
+  origin: QuestionOrigin;
+}
+
 const DEFAULT_MAX = 8;
 
 /** The H1 (or '') and the first prose paragraph (or ''), the only text the generators read. */
@@ -359,32 +370,62 @@ function isTitleCase(heading: string): boolean {
  */
 export function generateQuestions(markdown: string, opts: { max?: number } = {}): TargetQuestion[] {
   const max = opts.max ?? DEFAULT_MAX;
-  const a = gather(parseDraft(markdown));
-  const out: TargetQuestion[] = [];
-  const seen = new Set<string>();
-  const add = (text: string, source: QuestionSource) => {
-    const key = text.toLowerCase().replace(/\s+/g, ' ');
-    if (out.length >= max || seen.has(key)) return;
-    seen.add(key);
-    out.push({ text, source });
-  };
+  return dedupe(candidates(gather(parseDraft(markdown))))
+    .slice(0, Math.max(0, max))
+    .map(({ text, source }) => ({ text, source }));
+}
 
+/**
+ * The page-level questions of a draft, with their origin: the title's question (when the H1
+ * reads as one), then the topic questions, deduplicated ignoring case. Never a subheading's
+ * question, so adding a section never changes them. The reader-words check measures these
+ * when the author has no questions of their own.
+ */
+export function pageQuestions(markdown: string): GeneratedQuestion[] {
+  return pageQuestionsOf(gather(parseDraft(markdown)));
+}
+
+/** `pageQuestions` for an already gathered draft. */
+export function pageQuestionsOf(a: Artifacts): GeneratedQuestion[] {
+  return dedupe(candidates(a).filter((q) => q.origin !== 'subheading'));
+}
+
+/** `questions` without repeats, ignoring case and spacing; the first one is kept. */
+function dedupe(questions: GeneratedQuestion[]): GeneratedQuestion[] {
+  const seen = new Set<string>();
+  return questions.filter((q) => {
+    const key = q.text.toLowerCase().replace(/\s+/g, ' ');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** Every generated question of a draft, in the order generateQuestions lists them. */
+function candidates(a: Artifacts): GeneratedQuestion[] {
+  const out: GeneratedQuestion[] = [];
   const { title, intro } = contextOf(a);
-  if (title !== '' && readsAsQuestion(title)) add(asQuestion(title), 'draft-heading');
+  if (title !== '' && readsAsQuestion(title))
+    out.push({ text: asQuestion(title), source: 'draft-heading', origin: 'title' });
   const sub = a.headings.filter((h) => h.depth === 2 || h.depth === 3).map((h) => h.text);
-  for (const h of sub) if (readsAsQuestion(h)) add(asQuestion(h), 'draft-heading');
+  for (const h of sub)
+    if (readsAsQuestion(h))
+      out.push({ text: asQuestion(h), source: 'draft-heading', origin: 'subheading' });
   const written = [title, intro, ...sub].join('\n');
   const prose = proseOf(a);
   for (const h of sub) {
     if (readsAsQuestion(h)) continue;
     const q = fromTemplate(h, (text) => caseAsWritten(text, written, isTitleCase(h), prose));
-    if (q) add(q, 'template');
+    if (q) out.push({ text: q, source: 'template', origin: 'subheading' });
   }
   const topic = topicOf(title, intro, sub, prose);
   if (topic) {
-    add(asQuestion(`${topic.plural ? 'What are' : 'What is'} ${topic.text}`), 'template');
-    if (topic.mechanism)
-      add(asQuestion(`How ${topic.plural ? 'do' : 'does'} ${topic.text} work`), 'template');
+    const what = asQuestion(`${topic.plural ? 'What are' : 'What is'} ${topic.text}`);
+    out.push({ text: what, source: 'template', origin: 'topic' });
+    if (topic.mechanism) {
+      const how = asQuestion(`How ${topic.plural ? 'do' : 'does'} ${topic.text} work`);
+      out.push({ text: how, source: 'template', origin: 'topic' });
+    }
   }
   return out;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { type CheckId, EVIDENCE } from '@citation-equity/engine';
+import type { CheckId } from '@citation-equity/engine';
 import {
   ArrowUpToLine,
   ChevronRight,
@@ -15,12 +15,15 @@ import {
   Table2,
   Target,
   Undo2,
+  WholeWord,
 } from 'lucide-react';
-import { GradeLabel } from '@/components/grade-label';
+import Link from 'next/link';
+import { CheckChip } from '@/components/check-chip';
 import { Button } from '@/components/ui/button';
 import { excerpt } from '@/lib/fix-copy';
-import { CHECK_NAMES } from '@/lib/glossary';
+import { CHECK_NAMES, type CheckChip as Chip } from '@/lib/glossary';
 import { cn } from '@/lib/utils';
+import { RESEARCH_HREF } from '@/lib/views';
 import type { FixActions } from './fix-card';
 import { FixCard } from './fix-card';
 import type { FixItem, HandledItem } from './start-here';
@@ -37,6 +40,7 @@ export const CHECK_ICONS: Record<CheckId, LucideIcon> = {
   'direct-answer-lead': ArrowUpToLine,
   'question-coverage': Target,
   comparisons: Scale,
+  'reader-words': WholeWord,
 };
 
 export interface FixGroup {
@@ -44,6 +48,8 @@ export interface FixGroup {
   /** Open fixes, in document order. */
   items: FixItem[];
   handled: HandledItem[];
+  /** The group's one chip ("Helps" or "Not scored"), or null. */
+  chip: Chip | null;
 }
 
 const STATUS_WORD: Record<HandledItem['status'], string> = {
@@ -61,8 +67,9 @@ interface FixGroupsProps extends FixActions {
 }
 
 /**
- * All fixes, grouped by check: each group collapsed, its count in the title and its evidence grade
- * once. Groups carry no action of their own; every change is one click on one fix.
+ * All fixes, grouped by check: each group collapsed, its count in the title and at most one chip
+ * ("Helps" or "Not scored"). An open group ends on a Learn more link to the check's section of
+ * /research. Groups carry no action of their own; every change is one click on one fix.
  */
 export function FixGroups({
   groups,
@@ -122,7 +129,7 @@ export function FixGroups({
                     {g.items.length > 0 ? g.items.length : 'Done'}
                   </span>
                 </button>
-                <GradeLabel grade={EVIDENCE[g.checkId].grade} checkId={g.checkId} />
+                <CheckChip chip={g.chip} />
               </div>
               {isOpen && (
                 <div id={bodyId} className="space-y-2 p-2">
@@ -153,6 +160,16 @@ export function FixGroups({
                       ))}
                     </ul>
                   )}
+                  <p className="px-1 pb-1 text-sm">
+                    <Link
+                      href={`${RESEARCH_HREF}#check-${g.checkId}`}
+                      prefetch={false}
+                      className="rounded-sm font-medium text-brand underline-offset-2 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring"
+                    >
+                      Learn more
+                      <span className="sr-only">: {CHECK_NAMES[g.checkId]}</span>
+                    </Link>
+                  </p>
                 </div>
               )}
             </li>

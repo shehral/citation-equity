@@ -55,21 +55,22 @@ describe('scoreChecks', () => {
 });
 
 describe('presets and registry', () => {
-  it('weights the foundation-design checks at 1, the four added checks at 0.5, lists at 0', () => {
+  it('weights the foundation-design checks at 1, the added checks at 0.5, unscored notes at 0', () => {
     expect(PRESET_WEIGHTS.foundation).toEqual({
       'standalone-paragraphs': 1,
-      'question-headings': 1,
+      'question-headings': 0,
       lists: 0,
       statistics: 1,
       tables: 1,
       'expert-quotes': 1,
-      'cited-sources': 0.5,
-      'direct-answer-lead': 0.5,
+      'cited-sources': 0,
+      'direct-answer-lead': 0,
       'question-coverage': 0.5,
       comparisons: 0.5,
+      'reader-words': 0.5,
     });
     expect(PRESET_WEIGHTS.foundation.tables).toBe(1);
-    expect(PRESET_WEIGHTS.foundation['cited-sources']).toBe(0.5);
+    expect(PRESET_WEIGHTS.foundation.comparisons).toBe(0.5);
   });
 
   it('derives the evidence preset from each check grade, unscored checks at 0', () => {
@@ -80,12 +81,32 @@ describe('presets and registry', () => {
     }
   });
 
-  it('makes lists an unscored note: weight 0 in both presets, as E1 found no effect larger than δ', () => {
-    expect(UNSCORED_CHECKS).toEqual(['lists']);
-    expect(EVIDENCE.lists.e1.label).toBe('no-effect');
-    expect(PRESET_WEIGHTS.foundation.lists).toBe(0);
-    expect(PRESET_WEIGHTS.evidence.lists).toBe(0);
-    for (const d of CHECK_DEFINITIONS) expect(d.scored, d.id).toBe(d.id !== 'lists');
+  it('makes every check our own tests found no effect larger than δ for an unscored note: weight 0 in both presets', () => {
+    const unscored = ['question-headings', 'lists', 'cited-sources', 'direct-answer-lead'];
+    expect(UNSCORED_CHECKS).toEqual(unscored);
+    for (const id of unscored as CheckId[]) {
+      expect(EVIDENCE[id].e1.label, id).toBe('no-effect');
+      expect(PRESET_WEIGHTS.foundation[id], id).toBe(0);
+      expect(PRESET_WEIGHTS.evidence[id], id).toBe(0);
+    }
+    for (const d of CHECK_DEFINITIONS) expect(d.scored, d.id).toBe(!unscored.includes(d.id));
+  });
+
+  it('keeps the evidence grade and weight of a check E3 left inconclusive or short of pages', () => {
+    for (const id of ['tables', 'statistics', 'expert-quotes', 'comparisons'] as CheckId[]) {
+      expect(EVIDENCE[id].e1.test, id).toBe('E3');
+      expect(PRESET_WEIGHTS.foundation[id], id).toBeGreaterThan(0);
+      expect(PRESET_WEIGHTS.evidence[id], id).toBe(GRADE_WEIGHTS[EVIDENCE[id].grade]);
+    }
+  });
+
+  it('counts an unscored note once a custom weight includes it', () => {
+    for (const id of ['question-headings', 'cited-sources', 'direct-answer-lead'] as CheckId[]) {
+      expect(
+        scoreChecks([result(id, 1), result('tables', 0)], weights({ [id]: 1, tables: 1 })),
+        id,
+      ).toBe(50);
+    }
   });
 
   it('leaves an unscored check out of each preset score, renormalizing over the other weights', () => {

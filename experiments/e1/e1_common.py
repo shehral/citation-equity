@@ -5,14 +5,18 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-# Judges (Measurement 2). Gemma-4-31B is the editor and never a judge.
-JUDGES = {"gemma-4-12b": "google/gemma-4-12B-it", "qwen3.8-27b": "Qwen/Qwen3.8-27B"}
+# Judges (Measurement 2). Gemma-4-31B is the editor and never a judge. E1 uses JUDGE_ORDER only;
+# qwen3.5-9b is E2b's second judge (experiments/PLAN_E2.md), where Qwen3.8-27B is the editor.
+JUDGES = {"gemma-4-12b": "google/gemma-4-12B-it", "qwen3.8-27b": "Qwen/Qwen3.8-27B",
+          "qwen3.5-9b": "Qwen/Qwen3.5-9B"}
 JUDGE_ORDER = ["gemma-4-12b", "qwen3.8-27b"]  # the first is the primary judge
 SEEDS = range(1, 9)
 
 # Page sets. The timing smoke (r3 amendment 8) is held out of main and is never analyzed.
 SETS = ["main", "replication", "smoke", "timing"]
 TIMING = "timing"
+# E3's new five-page and four-page queries (experiments/PLAN_E3.md); scored only when named.
+E3_SETS = ["e3", "e3-four"]
 N_SOURCES = 4
 
 # Generation settings, fixed by the pre-registration.
@@ -28,6 +32,9 @@ REF = {
 }
 ARMS = [str(a) for a in range(1, 15)] + ["ALL"]
 PLACEBOS = ["P2", "P3", "P5", "P6", "P7", "P8", "P10", "P12", "P_ALL"]
+# E2a's two deterministic versions of arm 9 (experiments/PLAN_E2.md): words without a heading, and a
+# heading and sentence without the query's words. They belong to arm 9 for applicability and tier.
+E2_ARMS = ["9W", "9P"]
 
 FAMILY_A = [str(a) for a in range(2, 11)]
 FAMILY_B = ["11", "12", "14"]
@@ -53,7 +60,10 @@ CAVEAT = "Content check on a local model over a fixed page set. It does not pred
 
 
 def parent_arm(arm: str) -> str:
-    """The arm a version belongs to for applicability: P5 -> 5, P_ALL -> ALL, others unchanged."""
+    """The arm a version belongs to for applicability: P5 -> 5, P_ALL -> ALL, 9W and 9P -> 9,
+    others unchanged."""
+    if arm in E2_ARMS:
+        return "9"
     if arm == "P_ALL":
         return "ALL"
     if arm.startswith("P") and arm[1:].isdigit():

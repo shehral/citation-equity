@@ -22,7 +22,8 @@ describe('fix card copy', () => {
           expect(reason, s.title).not.toBe('');
           expect(words(reason), reason).toBeLessThanOrEqual(20);
           // A reader question is quoted in its own words; every other title is 6 words or fewer.
-          if (s.checkId !== 'question-coverage') expect(words(title), title).toBeLessThanOrEqual(6);
+          if (s.checkId !== 'question-coverage' && s.checkId !== 'reader-words')
+            expect(words(title), title).toBeLessThanOrEqual(6);
           expect(`${title} ${reason}`).not.toMatch(/—|GEO|C-SEO|Evidence grade/);
         }
       }
@@ -65,6 +66,41 @@ describe('fix card copy', () => {
       title: 'Make this heading a question',
       reason: '"Grind size" is a statement. Try the question a reader would type.',
     });
+  });
+
+  it("asks for the reader's question in the author's own words, a heading optional", () => {
+    const copy = fixCopy({
+      id: 'x',
+      checkId: 'question-coverage',
+      kind: 'advisory',
+      range: { start: 0, end: 4 },
+      before: '# Espresso',
+      title: 'Answer "What water temperature is best?" directly',
+      rationale: 'r',
+      grade: 'mixed',
+    });
+    expect(copy).toEqual({
+      title: 'Answer "What water temperature is best?" up front',
+      reason: 'Answer it in your own words near the top. A heading is fine, not required.',
+    });
+  });
+
+  it("names the reader's missing words, at most 3, and warns against forcing them in", () => {
+    const md = '# Bitter espresso\n\nGrind finer and the shot slows down.\n';
+    const questions = ['What water temperature is best?', 'Is my espresso sour?'];
+    const result = analyze(md, { questions, authorQuestions: questions });
+    const advice = result.checks.find((c) => c.checkId === 'reader-words')?.suggestions ?? [];
+    expect(advice.map((s) => fixCopy(s))).toEqual([
+      {
+        title: 'Use the words of "What water temperature is best?"',
+        reason:
+          'Add "water", "temperature", "best" to your title or opening if they fit. Never force words in.',
+      },
+      {
+        title: 'Use the words of "Is my espresso sour?"',
+        reason: 'Add "sour" to your title or opening if it fits. Never force words in.',
+      },
+    ]);
   });
 
   it('has a plain name for every check', () => {

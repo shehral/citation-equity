@@ -212,6 +212,69 @@ class DryRun(unittest.TestCase):
         self.assertEqual(proc.stdout.strip(), values["CE_ROOT"])
 
 
+class E2Jobs(unittest.TestCase):
+    """E2 (experiments/PLAN_E2.md) runs through the same jobs: a third judge and separate folders."""
+
+    def test_generate_accepts_the_e2b_judge(self):
+        run = Run("generate.sbatch", PLACEHOLDERS, {"JUDGE": "qwen3.5-9b", "BATCH": "main.qwen3.5-9b.tier2"})
+        self.assertEqual(run.code, 0, run.out + run.err)
+        self.assertIn("MODEL=Qwen/Qwen3.5-9B", run.out)
+        self.assertEqual(run.called, "")
+
+    def test_generate_reads_and_writes_under_the_run_folder(self):
+        root = PLACEHOLDERS["CE_ROOT"]
+        run = Run("generate.sbatch", PLACEHOLDERS, {"RUN": "e2/a"})
+        self.assertEqual(run.code, 0, run.out + run.err)
+        self.assertIn(f"PROMPTS={root}/e2/a/batches/main.gemma-4-12b.tier1.prompts.jsonl", run.out)
+        self.assertIn(f"OUT={root}/e2/a/answers/main.gemma-4-12b.tier1.jsonl", run.out)
+
+    def test_generate_still_refuses_an_unknown_judge_and_a_mismatched_batch(self):
+        run = Run("generate.sbatch", PLACEHOLDERS, {"JUDGE": "qwen3.5-27b", "BATCH": "main.qwen3.5-27b.tier1"})
+        self.assertEqual(run.code, 2)
+        run = Run("generate.sbatch", PLACEHOLDERS, {"JUDGE": "qwen3.5-9b", "BATCH": "main.gemma-4-12b.tier1"})
+        self.assertEqual(run.code, 2)
+
+    def test_edit_with_another_editor_refuses_the_e1_data_folder(self):
+        run = Run("edit.sbatch", PLACEHOLDERS, {"MODEL": "Qwen/Qwen3.8-27B"})
+        self.assertEqual(run.code, 2, run.out + run.err)
+        self.assertIn("DATA", run.out)
+        self.assertNotIn("resolved settings", run.out)
+        root = PLACEHOLDERS["CE_ROOT"]
+        run = Run("edit.sbatch", PLACEHOLDERS, {"MODEL": "Qwen/Qwen3.8-27B", "DATA": f"{root}/data/e2/b",
+                                                "SETS": "--set main", "EXTRA": "--arms 12"})
+        self.assertEqual(run.code, 0, run.out + run.err)
+        self.assertIn(f"DATA={root}/data/e2/b", run.out)
+        self.assertIn("MODEL=Qwen/Qwen3.8-27B", run.out)
+        self.assertIn("extra=--arms 12", run.out)
+
+
+class E3Jobs(unittest.TestCase):
+    """E3 (experiments/PLAN_E3.md) runs E1's editor with more attempts, in its own folders."""
+
+    def test_edit_refuses_e3_options_on_the_e1_data_folder(self):
+        root = PLACEHOLDERS["CE_ROOT"]
+        for extra in ("--arms 2 --max-attempts 3", f"--retry-from {root}/data/e1/versions.jsonl --max-attempts 3"):
+            for data in ({}, {"DATA": f"{root}/data/e1/"}):
+                run = Run("edit.sbatch", PLACEHOLDERS, {"EXTRA": extra, **data})
+                self.assertEqual(run.code, 2, run.out + run.err)
+                self.assertIn("E3", run.out)
+                self.assertNotIn("resolved settings", run.out)
+
+    def test_edit_runs_e3_options_in_e3_folders(self):
+        root = PLACEHOLDERS["CE_ROOT"]
+        extra = f"--arms 2,4,5,6,7,8,10 --max-attempts 3 --retry-from {root}/data/e1/versions.jsonl"
+        run = Run("edit.sbatch", PLACEHOLDERS, {"DATA": f"{root}/data/e3/retry", "SETS": "--set main", "EXTRA": extra})
+        self.assertEqual(run.code, 0, run.out + run.err)
+        self.assertIn(f"DATA={root}/data/e3/retry", run.out)
+        self.assertIn(f"extra={extra}", run.out)
+        self.assertEqual(run.called, "")
+
+    def test_e1_runs_are_unchanged(self):
+        run = Run("edit.sbatch", PLACEHOLDERS, {"EXTRA": "--arms 9,5,6,7"})
+        self.assertEqual(run.code, 0, run.out + run.err)
+        self.assertIn(f"DATA={PLACEHOLDERS['CE_ROOT']}/data/e1", run.out)
+
+
 class MissingSettings(unittest.TestCase):
     def test_each_required_setting_fails_fast_with_a_clear_message(self):
         for script in SCRIPTS:

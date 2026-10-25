@@ -298,6 +298,84 @@ class MetricsTest(unittest.TestCase):
         self.assertEqual(m["key_terms_delta"], 1)
 
 
+class Arm4TableConversionTest(unittest.TestCase):
+    """PLAN_E3.md amendment 1. The shape of E1's four arm 4 pages: a section whose only reason to
+    need a table is one Key: value list (bold or plain keys, no comparison wording); after the
+    tables check's own edit the list is a table and the check has nothing left to flag."""
+
+    RUN = "- **Ristretto:** a short shot, 1 to 1.5\n- **Espresso**: the usual shot, 1 to 2\n- Lungo: a long shot, 1 to 3"
+    TABLE = ("| Item | Detail |\n| --- | --- |\n| Ristretto | a short shot, 1 to 1.5 |\n"
+             "| Espresso | the usual shot, 1 to 2 |\n| Lungo | a long shot, 1 to 3 |")
+    PAGE = ("## Brew ratios\n\nA shot is named by how much water runs through the same dose of ground coffee, "
+            "and baristas keep a few ratios in mind when they dial in a new bag of beans.\n\n"
+            f"{RUN}\n\nAdjust the grind after each shot until the taste is balanced and sweet.")
+
+    def case(self, replacement=None, edit_end_extra=0, flagged=True, parsed=True):
+        page = self.PAGE
+        e = edit(self.RUN, self.TABLE if replacement is None else replacement, page)
+        e["end"] += edit_end_extra
+        edited = apply([e], page)
+        suggestion = {"kind": "edit", "start": e["start"], "end": e["start"] + len(self.RUN), "after": self.TABLE}
+        eng0 = fake_engine(page, {"tables": check(0.0, suggestions=[suggestion] if flagged else [])})
+        eng1 = fake_engine(edited, {"tables": check(0, applicable=False)})
+        if not parsed:
+            eng1["artifacts"]["tables"] = []
+        return page, edited, [e], eng0, eng1
+
+    def validate(self, page, edited, edits, eng0, eng1, step=False):
+        spans = [{"field": "text", "start": x["start"], "end": x["end"]} for x in edits]
+        return v.validate(arm="4", original=("T", page), edited=("T", edited), edits=edits, spans=spans,
+                          eng_orig=eng0, eng_edit=eng1, query=QUERY, target=("T", page), donor=None, step=step)
+
+    def test_a_correct_conversion_passes_although_the_check_is_then_not_applicable(self):
+        self.assertEqual(self.validate(*self.case())["failures"], [])
+
+    def test_an_all_step_keeps_the_e1_rule(self):
+        failures = self.validate(*self.case(), step=True)["failures"]
+        self.assertEqual(failures, ["After the edit the tables check is not applicable."])
+
+    def test_a_changed_cell_fails(self):
+        changed = self.TABLE.replace("a long shot", "a very long shot")
+        self.assertIn("After the edit the tables check is not applicable.",
+                      self.validate(*self.case(replacement=changed))["failures"])
+
+    def test_a_dropped_row_fails(self):
+        dropped = self.TABLE.replace("\n| Lungo | a long shot, 1 to 3 |", "")
+        self.assertIn("After the edit the tables check is not applicable.",
+                      self.validate(*self.case(replacement=dropped))["failures"])
+
+    def test_a_wider_span_than_the_flagged_run_fails(self):
+        page, edited, edits, eng0, eng1 = self.case(edit_end_extra=len("\n\nAdjust"))
+        self.assertFalse(v.converted_to_table(eng0, eng1, edits))
+
+    def test_a_run_the_check_did_not_flag_fails(self):
+        page, edited, edits, eng0, eng1 = self.case(flagged=False)
+        self.assertFalse(v.converted_to_table(eng0, eng1, edits))
+
+    def test_a_table_the_parser_does_not_read_fails(self):
+        page, edited, edits, eng0, eng1 = self.case(parsed=False)
+        self.assertFalse(v.converted_to_table(eng0, eng1, edits))
+
+    def test_other_arms_and_an_applicable_check_keep_their_rules(self):
+        page, edited, edits, eng0, eng1 = self.case()
+        msg = v.check_own_feature("3", fake_engine(page, {"lists": check(0.5)}),
+                                  fake_engine(edited, {"lists": check(0, applicable=False)}), QUERY,
+                                  ("T", page), ("T", edited), edits=edits, table_conversion=True)
+        self.assertIn("not applicable", msg)
+        flat = fake_engine(edited, {"tables": check(0.0)})
+        self.assertIn("did not rise", v.check_own_feature("4", eng0, flat, QUERY, ("T", page), ("T", edited),
+                                                          edits=edits, table_conversion=True))
+
+    def test_split_key_value_matches_the_engine(self):
+        self.assertEqual(v.split_key_value("**Dose:** 18 g"), ("Dose", "18 g"))
+        self.assertEqual(v.split_key_value("**Dose**: 18 g"), ("Dose", "18 g"))
+        self.assertEqual(v.split_key_value("Dose: 18 g"), ("Dose", "18 g"))
+        self.assertIsNone(v.split_key_value("**Dose:**: 18 g"))
+        self.assertIsNone(v.split_key_value("Dose:"))
+        self.assertIsNone(v.split_key_value("one two three four five six: too long a key"))
+        self.assertEqual(v.key_value_table([("a|b", "c")]), "| Item | Detail |\n| --- | --- |\n| a\\|b | c |")
+
+
 class ValidateTest(unittest.TestCase):
     def test_collects_every_failure(self):
         e = [edit("Grind size", "Why does grind size matter in Rome Italy?")]

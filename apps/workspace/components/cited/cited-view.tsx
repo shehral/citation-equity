@@ -16,13 +16,12 @@ import {
   Users,
   Video,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useDeferredValue, useEffect, useId, useMemo, useState, useSyncExternalStore } from 'react';
 import { type CitedEntry, citedReport, citedSummary } from '@/components/cited/tally';
-import { GradeLabel } from '@/components/grade-label';
 import { textLink } from '@/components/page-shell';
 import { Button } from '@/components/ui/button';
 import { EXAMPLE_CITED_INPUT, isExampleCited } from '@/lib/examples';
-import { REPO_URL } from '@/lib/links';
 import {
   type CitedInput,
   type CitedInputEntry,
@@ -31,6 +30,7 @@ import {
 } from '@/lib/pasted';
 import { type CitedSummary, getSummary, setSummary, subscribe } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { RESEARCH_HREF } from '@/lib/views';
 
 type Entry = CitedInputEntry;
 
@@ -200,7 +200,6 @@ function KindGroup({
           <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
           {card.title}
         </h3>
-        <GradeLabel grade={card.evidence.grade} />
       </div>
       <SitesTable rows={domains} total={total} />
       <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 border-t pt-3 text-sm">
@@ -209,21 +208,12 @@ function KindGroup({
         <dt className="font-semibold">Avoid</dt>
         <dd>{card.short.avoid}</dd>
       </dl>
-      <details className="mt-3 text-sm">
-        <summary className="w-fit cursor-pointer rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring">
-          What the studies say
-        </summary>
-        <p className="mt-2 text-muted-foreground leading-relaxed">{card.evidence.summary}</p>
-        <ul className="mt-2 space-y-1.5">
-          {card.evidence.sources.map((s) => (
-            <li key={s.id}>
-              <a href={s.url} target="_blank" rel="noreferrer" className={textLink}>
-                {s.citation}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </details>
+      <p className="mt-3 text-sm">
+        <Link href={`${RESEARCH_HREF}#offpage-${kind}`} prefetch={false} className={textLink}>
+          Learn more
+          <span className="sr-only">: {card.title}</span>
+        </Link>
+      </p>
     </section>
   );
 }
@@ -418,14 +408,9 @@ export function CitedView() {
       </section>
 
       <p className="mt-10 text-muted-foreground text-sm">
-        <a
-          href={`${REPO_URL}/blob/main/docs/evidence.md#off-page`}
-          target="_blank"
-          rel="noreferrer"
-          className={textLink}
-        >
-          How we grade these
-        </a>
+        <Link href={`${RESEARCH_HREF}#off-page`} prefetch={false} className={textLink}>
+          See the research
+        </Link>
       </p>
     </>
   );

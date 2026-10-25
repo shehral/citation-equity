@@ -1,7 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ScoreCard } from '@/components/draft/score-card';
-import { UNSCORED_NOTES } from '@/lib/glossary';
 
 afterEach(cleanup);
 
@@ -32,16 +31,21 @@ describe('ScoreCard', () => {
     expect(screen.getByText('-2 since you started')).toBeTruthy();
   });
 
-  it('says why it is not a forecast, and links the research', async () => {
+  it('says it is not a forecast in one line; Why holds two plain sentences and How we tested this', async () => {
     render(<ScoreCard {...props} />);
     expect(screen.getByText(/A writing checklist, not a forecast\./)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Why?' }));
-    const pop = within(await screen.findByRole('dialog'));
-    expect(pop.getByRole('link', { name: 'See the research' }).getAttribute('href')).toMatch(
+    const dialog = await screen.findByRole('dialog');
+    const pop = within(dialog);
+    expect(pop.getByRole('link', { name: 'How we tested this' }).getAttribute('href')).toMatch(
       /^\/research\/?$/,
     );
-    // The score explanation says plainly which check is not scored, and why.
-    expect(pop.getByText(UNSCORED_NOTES.lists ?? 'missing')).toBeTruthy();
+    const sentences = [...dialog.querySelectorAll('p')]
+      .flatMap((p) => (p.textContent ?? '').split(/(?<=\.)\s+/))
+      .filter((t) => t.trim() !== '');
+    expect(sentences.length).toBeLessThanOrEqual(2);
+    // Plain words: no numbers, no test names, no unscored-note list.
+    expect(dialog.textContent).not.toMatch(/\d|\bE[123]\b|Not scored/);
   });
 
   it('switches scoring and opens Adjust weights from the Scoring popover', async () => {

@@ -154,3 +154,13 @@ Sources re-opened in full on 2026-10-23 (PDFs downloaded from arXiv and the ACL 
 ### Advice copy (same task)
 
 The statistics, expert-quotes and cited-sources advisories now say to add only real, sourced material, say that adding it for its own sake did not raise citation rank in C-SEO Bench (statistics: lowered it in 19 of 24 settings), and end with the check's evidence grade. The cited-sources advisory also says internal (relative) links do not count.
+
+## Reader's words up top (2026-10-24)
+
+The `reader-words` check is E1's candidate check for query wording (arm 12), added because it helped (experiments/RESULTS_E1.md: d +0.035, 95% CI [+0.008, +0.066], n 33, Holm p 0.037; replication insufficient n, n 12; E2b with a Qwen editor: d +0.029, n 29, the sign held). Its literature grade uses the sources already read above, plus one re-check:
+
+- Aggarwal et al. 2024, GEO, re-opened on 2026-10-24 (arXiv HTML v3). Method list (verified): "Keyword Stuffing: Modifies content to include more keywords from the query, as expected in classical SEO optimization." Table 1 (verified, as in the entry above): Position-Adjusted Word Count 17.7 for Keyword Stuffing against 19.3 at baseline. Results text: "we find such methods offer little to no improvement on generative engine's responses".
+
+| Check | Grade | Deciding evidence |
+|---|---|---|
+| reader-words | mixed | Closest test of adding query words: GEO's Keyword Stuffing fell below baseline (17.7 vs 19.3), a negative result. What Gets Cited's Keyword Gap factor was not significant in two of six models (a null in part of a study). SAGEO Arena: query terms without an answer won at retrieval but lost at reranking and generation. ConflictingQA's question prefix helped. None tests the check's rule (key words in the title, first heading or first paragraph). |

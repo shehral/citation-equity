@@ -90,7 +90,7 @@ describe('ce analyze', () => {
     expect(stdout).toMatch(/^Suggestions/m);
     // An unscored note is still a row, and the output says why it is not scored.
     expect(stdout).toContain(
-      'Not scored: lists (our own test, E1, found no effect larger than 0.03).',
+      'Not scored: question-headings (E3), lists (E1), cited-sources (E3), direct-answer-lead (E3); our own tests found no effect larger than 0.03.',
     );
   });
 

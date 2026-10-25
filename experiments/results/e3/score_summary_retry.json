@@ -1,0 +1,57 @@
+{
+ "answers": 96,
+ "prompts": 96,
+ "unknown_answer_keys": 0,
+ "valid": 96,
+ "dropped_cells": 0,
+ "completion": [
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "2",
+   "prompts": 8,
+   "answered": 8,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "4",
+   "prompts": 32,
+   "answered": 32,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "P6",
+   "prompts": 8,
+   "answered": 8,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "2",
+   "prompts": 8,
+   "answered": 8,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "4",
+   "prompts": 32,
+   "answered": 32,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.8-27b",
+   "arm": "P6",
+   "prompts": 8,
+   "answered": 8,
+   "missing": 0
+  }
+ ]
+}

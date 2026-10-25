@@ -14,6 +14,10 @@ apps/workspace/lib/generated/
 next-env.d.ts
 experiments/e1/data/
 experiments/e1/out/
+experiments/e2/data/
+experiments/e2/out/
+experiments/e3/data/
+experiments/e3/out/
 __pycache__/
 *.pyc
 # Cluster settings for the experiment scripts (experiments/explorer/local.env.example and

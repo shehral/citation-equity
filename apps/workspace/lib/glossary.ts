@@ -1,13 +1,18 @@
-// The plain words the working screens use for checks and evidence grades, in one place so the
-// draft view, the site rows, /cited and /research read the same. The engine's registry titles stay as they are for the CLI and the JSON report.
+// The plain words for checks and evidence grades, in one place so the draft view, the site rows,
+// /cited and /research read the same. The working screens use only the check names and the two
+// chips; grades, studies and our tests' numbers live on /research. The engine's registry titles
+// stay as they are for the CLI and the JSON report.
 
 import {
   type CheckId,
   E1_COMBINED,
   E1_DELTA,
   type E1Label,
+  type E1Result,
+  EVIDENCE,
   type EvidenceGrade,
   signed3,
+  UNSCORED_CHECKS,
 } from '@citation-equity/engine';
 
 /** Plain names of the checks. */
@@ -22,9 +27,28 @@ export const CHECK_NAMES: Record<CheckId, string> = {
   'direct-answer-lead': 'Answer first',
   'question-coverage': 'Your questions answered',
   comparisons: 'Compares the options',
+  'reader-words': "Your reader's words up top",
 };
 
-/** The four grades in words. */
+/** The one chip a check may carry on the working screens. */
+export type CheckChip = 'helps' | 'not-scored';
+
+/** Each chip's word, and its one-sentence tooltip. */
+export const CHIP_TEXT: Record<CheckChip, { label: string; title: string }> = {
+  helps: { label: 'Helps', title: 'Our tests found this helps a little.' },
+  'not-scored': { label: 'Not scored', title: 'Our tests found no clear effect on AI citation.' },
+};
+
+/**
+ * A check's chip: "Not scored" while it carries no weight (an unscored note, unless a custom
+ * weight includes it), "Helps" for a check our tests found to help, else none.
+ */
+export function chipFor(id: CheckId, weight: number): CheckChip | null {
+  if (UNSCORED_CHECKS.includes(id) && !(weight > 0)) return 'not-scored';
+  return EVIDENCE[id].e1.label === 'helps' ? 'helps' : null;
+}
+
+/** The four grades in words (the Research page only). */
 export const GRADE_WORDS: Record<EvidenceGrade, string> = {
   strong: 'Strong evidence',
   moderate: 'Moderate evidence',
@@ -40,12 +64,6 @@ export const GRADE_MEANING: Record<EvidenceGrade, string> = {
   untested: 'No direct test yet.',
 };
 
-/** A check whose grade needs its own line. */
-export const CHECK_GRADE_MEANING: Partial<Record<CheckId, string>> = {
-  lists:
-    'Pages AI cites most use more lists, but formatting alone showed no effect in a controlled test. Use lists for real lists.',
-};
-
 /**
  * Plain leads for the checks whose engine summary opens on a study's name. The studies stay
  * named in the full summary behind the expand.
@@ -59,20 +77,40 @@ export const PLAIN_LEADS: Partial<Record<CheckId, string>> = {
     'Linking credible sources helped in one early test, but later tests found little gain from adding references alone.',
 };
 
-/** What our own test (E1) found for a check, in plain words. The numbers sit behind an expand. */
+/** What our own test (E1, or E3) found for a check, in plain words. The numbers sit behind an expand. */
 export const E1_WORDS: Record<E1Label, string> = {
   helps: 'Tested: helped a little, maybe through wording overlap',
+  // "No effect larger than 0.03": a small effect either way is not ruled out, so never "does nothing".
   'no-effect': 'Tested: no clear effect',
   'insufficient-n': 'Tested: too few pages',
+  inconclusive: 'Tested: unclear',
   'not-run': 'Tested: no edit passed our checks',
   // Measured, but the setup cannot give this check a verdict (it needs passage-level retrieval).
   descriptive: 'Tested: no verdict by design',
 };
 
-/** Why an unscored check (weight 0 in both presets) is not scored, one plain sentence each. */
-export const UNSCORED_NOTES: Partial<Record<CheckId, string>> = {
-  lists: `Lists count only if you give them a weight, because a test found no effect larger than ${E1_DELTA}.`,
-};
+/** A check's own-test result in plain words; an unclear result says which way it leaned. */
+export function ownTestWords(result: E1Result): string {
+  const words = E1_WORDS[result.label];
+  if (result.label !== 'inconclusive' || result.effect === null || result.effect.d === 0)
+    return words;
+  return `${words}, leaning ${result.effect.d > 0 ? 'positive' : 'negative'}`;
+}
+
+/**
+ * Why an unscored check (weight 0 in both presets) is not scored, one plain sentence each:
+ * "Not scored: <check>. A test on 57 pages found no effect larger than 0.03, ...".
+ */
+export const UNSCORED_NOTES: Partial<Record<CheckId, string>> = Object.fromEntries(
+  UNSCORED_CHECKS.map((id) => {
+    const n = EVIDENCE[id].e1.effect?.n;
+    const test = n === undefined ? 'a test' : `a test on ${n} pages`;
+    return [
+      id,
+      `Not scored: ${CHECK_NAMES[id]}. ${test[0]?.toUpperCase()}${test.slice(1)} found no effect larger than ${E1_DELTA}, so it counts only if you give it a weight.`,
+    ];
+  }),
+);
 
 const all = E1_COMBINED.vsOriginal;
 

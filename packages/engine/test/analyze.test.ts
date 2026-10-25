@@ -62,6 +62,7 @@ describe('analyze', () => {
 
   it('PRESET_WEIGHTS pins the foundation preset', () => {
     expect(PRESET_WEIGHTS.foundation.tables).toBe(1);
-    expect(PRESET_WEIGHTS.foundation['cited-sources']).toBe(0.5);
+    expect(PRESET_WEIGHTS.foundation.comparisons).toBe(0.5);
+    expect(PRESET_WEIGHTS.foundation['cited-sources']).toBe(0);
   });
 });

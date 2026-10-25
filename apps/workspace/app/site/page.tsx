@@ -23,8 +23,8 @@ export default function SitePage() {
       </p>
       <SiteView />
       <p className="mt-12 text-sm">
-        <Link href={RESEARCH_HREF} className={textLink}>
-          How we grade these
+        <Link href={`${RESEARCH_HREF}#site`} className={textLink}>
+          See the research
         </Link>
       </p>
     </PageShell>

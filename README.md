@@ -8,24 +8,28 @@ Citation Equity helps independent writers get quoted by AI search. Paste a draft
 
 ## What it does
 
-1. **Check your draft**: 10 writing checks, each with its research grade.
+1. **Check your draft**: eleven writing checks and an AI-ready score from 0 to 100.
 2. **Answer real questions**: import your Search Console or Bing queries.
-3. **Fix one thing at a time**: apply, mark done or skip; there is no apply-all.
-4. **Test before and after** on a free local model.
+3. **Fix one thing at a time**: preview an edit, then apply, mark done or skip; there is no apply-all.
+4. **Test before and after** on a free local model; live AI search may differ.
 5. **See who AI cites** for your questions, and whether AI crawlers can read your page.
 
-The score is a writing checklist, not a forecast; the test uses a small local model and sample pages, so live AI search may differ.
+## How to use it
+
+1. Open the demo and click **Try it with an example**, or paste your own post into Your draft.
+2. Work through **Start here**: three fixes, always including a ready edit when the draft has one. Preview it, then Apply.
+3. Open **All fixes** for the rest, grouped by check. **Helps** marks a check that helped in our tests; **Not scored** marks one that does not count toward the score unless you give it a weight.
+4. Add the questions your readers ask under **Reader questions**, or import them.
+5. Paste your published page's HTML into **Your site**, and AI answers into **Who gets cited**.
 
 ## How the score works
 
-- Ten checks, each scored 0 to 1; nine are averaged into an AI-ready score from 0 to 100. Lists is reported but not scored, because our own test found no effect.
-- Two weightings, Standard and By evidence (each check weighted by its research grade), both adjustable.
-- Four evidence grades: strong, moderate, mixed, untested. No check is graded strong yet; see [docs/evidence.md](docs/evidence.md).
-- Lists is a note, not scored: our own test found no effect larger than 0.03 ([experiments/RESULTS_E1.md](experiments/RESULTS_E1.md)).
+- Eleven checks, each scored 0 to 1; seven are averaged into the AI-ready score. The other four are shown as Not scored: they still suggest fixes, and a custom weight can count them.
+- Two weightings, Standard and By evidence, both adjustable under Adjust weights.
 
-## What the test found
+## How we tested it
 
-The edited sample drafts scored much higher on the checks, 32 to 69 (espresso) and 44 to 72 (RAG), but a small local model did not cite them measurably more. Details and the larger-model follow-up: [samples/README.md](samples/README.md) and [experiments/README.md](experiments/README.md).
+No check is graded strong yet, so the score is a writing checklist, not a forecast. The studies behind each check, our own tests and their numbers are in [docs/evidence.md](docs/evidence.md) and on the [Research page](https://shehral.github.io/citation-equity/research/).
 
 ## Quick start
 

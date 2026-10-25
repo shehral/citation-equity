@@ -1,7 +1,7 @@
 // The draft view shows at most 350 words of interface text on load, not counting the
 // draft itself. Counted on the real engine and the real example (26 fixes on the espresso
 // draft), inside the app shell, so the header and footer count too.
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DraftView } from '@/components/draft/draft-view';
 import { AppShell } from '@/components/shell/app-shell';
@@ -70,5 +70,47 @@ describe('draft view word budget', () => {
       </AppShell>,
     );
     expect(interfaceWords().length).toBeLessThanOrEqual(350);
+  });
+});
+
+describe('Start here on the real example', () => {
+  it('keeps one ready edit: on the espresso example, the question-heading edit with Preview', () => {
+    setActiveSlot('espresso-bitterness');
+    render(
+      <AppShell>
+        <DraftView />
+      </AppShell>,
+    );
+    const cards = within(screen.getByRole('region', { name: 'Start here' })).getAllByRole(
+      'article',
+    );
+    expect(cards).toHaveLength(3);
+    // The first two are the measured advice; the third slot holds the draft's best ready edit.
+    expect(cards.slice(0, 2).map((c) => c.dataset.kind)).toEqual(['advisory', 'advisory']);
+    const edit = cards[2] as HTMLElement;
+    expect(edit.dataset.kind).toBe('edit');
+    expect(within(edit).getByRole('heading').textContent).toBe('Add "?" or reword it');
+    expect(within(edit).getByRole('button', { name: 'Preview' })).toBeTruthy();
+  });
+
+  it('keeps one ready edit on every example that has one', () => {
+    for (const sample of SAMPLES) {
+      setActiveSlot(sample.slug);
+      const { unmount } = render(<DraftView />);
+      const cards = within(screen.getByRole('region', { name: 'Start here' })).getAllByRole(
+        'article',
+      );
+      const groups = within(screen.getByRole('region', { name: 'All fixes' }));
+      for (const t of groups.getAllByRole('button', { expanded: false })) fireEvent.click(t);
+      const anyEdit = groups.queryAllByRole('article').some((a) => a.dataset.kind === 'edit');
+      if (anyEdit) {
+        expect(
+          cards.filter((c) => c.dataset.kind === 'edit').length,
+          sample.slug,
+        ).toBeGreaterThanOrEqual(1);
+      }
+      unmount();
+      clearAll();
+    }
   });
 });

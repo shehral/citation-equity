@@ -7,7 +7,10 @@
 #   . ./local.env && sbatch --gres=gpu:h200:1 edit.sbatch                                          # one H200
 #   . ./local.env && TP=2 sbatch --partition=gpu-short --time=02:00:00 --gres=gpu:a100:2 edit.sbatch  # 2x A100
 # Optional: SETS="--set main" (default all sets but timing; the timing smoke: SETS="--set timing"), EXTRA="--arms 9,5,6,7" (tier order cuts),
-# DATA=<folder> (default $CE_ROOT/data/e1). Check the settings first with CE_DRY_RUN=1 bash edit.sbatch
+# DATA=<folder> (default $CE_ROOT/data/e1), MODEL=<editor> (default Gemma-4-31B-it; any other editor, such as
+# E2b's Qwen/Qwen3.8-27B, must write to its own DATA folder). E3 (experiments/e3/README.md) passes
+# --max-attempts 3 and, for E1's failed pairs, --retry-from in EXTRA, always with its own DATA folder.
+# Check the settings first with CE_DRY_RUN=1 bash edit.sbatch
 #SBATCH --job-name=ce-e1-edit
 #SBATCH --partition=gpu
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=8
@@ -43,6 +46,19 @@ LOCAL_ENV="${SLURM_SUBMIT_DIR:-.}/local.env"
 PROJ=$CE_ROOT
 E1=$PROJ/code/e1
 DATA=${DATA:-$PROJ/data/e1}
+# E1's versions.jsonl is written by E1's editor only: another editor needs its own folder.
+if [ "$MODEL" != "google/gemma-4-31B-it" ] && [ "${DATA%/}" = "$PROJ/data/e1" ]; then
+  echo "FATAL: editor $MODEL would overwrite E1's $DATA/versions.jsonl; set DATA to its own folder (E2b: DATA=\$CE_ROOT/data/e2/b)"
+  exit 2
+fi
+# E3's options change what is written, so they never run on E1's folder either.
+case " ${EXTRA:-} " in
+  *" --retry-from"*|*" --max-attempts"*)
+    if [ "${DATA%/}" = "$PROJ/data/e1" ]; then
+      echo "FATAL: EXTRA has E3's --retry-from or --max-attempts, which would overwrite E1's $DATA/versions.jsonl; set DATA to E3's folder (DATA=\$CE_ROOT/data/e3/new or \$CE_ROOT/data/e3/retry)"
+      exit 2
+    fi ;;
+esac
 NODE=${CE_NODE:-node}
 MODULES=${CE_MODULES-miniconda3/24.11.1}
 if [ -n "${CE_DRY_RUN:-}" ]; then

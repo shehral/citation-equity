@@ -51,6 +51,83 @@ class Arm9Test(unittest.TestCase):
         self.assertTrue(splice(md, edits).startswith(f"# Title\n\n## {QUERY}\n\nEspresso extraction matters.\n\n"))
 
 
+
+# E2 (experiments/PLAN_E2.md): two versions of arm 9 that share its sentence choice.
+E2_QUERY = "what is espresso extraction"  # 4 words; key terms "espresso", "extract"
+E2_MD = (
+    "# Title\n\n"
+    "Coffee is brewed daily by many people here. Espresso extraction pulls flavor. Water boils quite fast. "
+    "Extraction takes time.\n\n## More\n\nText."
+)
+
+
+class Arm9WTest(unittest.TestCase):
+    def test_the_query_as_a_plain_paragraph_then_arm_9s_sentence_at_arm_9s_position(self):
+        edits, reason = da.arm9w(E2_MD, fake_engine(E2_MD), E2_QUERY)
+        self.assertIsNone(reason)
+        self.assertEqual(splice(E2_MD, edits),
+                         f"# Title\n\n{E2_QUERY}\n\nEspresso extraction pulls flavor.\n\n" + E2_MD[len("# Title\n\n"):])
+
+    def test_differs_from_arm_9_only_by_the_heading_markup(self):
+        for md in (E2_MD, "Plain start. Espresso extraction pulls flavor."):
+            nine, _ = da.arm9(md, fake_engine(md), E2_QUERY)
+            w, _ = da.arm9w(md, fake_engine(md), E2_QUERY)
+            self.assertEqual(splice(md, nine).replace(f"## {E2_QUERY}", E2_QUERY, 1), splice(md, w))
+
+    def test_no_prose_sentence(self):
+        md = "- only a list"
+        self.assertEqual(da.arm9w(md, fake_engine(md), E2_QUERY), (None, "the page has no prose sentence"))
+
+
+class Arm9PTest(unittest.TestCase):
+    # Amendment 1: S must be body text (one line, 8+ words, capital or digit start, ., ! or ? end).
+    P_MD = (
+        "# Title\n\n"
+        "Coffee is brewed daily by many people in this town. Espresso extraction pulls flavor. "
+        "Water boils quite fast on a big gas stove today. Extraction takes time.\n\n## More\n\nText."
+    )
+
+    def test_the_fewest_key_terms_body_sentence_closest_in_length_earliest_on_ties(self):
+        # Arm 9's sentence has 4 words; the two body sentences without key terms both have 10.
+        edits, reason = da.arm9p(self.P_MD, fake_engine(self.P_MD), E2_QUERY)
+        self.assertIsNone(reason)
+        self.assertEqual(splice(self.P_MD, edits),
+                         "# Title\n\n## Coffee is brewed daily\n\nCoffee is brewed daily by many people in this town.\n\n"
+                         + self.P_MD[len("# Title\n\n"):])
+
+    def test_page_furniture_and_fragments_are_never_s(self):
+        md = ("Espresso extraction pulls flavor. Comment\nCorporate Communications Address for the press office here. "
+              "short words only here without a capital start at all. Too short. "
+              "Milk foams well when it is cold and fresh from the fridge.")
+        self.assertEqual(da.arm9p_sentence(md, fake_engine(md), E2_QUERY),
+                         "Milk foams well when it is cold and fresh from the fridge.")
+        self.assertFalse(da.is_body_sentence("Comment\nCorporate Communications Address for the press office here."))
+        self.assertFalse(da.is_body_sentence("Seven words is not quite enough here."))
+        self.assertTrue(da.is_body_sentence("\u201cEight words, quoted, still count as body text here.\u201d"))
+
+    def test_no_body_sentence_means_no_9p(self):
+        md = "Espresso extraction pulls flavor. Water boils fast."
+        self.assertEqual(da.arm9p(md, fake_engine(md), E2_QUERY), (None, da.NO_BODY_SENTENCE))
+
+    def test_the_heading_takes_the_first_n_words_as_the_pipeline_counts_them(self):
+        md = "Espresso extraction pulls flavor. Fresh [beans](https://x.org/b) give the best cups, said Ana."
+        edits, _ = da.arm9p(md, fake_engine(md), E2_QUERY)
+        self.assertTrue(splice(md, edits).startswith(
+            "## Fresh beans give the\n\nFresh [beans](https://x.org/b) give the best cups, said Ana.\n\n"))
+        self.assertEqual(da.first_words("Hi, it's 4.5 now!", 3), "Hi it's 4.5")
+        self.assertEqual(da.first_words("Too short.", 4), "Too short")
+
+    def test_with_one_body_sentence_it_is_that_one(self):
+        md = "Espresso extraction pulls a lot of flavor from the beans."
+        self.assertEqual(da.arm9p_sentence(md, fake_engine(md), E2_QUERY), md)
+
+    def test_no_prose_sentence(self):
+        md = "- only a list"
+        self.assertEqual(da.arm9p(md, fake_engine(md), E2_QUERY), (None, "the page has no prose sentence"))
+
+    def test_arm_9_keeps_its_choice(self):
+        self.assertEqual(da.arm9_sentence(E2_MD, fake_engine(E2_MD), E2_QUERY), "Espresso extraction pulls flavor.")
+
 class Arm11Test(unittest.TestCase):
     def test_copies_the_first_definition_sentence_under_the_title(self):
         md = "Many people love coffee.\n\n## Basics\n\nThe extraction is the process of dissolving solubles. Espresso is strong."

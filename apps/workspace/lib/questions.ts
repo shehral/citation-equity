@@ -11,6 +11,20 @@ export interface WorkspaceQuestion {
 
 export const MAX_QUESTIONS = 8;
 
+/** Sources the tool generates; every other source is the author's own (typed or imported). */
+const GENERATED: ReadonlySet<WorkspaceQuestionSource> = new Set([
+  'draft-heading',
+  'template',
+  'local-model',
+]);
+
+/**
+ * The questions the author typed or imported (a sample pack's count as imported), which the
+ * reader-words check measures instead of the page's own title and topic questions.
+ */
+export const authorQuestionTexts = (questions: WorkspaceQuestion[]): string[] =>
+  questions.filter((q) => !GENERATED.has(q.source)).map((q) => q.text);
+
 /** The small label each question carries. */
 export const SOURCE_LABELS: Record<WorkspaceQuestionSource, string> = {
   'sample-pack': 'Sample pack',

@@ -24,7 +24,11 @@ export interface HandledItem {
   undoStale: boolean;
 }
 
-/** The top three fixes by rankFixes: ready edits first, then the larger expected gain. */
+/**
+ * The top three fixes by rankFixes, one per check: scored checks before unscored notes, then
+ * measured-to-help checks, then ready edits, then the larger expected gain. When none of the three
+ * is a ready edit but the draft has one, the third is the best ready edit (startHereFixes).
+ */
 export function StartHere({
   items,
   activeId,

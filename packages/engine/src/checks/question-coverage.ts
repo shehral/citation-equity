@@ -49,16 +49,32 @@ function stem(word: string): string {
 const tokens = (text: string): string[] => text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
 
 /** All stemmed words of a text, stopwords included. */
-const allTerms = (text: string): Set<string> => new Set(tokens(text).map(stem));
+export const allTerms = (text: string): Set<string> => new Set(tokens(text).map(stem));
+
+/** A key word of a question: its stemmed term, and the word as the question first writes it. */
+export interface KeyWord {
+  term: string;
+  word: string;
+}
 
 /**
- * The content terms of a question: lowercased, stopwords removed, stemmed. A question made
- * only of stopwords ("What is it?") keeps all its words, so it can still be matched.
+ * The key words of a question, in its order, one per term: stopwords removed, stemmed. A
+ * question made only of stopwords ("What is it?") keeps all its words, so it can still be matched.
  */
+export function keyWords(text: string): KeyWord[] {
+  const words = text.match(/[\p{L}\p{N}]+/gu) ?? [];
+  const content = words.filter((w) => !STOPWORDS.has(w.toLowerCase()));
+  const out = new Map<string, KeyWord>();
+  for (const word of content.length > 0 ? content : words) {
+    const term = stem(word.toLowerCase());
+    if (!out.has(term)) out.set(term, { term, word });
+  }
+  return [...out.values()];
+}
+
+/** The content terms of a question: lowercased, stopwords removed, stemmed (see `keyWords`). */
 export function contentTerms(text: string): Set<string> {
-  const words = tokens(text);
-  const content = words.filter((w) => !STOPWORDS.has(w));
-  return new Set((content.length > 0 ? content : words).map(stem));
+  return new Set(keyWords(text).map((k) => k.term));
 }
 
 /** How many of `terms` occur in `text`. */
@@ -125,7 +141,9 @@ function problem(target: Target, terms: Set<string>): string | null {
   return null;
 }
 
-const RATIONALE = `Answer engines lean on pages that address the question directly: in controlled tests, edits that made a page more relevant to the question raised how often models used it (ConflictingQA, SAGEO Arena), but pages missing the question's terms lost the first citation reliably in only four of six models (What Gets Cited). Open the section that covers this question, or add one, with one plain sentence of ${MIN_WORDS} to ${MAX_WORDS} words that answers it in the question's own words, and state only what is true. ${measuredNote(EVIDENCE['question-coverage'].e1)} Evidence grade: ${EVIDENCE['question-coverage'].grade}.`;
+const { e1 } = EVIDENCE['question-coverage'];
+
+const RATIONALE = `Use your reader's question, in your own words, near the top of the section that covers it (or of a new section): one plain sentence of ${MIN_WORDS} to ${MAX_WORDS} words that answers it with most of its key words, stating only what is true. A heading is fine but not required. ${e1.followUp ?? ''} Answer engines lean on pages that address the question directly: in controlled tests, edits that made a page more relevant to the question raised how often models used it (ConflictingQA, SAGEO Arena), but pages missing the question's terms lost the first citation reliably in only four of six models (What Gets Cited). ${measuredNote(e1)} Evidence grade: ${EVIDENCE['question-coverage'].grade}.`;
 
 /** One target question: whether the draft answers it, and the text to show for it. */
 export interface QuestionCoverage {

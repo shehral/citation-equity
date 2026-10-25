@@ -44,7 +44,7 @@ export const ROWS: readonly { id: ReadinessId; name: string; what: string; why: 
     id: 'byline',
     name: 'Author name',
     what: 'Your name, in a form machines can read.',
-    why: 'Google asks for clear authorship; no study tests it for AI citation.',
+    why: 'Google asks for clear authorship.',
   },
   {
     id: 'dates',

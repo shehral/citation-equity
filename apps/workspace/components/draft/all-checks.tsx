@@ -3,11 +3,11 @@
 import {
   type CheckId,
   type CheckResult,
-  EVIDENCE,
   UNSCORED_CHECKS,
   type Weights,
 } from '@citation-equity/engine';
-import { CHECK_NAMES, E1_WORDS, GRADE_WORDS, UNSCORED_NOTES } from '@/lib/glossary';
+import { CheckChip } from '@/components/check-chip';
+import { CHECK_NAMES, chipFor } from '@/lib/glossary';
 
 interface AllChecksProps {
   checks: CheckResult[];
@@ -18,9 +18,9 @@ interface AllChecksProps {
 }
 
 /**
- * "All 10 checks": each check's bar and percent, its grade and own-test result, and the weights
- * behind Adjust weights. An unscored note (weight 0 by default) still shows its bar, marked
- * "Not scored" with the reason under the list, until a custom weight includes it.
+ * "All checks": each check's bar and percent, at most one chip ("Helps" or "Not scored"), and the
+ * weights behind Adjust weights. An unscored note (weight 0 by default) still shows its bar,
+ * marked "Not scored", until a custom weight includes it.
  */
 export function AllChecks({
   checks,
@@ -35,17 +35,16 @@ export function AllChecks({
       <ul className="space-y-2.5">
         {checks.map((check) => {
           const percent = Math.round(check.score * 100);
-          const unscored = notes.includes(check.checkId);
+          const line = detail(check);
           return (
             <li key={check.checkId} className="space-y-1.5">
               <div className="grid grid-cols-[minmax(0,1fr)_4.5rem_2.5rem] items-center gap-2.5">
                 <span className="min-w-0">
-                  {CHECK_NAMES[check.checkId]}
-                  <span className="block text-ink-soft text-xs">
-                    {`${GRADE_WORDS[EVIDENCE[check.checkId].grade]} · ${E1_WORDS[EVIDENCE[check.checkId].e1.label]}`}
-                    {unscored && ' · Not scored'}
-                    {detail(check)}
+                  <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                    {CHECK_NAMES[check.checkId]}
+                    <CheckChip chip={chipFor(check.checkId, weights[check.checkId])} />
                   </span>
+                  {line !== '' && <span className="block text-ink-soft text-xs">{line}</span>}
                 </span>
                 {check.applicable ? (
                   <>
@@ -79,11 +78,11 @@ export function AllChecks({
           );
         })}
       </ul>
-      {notes.map((id) => (
-        <p key={id} className="text-ink-soft text-xs">
-          {UNSCORED_NOTES[id]}
+      {notes.length > 0 && (
+        <p className="text-ink-soft text-xs">
+          Not scored checks count only if you give them a weight.
         </p>
-      ))}
+      )}
       <button
         type="button"
         aria-expanded={showWeights}
@@ -101,7 +100,7 @@ function detail(check: CheckResult): string {
   if (check.checkId !== 'comparisons' || !check.applicable) return '';
   const n = check.metrics.comparisons;
   if (n === undefined) return '';
-  return ` · ${n === 0 ? 'No comparisons found' : `${n} comparison${n === 1 ? '' : 's'} found`}`;
+  return n === 0 ? 'No comparisons found' : `${n} comparison${n === 1 ? '' : 's'} found`;
 }
 
 /**

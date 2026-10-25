@@ -8,6 +8,7 @@ import {
   CHECK_DEFINITIONS,
   E1_DELTA,
   generateQuestions,
+  pageQuestions,
   parseDraft,
   READINESS_NOTE,
 } from '@citation-equity/engine';
@@ -84,7 +85,13 @@ export function createProgram(io: CliIo): Command {
               .filter((l) => l !== '' && !l.startsWith('#'))
           : generated.filter((q) => q.source === 'draft-heading').map((q) => q.text);
         const suggested = generated.filter((q) => q.source !== 'draft-heading').map((q) => q.text);
-        const result = analyze(source, { format, questions });
+        // Questions in a file are the author's own: reader-words measures exactly those. Without
+        // one it measures the page's title and topic questions.
+        const result = analyze(source, {
+          format,
+          questions,
+          ...(o.questions ? { authorQuestions: questions } : {}),
+        });
         if (o.json) {
           out(`${JSON.stringify(result, null, 2)}\n`);
           return;
@@ -97,8 +104,13 @@ export function createProgram(io: CliIo): Command {
           suggested.length > 0
             ? `\nSuggested from the draft's title and headings (not scored; add the ones you want to a --questions file):\n${suggested.map((q) => `- ${q}`).join('\n')}\n`
             : '';
+        const page = o.questions ? [] : pageQuestions(parseDraft(source, format).markdown);
+        const pageLines =
+          page.length > 0
+            ? `\nReader's words up top measures the page's own questions (from its title and topic):\n${page.map((q) => `- ${q.text}`).join('\n')}\n`
+            : '';
         out(
-          `Target questions (${from}):\n${listed.join('\n')}\n${more}\n${formatAnalysis(result, format)}`,
+          `Target questions (${from}):\n${listed.join('\n')}\n${more}${pageLines}\n${formatAnalysis(result, format)}`,
         );
       },
     );
@@ -437,10 +449,12 @@ function formatAnalysis(result: AnalysisResult, format: 'markdown' | 'html' = 'm
       `${c.checkId.padEnd(idWidth)}  ${(def?.evidence.grade ?? '').padEnd(8)}  ${score.padStart(5)}  ${def?.title ?? ''}`,
     );
   }
-  const unscored = CHECK_DEFINITIONS.filter((d) => !d.scored).map((d) => d.id);
+  const unscored = CHECK_DEFINITIONS.filter((d) => !d.scored).map(
+    (d) => `${d.id} (${d.evidence.e1.test})`,
+  );
   if (unscored.length > 0) {
     lines.push(
-      `Not scored: ${unscored.join(', ')} (our own test, E1, found no effect larger than ${E1_DELTA}).`,
+      `Not scored: ${unscored.join(', ')}; our own tests found no effect larger than ${E1_DELTA}.`,
     );
   }
   const suggestions = result.checks.flatMap((c) => c.suggestions);

@@ -19,6 +19,7 @@
  */
 
 import nlp from 'compromise/two';
+import { unscoredNote } from '../e1';
 import { EVIDENCE } from '../evidence';
 import type { Artifacts, Paragraph } from '../gather';
 import type { CheckResult } from '../types';
@@ -141,7 +142,7 @@ export const check: CheckFn = (a: Artifacts): CheckResult => {
         range: sentence.range,
         before: sentence.text,
         title: 'Link the source of this claim',
-        rationale: `${message} Link the study, report or dataset it comes from in the same sentence or paragraph, so a reader can check it. Link only a real source that supports this exact claim; internal (relative) links do not count. If you cannot find one, reword or drop the claim. In the larger studies, adding references for their own sake did not raise citation rank (C-SEO Bench). Evidence grade: ${EVIDENCE['cited-sources'].grade}.`,
+        rationale: `${message} Link the study, report or dataset it comes from in the same sentence or paragraph, so a reader can check it. Link only a real source that supports this exact claim; internal (relative) links do not count. If you cannot find one, reword or drop the claim. In the larger studies, adding references for their own sake did not raise citation rank (C-SEO Bench). Evidence grade: ${EVIDENCE['cited-sources'].grade}. ${unscoredNote(EVIDENCE['cited-sources'].e1)}`,
       }),
     );
   }

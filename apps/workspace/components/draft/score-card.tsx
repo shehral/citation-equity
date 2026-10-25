@@ -1,10 +1,9 @@
 'use client';
 
-import { type AnalysisResult, UNSCORED_CHECKS } from '@citation-equity/engine';
+import type { AnalysisResult } from '@citation-equity/engine';
 import Link from 'next/link';
 import { useId } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { UNSCORED_NOTES } from '@/lib/glossary';
 import type { ActivePreset } from '@/lib/use-analysis';
 import { cn } from '@/lib/utils';
 import { RESEARCH_HREF } from '@/lib/views';
@@ -58,8 +57,8 @@ function ScoreRing({ score }: { score: number }) {
 }
 
 /**
- * The AI-ready score: a ring, "+N since you started", the one caveat with its Why, and the
- * Scoring popover. Shown only for a draft with content; the rail says "No content yet" otherwise.
+ * The AI-ready score: a ring, "+N since you started", the one caveat with its Why (two plain
+ * sentences and How we tested this), and the Scoring popover. Shown only for a draft with content; the rail says "No content yet" otherwise.
  */
 export function ScoreCard({
   scores,
@@ -125,18 +124,15 @@ export function ScoreCard({
             className="space-y-2 rounded-lg text-sm leading-relaxed shadow-pop"
           >
             <p>
-              No check is proven to raise AI citations yet. The score shows how clearly the post is
+              No check is proven to raise AI citations yet. The score shows how clearly your post is
               written for quoting.
             </p>
-            {UNSCORED_CHECKS.map((id) => (
-              <p key={id}>{UNSCORED_NOTES[id]}</p>
-            ))}
             <Link
               href={RESEARCH_HREF}
               prefetch={false}
               className="inline-block rounded-sm font-medium text-brand underline-offset-2 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring"
             >
-              See the research
+              How we tested this
             </Link>
           </PopoverContent>
         </Popover>

@@ -16,7 +16,7 @@ interface RailSectionProps {
 }
 
 /**
- * A collapsed section of the fix rail (Reader questions, All 10 checks, Test it). Its body is
+ * A collapsed section of the fix rail (Reader questions, All checks, Test it). Its body is
  * rendered from the first time it opens, so nothing in it is on the page at load; after that it
  * is only hidden, so collapsing never drops its state (a test run, a connection, a file read).
  */

@@ -1,13 +1,14 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { CHECK_IDS, E1_MODELS, EVIDENCE, formatE1 } from '@citation-equity/engine';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { CHECK_IDS, EVIDENCE, PRESET_WEIGHTS, UNSCORED_CHECKS } from '@citation-equity/engine';
+import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
+import { CheckChip } from '@/components/check-chip';
 import { GradeLabel } from '@/components/grade-label';
-import { CHECK_NAMES, E1_WORDS, GRADE_MEANING, GRADE_WORDS, UNSCORED_NOTES } from '@/lib/glossary';
+import { CHECK_NAMES, CHIP_TEXT, chipFor, GRADE_MEANING, GRADE_WORDS } from '@/lib/glossary';
 
-// One grade label and one plain-name glossary for the draft groups, the site rows,
-// /cited and /research, so a grade or a check reads the same everywhere.
+// One grade label (on /research only), one chip for the working screens and one plain-name
+// glossary, so a grade, a chip or a check reads the same everywhere.
 
 afterEach(cleanup);
 
@@ -31,6 +32,11 @@ function sources(): string[] {
 const containing = (text: string) =>
   sources().filter((f) => readFileSync(join(root, f), 'utf8').includes(text));
 
+/** Files that type `line` as a string literal, in single quotes or (for a line with an apostrophe) double. */
+const typing = (line: string) => [
+  ...new Set([...containing(`'${line}'`), ...containing(`"${line}"`)]),
+];
+
 describe('the glossary', () => {
   it('names every check and every grade once', () => {
     expect(Object.keys(CHECK_NAMES).sort()).toEqual([...CHECK_IDS].sort());
@@ -44,7 +50,7 @@ describe('the glossary', () => {
       ...Object.values(GRADE_MEANING),
       ...Object.values(CHECK_NAMES),
     ];
-    for (const line of lines) expect(containing(`'${line}'`), line).toEqual(['lib/glossary.ts']);
+    for (const line of lines) expect(typing(line), line).toEqual(['lib/glossary.ts']);
   });
 
   it('leaves one grade label component, and no old panel files', () => {
@@ -69,30 +75,35 @@ describe('GradeLabel', () => {
       unmount();
     }
   });
+});
 
-  it("with a check, opens that check's meaning and links its studies", async () => {
-    const id = CHECK_IDS.find((c) => c !== 'lists' && EVIDENCE[c].grade === 'mixed') ?? 'tables';
-    render(<GradeLabel grade={EVIDENCE[id].grade} checkId={id} />);
-    fireEvent.click(screen.getByRole('button', { name: GRADE_WORDS[EVIDENCE[id].grade] }));
-    const pop = await screen.findByRole('dialog');
-    expect(pop.textContent).toContain(GRADE_MEANING[EVIDENCE[id].grade]);
-    expect(within(pop).getByRole('link', { name: 'See the studies' }).getAttribute('href')).toMatch(
-      new RegExp(`/research/?#check-${id}$`),
-    );
+describe('CheckChip', () => {
+  it('gives "Helps" to the checks our tests found to help and "Not scored" to the unscored notes', () => {
+    for (const id of CHECK_IDS) {
+      const chip = chipFor(id, PRESET_WEIGHTS.foundation[id]);
+      if (UNSCORED_CHECKS.includes(id)) expect(chip, id).toBe('not-scored');
+      else if (EVIDENCE[id].e1.label === 'helps') expect(chip, id).toBe('helps');
+      else expect(chip, id).toBeNull();
+    }
+    expect(CHECK_IDS.filter((id) => chipFor(id, 1) === 'helps')).toEqual([
+      'question-coverage',
+      'reader-words',
+    ]);
+    // A custom weight that counts an unscored note drops its "Not scored".
+    expect(chipFor('question-headings', 0.5)).toBeNull();
   });
 
-  it('with a check, says what our own test found, with numbers for a measured check', async () => {
-    for (const id of CHECK_IDS) {
-      const { unmount } = render(<GradeLabel grade={EVIDENCE[id].grade} checkId={id} />);
-      fireEvent.click(screen.getByRole('button', { name: GRADE_WORDS[EVIDENCE[id].grade] }));
-      const pop = await screen.findByRole('dialog');
-      expect(pop.textContent, id).toContain(E1_WORDS[EVIDENCE[id].e1.label]);
-      if (EVIDENCE[id].e1.label === 'helps') {
-        expect(pop.textContent, id).toContain(formatE1(EVIDENCE[id].e1));
-        expect(pop.textContent, id).toContain(E1_MODELS);
-      }
-      if (id === 'lists') expect(pop.textContent).toContain(UNSCORED_NOTES.lists ?? 'missing');
+  it('shows one word and a one-sentence tooltip, with no numbers', () => {
+    expect(CHIP_TEXT['not-scored'].title).toBe('Our tests found no clear effect on AI citation.');
+    for (const chip of ['helps', 'not-scored'] as const) {
+      const { container, unmount } = render(<CheckChip chip={chip} />);
+      const el = container.firstElementChild as HTMLElement;
+      expect(el.textContent).toBe(CHIP_TEXT[chip].label);
+      expect(el.title).toBe(CHIP_TEXT[chip].title);
+      expect(el.title).not.toMatch(/\d/);
       unmount();
     }
+    const { container } = render(<CheckChip chip={null} />);
+    expect(container.textContent).toBe('');
   });
 });

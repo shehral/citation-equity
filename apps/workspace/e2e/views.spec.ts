@@ -94,17 +94,22 @@ test('/cited parses pasted answers and puts your site first', async ({ page }) =
   await expect(forums.getByText('Avoid', { exact: true })).toBeVisible();
 });
 
-test('/research lists all ten checks with a grade each', async ({ page }) => {
+test('/research lists all eleven checks with a grade each', async ({ page }) => {
   await go(page, '/research/');
-  for (const id of ['standalone-paragraphs', 'lists', 'comparisons']) {
+  for (const id of ['standalone-paragraphs', 'lists', 'comparisons', 'reader-words']) {
     await expect(page.locator(`#check-${id}`)).toBeVisible();
   }
-  await expect(page.locator('section[id^="check-"]')).toHaveCount(10);
+  await expect(page.locator('section[id^="check-"]')).toHaveCount(11);
   await expect(
     page
       .locator('section[id^="check-"]')
       .getByText(/^(Strong evidence|Moderate evidence|Mixed evidence|Untested)$/),
-  ).toHaveCount(10);
+  ).toHaveCount(11);
+  // What Your site and Who gets cited leave out is here too, each at the anchor they link to.
+  await expect(page.locator('section[id^="site-"]')).toHaveCount(7);
+  await expect(page.locator('section[id^="offpage-"]')).toHaveCount(9);
+  await go(page, '/research/#offpage-forum');
+  await expect(page.locator('#offpage-forum')).toBeInViewport();
 });
 
 test('old routes redirect: /off-page to /cited, /evidence to /research, /about to the About dialog', async ({

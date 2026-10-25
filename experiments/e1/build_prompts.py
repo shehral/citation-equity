@@ -4,9 +4,9 @@ Each prompt has exactly 4 sources: the target version and the query's 3 competit
 donor). For each (query, seed) the order depends only on (query, seed), so it is identical for the
 original, every arm, every placebo and ALL. Seed s puts the target in slot ((s - 1) mod 4) + 1, and
 the competitors fill the other slots in the order random.Random(f"{query}|{seed}") shuffles them
-into (starting from page_id order). Before anything is written, every prompt is counted with the
-larger of the two judge tokenizers; a query with any prompt over 31,000 tokens is excluded from
-every arm and listed in prompt_build.json.
+into (starting from page_id order). Before anything is written, every prompt is counted with each
+selected judge's tokenizer and the largest count is kept; a query with any prompt over 31,000
+tokens is excluded from every arm and listed in prompt_build.json.
 
 The prompt is a Python twin of buildPrompt in packages/bench/src/prompt.ts, which is adapted from
 GEO-optim/GEO (https://github.com/GEO-optim/GEO, commit c9e985f2bc4b539a01e8e9d226ff2a3d8d29a888,
@@ -19,10 +19,10 @@ data/batches/<set>.<judge>.tier<k>.prompts.jsonl (PromptLine files for
 experiments/explorer/batch_generate.py) and data/prompt_build.json.
 
 Usage: python3 -I experiments/e1/build_prompts.py [--data DIR] [--sets main,replication]
-           [--judges gemma-4-12b,qwen3.8-27b] [--tokens hf|utf8]
+           [--judges gemma-4-12b,qwen3.8-27b] [--tokens hf|utf8] [--without-original]
        python3 -I experiments/e1/build_prompts.py --twin in.json [--twin-out out.json]
-`--tokens hf` (default) loads both judges' tokenizers from the local Hugging Face cache (run it
-where they are cached, such as Explorer). `--tokens utf8` counts UTF-8 bytes, an upper bound for
+`--tokens hf` (default) loads the tokenizers of the judges named in --judges from the local
+Hugging Face cache (run it where they are cached, such as Explorer). `--tokens utf8` counts UTF-8 bytes, an upper bound for
 byte-level tokenizers, and is meant for the smoke set only.
 """
 
@@ -108,8 +108,13 @@ def _applicable(appl: dict, query_id: str, arm: str) -> bool:
     return appl.get((query_id, parent_arm(arm)), True)
 
 
-def build_all(pages, versions, applicability, *, sets, judges, seeds=SEEDS, count_tokens, limit=TOKEN_LIMIT):
-    """Prompt rows for every valid, applicable version of every query in `sets`, and the refused queries."""
+def build_all(pages, versions, applicability, *, sets, judges, seeds=SEEDS, count_tokens, limit=TOKEN_LIMIT,
+              require_original=True):
+    """Prompt rows for every valid, applicable version of every query in `sets`, and the refused queries.
+
+    `require_original=False` is for an E2 folder (experiments/PLAN_E2.md) that holds only E2 versions:
+    the original's prompts and answers come from E1, so a query without an original is not an error.
+    Queries with no version to prompt are then skipped."""
     appl = {(a["query_id"], a["arm"]): bool(a["applicable"]) for a in applicability}
     by_query = defaultdict(list)
     for p in pages:
@@ -126,8 +131,10 @@ def build_all(pages, versions, applicability, *, sets, judges, seeds=SEEDS, coun
         competitors = [p for p in qpages if p["role"] == "competitor"]
         query = qpages[0]["query"]
         qvers = sorted(vers[qid], key=lambda v: v["version_id"])
-        if not any(v["arm"] == "original" for v in qvers):
+        if require_original and not any(v["arm"] == "original" for v in qvers):
             raise ValueError(f"query {qid} has no valid original version")
+        if not qvers:
+            continue
         built, most = [], 0
         for seed in seeds:
             for v in qvers:
@@ -181,6 +188,9 @@ def main(argv: list[str] | None = None) -> None:
                     help="comma-separated sets (the timing smoke: --sets timing, in its own data folder)")
     ap.add_argument("--judges", default=",".join(JUDGE_ORDER))
     ap.add_argument("--tokens", choices=["hf", "utf8"], default="hf")
+    ap.add_argument("--without-original", action="store_true",
+                    help="E2: the folder holds only E2 versions (the original's prompts are E1's); "
+                         "applicability.jsonl is then optional")
     ap.add_argument("--twin", help="JSON list of {query, sources: [{title, text}]}: print their prompts")
     ap.add_argument("--twin-out", help="with --twin: write the prompts here instead of stdout")
     args = ap.parse_args(argv)
@@ -199,11 +209,18 @@ def main(argv: list[str] | None = None) -> None:
     unknown = [j for j in judges if j not in JUDGES]
     if unknown:
         sys.exit(f"build_prompts: unknown judge(s) {unknown}; known: {list(JUDGES)}")
-    count = hf_counter(JUDGE_ORDER) if args.tokens == "hf" else utf8_counter()
+    # Counted with the tokenizers of the judges these prompts are built for.
+    count = hf_counter(judges) if args.tokens == "hf" else utf8_counter()
+    appl_path = data / "applicability.jsonl"
+    if args.without_original and not appl_path.exists():
+        print(f"build_prompts: no applicability.jsonl in {data}; every version there counts as applicable")
+        applicability = []
+    else:
+        applicability = read_jsonl(appl_path)
     rows, refused = build_all(
-        read_jsonl(data / "pages.jsonl"), read_jsonl(data / "versions.jsonl"),
-        read_jsonl(data / "applicability.jsonl"), sets=set(args.sets.split(",")), judges=judges,
-        count_tokens=count,
+        read_jsonl(data / "pages.jsonl"), read_jsonl(data / "versions.jsonl"), applicability,
+        sets=set(args.sets.split(",")), judges=judges, count_tokens=count,
+        require_original=not args.without_original,
     )
     write_jsonl(data / "prompts.jsonl", rows)
     files = batch_files(rows)
@@ -212,6 +229,8 @@ def main(argv: list[str] | None = None) -> None:
     write_json(data / "prompt_build.json", {
         "prompts": len(rows), "limit": TOKEN_LIMIT, "token_count": args.tokens, "refused": refused,
         "batches": {name: len(lines) for name, lines in sorted(files.items())},
+        # E2 folders only, so an E1 build writes the same summary as before.
+        **({"judges": judges, "without_original": True} if args.without_original else {}),
     })
     print(f"build_prompts: {len(rows)} prompts, {len(refused)} queries refused over {TOKEN_LIMIT} tokens, "
           f"{len(files)} batch files in {data / 'batches'}")

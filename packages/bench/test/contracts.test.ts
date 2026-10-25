@@ -27,7 +27,7 @@ describe('bench contracts', () => {
 
 describe('workspace source resolution', () => {
   it('imports @citation-equity/engine from source without a build', () => {
-    expect(CHECK_IDS.length).toBe(10);
+    expect(CHECK_IDS.length).toBe(11);
   });
 
   it('resolves the @citation-equity/bench/node subpath', async () => {

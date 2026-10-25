@@ -68,6 +68,13 @@ test('the self-hosted fonts load from the base path', async ({ page, baseURL }) 
     expect(path.startsWith(`${new URL(baseURL ?? '').pathname}_next/`)).toBe(true);
 });
 
+/**
+ * What the working screens never say (the evidence lives on /research): test names, intervals,
+ * p values, sample sizes, grade words and "our test found" sentences.
+ */
+const EVIDENCE_TALK =
+  /\bE[123]\b|95%|\bCI\b|Holm|\bp = |(^|[\s(])n \d|\b[Ss]trong evidence|\b[Mm]oderate evidence|\b[Mm]ixed evidence|\bUntested\b|\b[Oo]ur (own )?tests? (found|measured)\b|\bGEO\b/;
+
 test('with the example loaded, no view uses the retired grade word or leaves the origin', async ({
   page,
   baseURL,
@@ -81,11 +88,20 @@ test('with the example loaded, no view uses the retired grade word or leaves the
     await go(page, route, { waitUntil: 'networkidle' });
     if (route === '/draft/') {
       // Open every collapsed section of the rail, so their text is checked too.
-      for (const name of [/^Reader questions/, /^All 10 checks/, /^Test it/]) {
+      for (const name of [/^Reader questions/, /^All 11 checks/, /^Test it/]) {
         await page.getByRole('button', { name }).click();
       }
     }
     expect(await bodyText(page), route).not.toContain(RETIRED_GRADE);
+    if (route !== '/research/') {
+      // The page's own text, hidden parts included, without its scripts' payloads.
+      const text = await page.evaluate(() => {
+        const body = document.body.cloneNode(true) as HTMLElement;
+        for (const el of body.querySelectorAll('script, style')) el.remove();
+        return body.textContent ?? '';
+      });
+      expect(text.match(EVIDENCE_TALK)?.[0], route).toBeUndefined();
+    }
   }
   expect(traffic.outside).toEqual([]);
   expect(traffic.failed).toEqual([]);

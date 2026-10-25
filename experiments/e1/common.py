@@ -135,6 +135,7 @@ _LINK_DEST = re.compile(rf"\]\({_DEST}(?:\s+\"[^\"]*\")?\)")
 _IMAGE = re.compile(rf"!\[[^\]]*\]\({_DEST}(?:\s+\"[^\"]*\")?\)")
 _BARE_URL = re.compile(r"https?://\S+")
 _WORD = re.compile(r"[^\W_]+(?:(?:['’]|(?<=\d)[.,](?=\d))[^\W_]+)*")
+WORD = _WORD  # the word pattern count_words uses
 
 
 def strip_markup(text: str) -> str:

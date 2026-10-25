@@ -54,6 +54,17 @@ describe('question-coverage', () => {
     expect(r.findings[0]?.range).toEqual(s?.range);
   });
 
+  it("asks for the reader's question in the author's own words near the top, not for a question heading", () => {
+    const [s] = run(espresso, [WATER]).suggestions;
+    expect(s?.rationale).toContain(
+      "Use your reader's question, in your own words, near the top of the section that covers it",
+    );
+    expect(s?.rationale).toContain('A heading is fine but not required');
+    expect(s?.rationale).not.toMatch(/phrase (it|the heading) as a question/i);
+    // The follow-up test's finding behind the wording.
+    expect(s?.rationale).toContain(EVIDENCE['question-coverage'].e1.followUp);
+  });
+
   it('anchors on the matching heading when its section does not answer', () => {
     const md = [
       '# Espresso',

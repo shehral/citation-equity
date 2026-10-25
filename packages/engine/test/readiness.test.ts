@@ -360,9 +360,9 @@ describe('docs/evidence.md, Site readiness', () => {
   const next = DOC.indexOf('\n## ', start + 1);
   const section = DOC.slice(start, next === -1 ? undefined : next);
 
-  it('has a Site readiness section that says it is not part of the GEO Score', () => {
+  it('has a Site readiness section that says it is not part of the AI-ready score', () => {
     expect(start).toBeGreaterThan(-1);
-    expect(section).toMatch(/not part of (the|any) GEO Score/i);
+    expect(section).toMatch(/not part of the AI-ready score/i);
   });
 
   it('states the same grade as the registry for every item', () => {

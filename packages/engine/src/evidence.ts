@@ -275,6 +275,29 @@ const REVIEW: Record<CheckId, Evidence> = {
       ),
     ],
   },
+  'reader-words': {
+    grade: 'mixed',
+    summary:
+      "Using your reader's own words where the page opens can help it get picked, but piling in query words is not the same thing. In an early controlled study (Aggarwal et al. 2024), a rewrite that added more of the query's keywords (Keyword Stuffing) lowered the page's share of the answer, 17.7 against 19.3 at baseline, and in the largest controlled study, pages missing the query's terms lost the first citation in only four of six models. Work the reader's words into the title or opening where they fit naturally, and leave them out where they do not.",
+    sources: [
+      cite(
+        WORKS.aggarwal2024,
+        'Keyword Stuffing ("Modifies content to include more keywords from the query, as expected in classical SEO optimization") lowered the rewritten source\'s position-adjusted word count from 19.3 at baseline to 17.7, with the top five Google results given to GPT-3.5-turbo; the authors find such methods "offer little to no improvement". It adds keywords anywhere, not into the title and opening.',
+      ),
+      cite(
+        WORKS.vishwakarma2026,
+        'Pages that lacked query terms present in the competing page lost the first citation, significant in four of six models (Kimi K2, GPT-5 Nano, GPT-5 Mini, GPT-5.2) but not in Gemini 2.5 Flash or Claude 3.5 Sonnet. Shopping-style product pages, two sources per trial.',
+      ),
+      cite(
+        WORKS.kim2026,
+        'Rewrites that mention query terms without meaningfully addressing the question did well at retrieval but lost at reranking and generation, in a full retrieve, rerank and generate pipeline.',
+      ),
+      cite(
+        WORKS.wan2024,
+        'Starting a page with "The following text is about the question: [question]" substantially raised how often models sided with it in counterfactual tests, while stylistic edits had a neutral or negative effect.',
+      ),
+    ],
+  },
 };
 
 /** Evidence behind each check, keyed in CHECK_IDS order: the review, plus the check's E1 outcome. */

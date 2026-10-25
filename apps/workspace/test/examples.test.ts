@@ -16,7 +16,7 @@ import {
   EXAMPLE_SLUG,
   runExample,
 } from '@/lib/examples';
-import { initialQuestions } from '@/lib/questions';
+import { authorQuestionTexts, initialQuestions } from '@/lib/questions';
 import { getSample } from '@/lib/samples';
 import { clearAll, getActiveSlot, getSummary, setSummary } from '@/lib/store';
 
@@ -84,16 +84,21 @@ describe('runExample', () => {
   it('opens the espresso example and stores the three summaries, labelled Example', () => {
     runExample(AT);
     const sample = getSample(EXAMPLE_SLUG);
-    const questions = initialQuestions(sample, sample.before).map((q) => q.text);
-    const result = analyze(sample.before, { questions });
-    const fixes = result.checks.reduce((n, c) => n + c.suggestions.length, 0);
+    const initial = initialQuestions(sample, sample.before);
+    // The pack's questions are imported, so they are the author's own for reader-words.
+    const result = analyze(sample.before, {
+      questions: initial.map((q) => q.text),
+      authorQuestions: authorQuestionTexts(initial),
+    });
+    // Start here shows at most one fix per check.
+    const checksWithFixes = result.checks.filter((c) => c.suggestions.length > 0).length;
 
     expect(getActiveSlot()).toBe(EXAMPLE_SLUG);
     expect(getSummary('draft')).toEqual({
       slot: EXAMPLE_SLUG,
       score: result.scores.foundation,
       baseline: { standard: result.scores.foundation, evidence: result.scores.evidence },
-      openStartHere: Math.min(3, fixes),
+      openStartHere: Math.min(3, checksWithFixes),
       example: true,
       at: AT.toISOString(),
     });

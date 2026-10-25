@@ -1,0 +1,89 @@
+{
+ "answers": 4464,
+ "prompts": 4464,
+ "unknown_answer_keys": 0,
+ "valid": 4462,
+ "dropped_cells": 0,
+ "completion": [
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "12",
+   "prompts": 392,
+   "answered": 392,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "ALL",
+   "prompts": 616,
+   "answered": 616,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "P12",
+   "prompts": 232,
+   "answered": 232,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "P_ALL",
+   "prompts": 352,
+   "answered": 352,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "gemma-4-12b",
+   "arm": "original",
+   "prompts": 640,
+   "answered": 640,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.5-9b",
+   "arm": "12",
+   "prompts": 392,
+   "answered": 392,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.5-9b",
+   "arm": "ALL",
+   "prompts": 616,
+   "answered": 616,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.5-9b",
+   "arm": "P12",
+   "prompts": 232,
+   "answered": 232,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.5-9b",
+   "arm": "P_ALL",
+   "prompts": 352,
+   "answered": 352,
+   "missing": 0
+  },
+  {
+   "set": "main",
+   "judge": "qwen3.5-9b",
+   "arm": "original",
+   "prompts": 640,
+   "answered": 640,
+   "missing": 0
+  }
+ ]
+}

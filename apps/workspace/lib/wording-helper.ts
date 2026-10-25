@@ -9,9 +9,20 @@ import type { CheckId, Suggestion } from '@citation-equity/engine';
  */
 const DATA_SUPPORT_CHECKS = new Set<CheckId>(['statistics', 'expert-quotes', 'cited-sources']);
 
+/**
+ * Advice only, by design: a model asked to work the reader's words in would stuff them in, so
+ * this check never gets a written edit; the author decides where a word fits.
+ */
+const ADVICE_ONLY_CHECKS = new Set<CheckId>(['reader-words']);
+
 /** True when the card may offer the local wording helper for `s`. */
 export function offersWordingHelper(s: Suggestion): boolean {
-  return s.kind === 'advisory' && !DATA_SUPPORT_CHECKS.has(s.checkId) && s.before.trim() !== '';
+  return (
+    s.kind === 'advisory' &&
+    !DATA_SUPPORT_CHECKS.has(s.checkId) &&
+    !ADVICE_ONLY_CHECKS.has(s.checkId) &&
+    s.before.trim() !== ''
+  );
 }
 
 /**

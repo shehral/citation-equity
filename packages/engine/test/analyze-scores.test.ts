@@ -21,6 +21,11 @@ vi.mock('../src/checks/standalone-paragraphs', async () => {
   const { notApplicable } = await import('../src/checks/types');
   return { check: () => notApplicable('standalone-paragraphs') };
 });
+// reader-words applies whenever the page has a topic question; keep it out of the wiring test too.
+vi.mock('../src/checks/reader-words', async () => {
+  const { notApplicable } = await import('../src/checks/types');
+  return { check: () => notApplicable('reader-words') };
+});
 
 const DRAFT = 'A short draft with some words in it.';
 

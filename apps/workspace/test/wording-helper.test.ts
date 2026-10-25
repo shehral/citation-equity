@@ -109,6 +109,10 @@ describe('wording helper safeguards (no invented facts)', () => {
     expect(offersWordingHelper({ ...PARAGRAPH, kind: 'edit', after: 'x' })).toBe(false);
   });
 
+  it("is never offered for the reader's words: that check is advice only, so no model writes them in", () => {
+    expect(offersWordingHelper({ ...PARAGRAPH, checkId: 'reader-words' })).toBe(false);
+  });
+
   it('leaves the worked example out of the prompt, so the model cannot copy it in', () => {
     const rationale =
       'The quote has no speaker. Add the speaker\'s name and role next to the quote, for example "says Jane Doe, head roaster at Example Coffee", so a reader can judge the source. Name only the person who really said it.';

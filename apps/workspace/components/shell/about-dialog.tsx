@@ -1,5 +1,6 @@
 'use client';
 
+import { CHECK_IDS } from '@citation-equity/engine';
 import Link from 'next/link';
 import { textLink } from '@/components/page-shell';
 import {
@@ -39,8 +40,8 @@ export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
           </h3>
           <ul className="list-disc space-y-1 pl-5 text-sm leading-relaxed">
             <li>
-              <strong className="font-semibold">Checks</strong> your draft against 10 writing
-              habits, each with its research grade.
+              <strong className="font-semibold">Checks</strong> your draft against{' '}
+              {CHECK_IDS.length} writing habits.
             </li>
             <li>
               <strong className="font-semibold">Suggests</strong> fixes one at a time; you apply,
@@ -59,7 +60,7 @@ export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
               className={textLink}
               onClick={() => onOpenChange(false)}
             >
-              See the research
+              How we tested this
             </Link>
           </p>
         </section>

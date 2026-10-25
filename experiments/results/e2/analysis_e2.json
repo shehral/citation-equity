@@ -1,0 +1,1789 @@
+{
+ "settings": {
+  "alpha": 0.05,
+  "delta": 0.03,
+  "min_n": 30,
+  "draws": 100000,
+  "resamples": 10000,
+  "bootstrap_seed": 1,
+  "sign_flip_seed": 1
+ },
+ "e2a": {
+  "main": {
+   "set": "main",
+   "mode": "two-judge",
+   "judges": [
+    "gemma-4-12b",
+    "qwen3.8-27b"
+   ],
+   "secondary_judges": [],
+   "n_queries": 80,
+   "refused_queries": [],
+   "family": {
+    "m": 2,
+    "alpha": 0.05,
+    "contrasts": [
+     [
+      "9",
+      "9W"
+     ],
+     [
+      "9",
+      "9P"
+     ]
+    ]
+   },
+   "planned": [
+    {
+     "arm": "9",
+     "ref": "9W",
+     "status": "ok",
+     "dropped_cells": 0,
+     "n": 54,
+     "mean_d": 0.003472222222222222,
+     "sd": 0.04767078697501868,
+     "p": 0.6280937190628094,
+     "ci95": [
+      -0.008969907407407407,
+      0.015914351851851853
+     ],
+     "ci90": [
+      -0.007233796296296296,
+      0.013888888888888888
+     ],
+     "p_holm": 0.6280937190628094,
+     "mde": 0.020519677887927017,
+     "mde_alpha": 0.025,
+     "per_judge": {
+      "gemma-4-12b": {
+       "mean_d": -0.009837962962962963,
+       "p": 0.35067649323506767
+      },
+      "qwen3.8-27b": {
+       "mean_d": 0.01678240740740741,
+       "p": 0.06605933940660594
+      }
+     },
+     "confound": {
+      "n": 54,
+      "regressors": [],
+      "dropped": {
+       "dlog_length": 0.0,
+       "dkey_terms": 0.0
+      },
+      "identifiable": true,
+      "intercept": 0.0034722222222222216,
+      "se": 0.00648717242920612,
+      "ci95": [
+       -0.00953939789859445,
+       0.016483842343038894
+      ],
+      "slopes": {}
+     },
+     "secondary": {
+      "cited": {
+       "n": 54,
+       "mean_d": -0.006944444444444444,
+       "sd": 0.06386096828611554,
+       "p": 0.5897241027589724,
+       "ci95": [
+        -0.02546296296296296,
+        0.008101851851851851
+       ],
+       "ci90": [
+        -0.02199074074074074,
+        0.005787037037037037
+       ]
+      },
+      "pawc": {
+       "n": 54,
+       "mean_d": 0.004449300665658729,
+       "sd": 0.025842910630617985,
+       "p": 0.2162078379216208,
+       "ci95": [
+        -0.0020962261537077354,
+        0.01125170223149828
+       ],
+       "ci90": [
+        -0.0010691267281036899,
+        0.010026593373284327
+       ]
+      },
+      "valid_rate": {
+       "n": 54,
+       "mean_d": 0.0,
+       "sd": 0.0,
+       "p": 1.0,
+       "ci95": [
+        0.0,
+        0.0
+       ],
+       "ci90": [
+        0.0,
+        0.0
+       ]
+      }
+     },
+     "label": "no effect larger than \u03b4"
+    },
+    {
+     "arm": "9",
+     "ref": "9P",
+     "status": "ok",
+     "dropped_cells": 0,
+     "n": 54,
+     "mean_d": 0.01707175925925926,
+     "sd": 0.060192402800232844,
+     "p": 0.044689553104468954,
+     "ci95": [
+      0.0008680555555555555,
+      0.03298611111111111
+     ],
+     "ci90": [
+      0.003472222222222222,
+      0.030671296296296297
+     ],
+     "p_holm": 0.08937910620893791,
+     "mde": 0.025909551638163414,
+     "mde_alpha": 0.025,
+     "per_judge": {
+      "gemma-4-12b": {
+       "mean_d": 0.011574074074074073,
+       "p": 0.33090669093309066
+      },
+      "qwen3.8-27b": {
+       "mean_d": 0.022569444444444444,
+       "p": 0.05284947150528495
+      }
+     },
+     "confound": {
+      "n": 54,
+      "regressors": [
+       "dlog_length",
+       "dkey_terms"
+      ],
+      "dropped": {},
+      "identifiable": true,
+      "intercept": -0.0006726888115491615,
+      "se": 0.021135324759867343,
+      "ci95": [
+       -0.04310362377981317,
+       0.041758246156714855
+      ],
+      "slopes": {
+       "dlog_length": 0.5244299130252823,
+       "dkey_terms": 0.002392831442926982
+      }
+     },
+     "secondary": {
+      "cited": {
+       "n": 54,
+       "mean_d": -0.0023148148148148147,
+       "sd": 0.07075544490657468,
+       "p": 0.9145808541914581,
+       "ci95": [
+        -0.02199074074074074,
+        0.015046296296296295
+       ],
+       "ci90": [
+        -0.018518518518518517,
+        0.01273148148148148
+       ]
+      },
+      "pawc": {
+       "n": 54,
+       "mean_d": 0.015285379229485259,
+       "sd": 0.032008211765315264,
+       "p": 0.0005199948000519994,
+       "ci95": [
+        0.007289687867634741,
+        0.024005372541419465
+       ],
+       "ci90": [
+        0.008434286815168139,
+        0.022541870056825793
+       ]
+      },
+      "valid_rate": {
+       "n": 54,
+       "mean_d": 0.0011574074074074073,
+       "sd": 0.008505172717997146,
+       "p": 1.0,
+       "ci95": [
+        0.0,
+        0.003472222222222222
+       ],
+       "ci90": [
+        0.0,
+        0.003472222222222222
+       ]
+      }
+     },
+     "label": "inconclusive"
+    }
+   ],
+   "reported": [
+    {
+     "arm": "9W",
+     "ref": "original",
+     "status": "ok",
+     "dropped_cells": 0,
+     "n": 54,
+     "mean_d": 0.023148148148148147,
+     "sd": 0.06696470167252928,
+     "p": 0.012689873101268987,
+     "ci95": [
+      0.00636574074074074,
+      0.0408058449074073
+     ],
+     "ci90": [
+      0.008680555555555556,
+      0.03819444444444445
+     ],
+     "p_holm": null,
+     "mde": 0.026193352837098397,
+     "mde_alpha": 0.05,
+     "per_judge": {
+      "gemma-4-12b": {
+       "mean_d": 0.027777777777777776,
+       "p": 0.025289747102528976
+      },
+      "qwen3.8-27b": {
+       "mean_d": 0.018518518518518517,
+       "p": 0.14019859801401985
+      }
+     },
+     "confound": {
+      "n": 54,
+      "regressors": [
+       "dlog_length",
+       "dkey_terms"
+      ],
+      "dropped": {},
+      "identifiable": true,
+      "intercept": -0.03587588100882319,
+      "se": 0.024429015555747037,
+      "ci95": [
+       -0.08491917616333391,
+       0.013167414145687534
+      ],
+      "slopes": {
+       "dlog_length": 0.1863594584388274,
+       "dkey_terms": 0.006871605949007501
+      }
+     },
+     "secondary": {
+      "cited": {
+       "n": 54,
+       "mean_d": 0.02662037037037037,
+       "sd": 0.06716313111367214,
+       "p": 0.0033799662003379965,
+       "ci95": [
+        0.010416666666666666,
+        0.04513888888888889
+       ],
+       "ci90": [
+        0.01273148148148148,
+        0.041666666666666664
+       ]
+      },
+      "pawc": {
+       "n": 54,
+       "mean_d": 0.015296566434494722,
+       "sd": 0.03716601956084775,
+       "p": 0.002939970600293997,
+       "ci95": [
+        0.005719362040690735,
+        0.025307610242706655
+       ],
+       "ci90": [
+        0.007214541343056923,
+        0.02364051195265451
+       ]
+      },
+      "valid_rate": {
+       "n": 54,
+       "mean_d": 0.0,
+       "sd": 0.0,
+       "p": 1.0,
+       "ci95": [
+        0.0,
+        0.0
+       ],
+       "ci90": [
+        0.0,
+        0.0
+       ]
+      }
+     },
+     "label": "reported without a verdict"
+    },
+    {
+     "arm": "9P",
+     "ref": "original",
+     "status": "ok",
+     "dropped_cells": 0,
+     "n": 54,
+     "mean_d": 0.009548611111111112,
+     "sd": 0.06369846426288224,
+     "p": 0.2952170478295217,
+     "ci95": [
+      -0.006655092592592593,
+      0.02662037037037037
+     ],
+     "ci90": [
+      -0.0040653935185185055,
+      0.024016203703703703
+     ],
+     "p_holm": null,
+     "mde": 0.02491575871984256,
+     "mde_alpha": 0.05,
+     "per_judge": {
+      "gemma-4-12b": {
+       "mean_d": 0.00636574074074074,
+       "p": 0.6459635403645964
+      },
+      "qwen3.8-27b": {
+       "mean_d": 0.01273148148148148,
+       "p": 0.22548774512254877
+      }
+     },
+     "confound": {
+      "n": 54,
+      "regressors": [
+       "dlog_length",
+       "dkey_terms"
+      ],
+      "dropped": {},
+      "identifiable": true,
+      "intercept": -0.00046597096936538463,
+      "se": 0.016088191275015637,
+      "ci95": [
+       -0.03276436266682353,
+       0.03183242072809277
+      ],
+      "slopes": {
+       "dlog_length": 0.2954126943141303,
+       "dkey_terms": 0.00014956729761752952
+      }
+     },
+     "secondary": {
+      "cited": {
+       "n": 54,
+       "mean_d": 0.02199074074074074,
+       "sd": 0.05967360046028546,
+       "p": 0.0067099329006709936,
+       "ci95": [
+        0.008101851851851851,
+        0.03935185185185185
+       ],
+       "ci90": [
+        0.009259259259259259,
+        0.03587962962962963
+       ]
+      },
+      "pawc": {
+       "n": 54,
+       "mean_d": 0.004460487870668196,
+       "sd": 0.028065916568618413,
+       "p": 0.2519874801251987,
+       "ci95": [
+        -0.002847791564137906,
+        0.011838176436483322
+       ],
+       "ci90": [
+        -0.0016127551560586842,
+        0.010724047032712538
+       ]
+      },
+      "valid_rate": {
+       "n": 54,
+       "mean_d": -0.0011574074074074073,
+       "sd": 0.008505172717997146,
+       "p": 1.0,
+       "ci95": [
+        -0.003472222222222222,
+        0.0
+       ],
+       "ci90": [
+        -0.003472222222222222,
+        0.0
+       ]
+      }
+     },
+     "label": "reported without a verdict"
+    }
+   ],
+   "reading": {
+    "case": null,
+    "text": "The plan gives no reading for this pair of labels (9 vs 9W: no effect larger than \u03b4; 9 vs 9P: inconclusive), so no reading is drawn."
+   },
+   "versions": {
+    "9": {
+     "applicable": 55,
+     "valid": 54,
+     "invalid": 1,
+     "mean_edit_distance": 32.074074074074076,
+     "mean_length_ratio": 1.03414345246348,
+     "mean_key_terms_delta": 7.685185185185185,
+     "failed": [
+      {
+       "query_id": "geo-test-209",
+       "reason": "invalid: The page length went from 269 to 326 words (1.21x; allowed 0.00-1.15x)."
+      }
+     ]
+    },
+    "9W": {
+     "applicable": 54,
+     "valid": 54,
+     "invalid": 0,
+     "mean_edit_distance": 32.074074074074076,
+     "mean_length_ratio": 1.03414345246348,
+     "mean_key_terms_delta": 7.685185185185185,
+     "failed": []
+    },
+    "9P": {
+     "applicable": 54,
+     "valid": 54,
+     "invalid": 0,
+     "mean_edit_distance": 31.425925925925927,
+     "mean_length_ratio": 1.0346498930256598,
+     "mean_key_terms_delta": 0.16666666666666666,
+     "failed": []
+    }
+   }
+  },
+  "replication": {
+   "set": "replication",
+   "mode": "two-judge",
+   "judges": [
+    "gemma-4-12b",
+    "qwen3.8-27b"
+   ],
+   "secondary_judges": [],
+   "n_queries": 60,
+   "refused_queries": [],
+   "family": {
+    "m": 2,
+    "alpha": 0.05,
+    "contrasts": [
+     [
+      "9",
+      "9W"
+     ],
+     [
+      "9",
+      "9P"
+     ]
+    ]
+   },
+   "planned": [
+    {
+     "arm": "9",
+     "ref": "9W",
+     "status": "ok",
+     "dropped_cells": 0,
+     "n": 52,
+     "mean_d": -0.0009014423076923077,
+     "sd": 0.04867002827501463,
+     "p": 0.9305206947930521,
+     "ci95": [
+      -0.013822115384615384,
+      0.01201923076923077
+     ],
+     "ci90": [
+      -0.01171875,
+      0.009915865384615384
+     ],
+     "p_holm": 0.9305206947930521,
+     "mde": 0.021348876463057664,
+     "mde_alpha": 0.025,
+     "per_judge": {
+      "gemma-4-12b": {
+       "mean_d": 0.007211538461538462,
+       "p": 0.5055449445505545
+      },
+      "qwen3.8-27b": {
+       "mean_d": -0.009014423076923076,
+       "p": 0.41714582854171456
+      }
+     },
+     "confound": {
+      "n": 52,
+      "regressors": [],
+      "dropped": {
+       "dlog_length": 0.0,
+       "dkey_terms": 0.0
+      },
+      "identifiable": true,
+      "intercept": -0.0009014423076923083,
+      "se": 0.006749318558609517,
+      "ci95": [
+       -0.014451264706648212,
+       0.012648380091263596
+      ],
+      "slopes": {}
+     },
+     "secondary": {
+      "cited": {
+       "n": 52,
+       "mean_d": -0.010817307692307692,
+       "sd": 0.07079852862421966,
+       "p": 0.3324166758332417,
+       "ci95": [
+        -0.030048076923076924,
+        0.008413461538461538
+       ],
+       "ci90": [
+        -0.026442307692307692,
+        0.004807692307692308
+       ]
+      },
+      "pawc": {
+       "n": 52,
+       "mean_d": 0.002626936100718775,
+       "sd": 0.02383285894906126,
+       "p": 0.4301256987430126,
+       "ci95": [
+        -0.003684632369141218,
+        0.009061520389002967
+       ],
+       "ci90": [
+        -0.00270390791697504,
+        0.008038019739074604
+       ]
+      },
+      "valid_rate": {
+       "n": 52,
+       "mean_d": 0.0,
+       "sd": 0.0,
+       "p": 1.0,
+       "ci95": [
+        0.0,
+        0.0
+       ],
+       "ci90": [
+        0.0,
+        0.0
+       ]
+      }
+     },
+     "label": "no effect larger than \u03b4"
+    },
+    {
+     "arm": "9",
+     "ref": "9P",
+     "status": "ok",
+     "dropped_cells": 0,
+     "n": 52,
+     "mean_d": 0.04837740384615385,
+     "sd": 0.08170472861427146,
+     "p": 4.999950000499995e-05,
+     "ci95": [
+      0.027043269230769232,
+      0.0712139423076923
+     ],
+     "ci90": [
+      0.030348557692307692,
+      0.0673076923076923
+     ],
+     "p_holm": 9.99990000099999e-05,
+     "mde": 0.03583939067751054,
+     "mde_alpha": 0.025,
+     "per_judge": {
+      "gemma-4-12b": {
+       "mean_d": 0.05889423076923077,
+       "p": 1.999980000199998e-05
+      },
+      "qwen3.8-27b": {
+       "mean_d": 0.03786057692307692,
+       "p": 0.00950990490095099
+      }
+     },
+     "confound": {
+      "n": 52,
+      "regressors": [
+       "dlog_length",
+       "dkey_terms"
+      ],
+      "dropped": {},
+      "identifiable": true,
+      "intercept": 0.032113901244451265,
+      "se": 0.03206538604312368,
+      "ci95": [
+       -0.03232390451679948,
+       0.09655170700570201
+      ],
+      "slopes": {
+       "dlog_length": 0.07006007567816824,
+       "dkey_terms": 0.0017197770409456616
+      }
+     },
+     "secondary": {
+      "cited": {
+       "n": 52,
+       "mean_d": 0.037259615384615384,
+       "sd": 0.11428299456571828,
+       "p": 0.024289757102428977,
+       "ci95": [
+        0.007211538461538462,
+        0.06971153846153846
+       ],
+       "ci90": [
+        0.01201923076923077,
+        0.06370192307692307
+       ]
+      },
+      "pawc": {
+       "n": 52,
+       "mean_d": 0.027493664853058247,
+       "sd": 0.042387526863209936,
+       "p": 1.999980000199998e-05,
+       "ci95": [
+        0.016698071506406825,
+        0.038984328436715274
+       ],
+       "ci90": [
+        0.018233417567459394,
+        0.03721937567767314
+       ]
+      },
+      "valid_rate": {
+       "n": 52,
+       "mean_d": 0.0,
+       "sd": 0.0,
+       "p": 1.0,
+       "ci95": [
+        0.0,
+        0.0
+       ],
+       "ci90": [
+        0.0,
+        0.0
+       ]
+      }
+     },
+     "label": "helps"
+    }
+   ],
+   "reported": [
+    {
+     "arm": "9W",
+     "ref": "original",
+     "status": "ok",
+     "dropped_cells": 0,
+     "n": 52,
+     "mean_d": 0.037259615384615384,
+     "sd": 0.07310160236599894,
+     "p": 0.0002899971000289997,
+     "ci95": [
+      0.018622295673076928,
+      0.05739182692307692
+     ],
+     "ci90": [
+      0.021634615384615384,
+      0.053786057692307696
+     ],
+     "p_holm": null,
+     "mde": 0.02913850457788975,
+     "mde_alpha": 0.05,
+     "per_judge": {
+      "gemma-4-12b": {
+       "mean_d": 0.034254807692307696,
+       "p": 0.006379936200637993
+      },
+      "qwen3.8-27b": {
+       "mean_d": 0.04026442307692308,
+       "p": 0.012689873101268987
+      }
+     },
+     "confound": {
+      "n": 52,
+      "regressors": [
+       "dlog_length",
+       "dkey_terms"
+      ],
+      "dropped": {},
+      "identifiable": true,
+      "intercept": 0.03341953905840331,
+      "se": 0.028514862709959923,
+      "ci95": [
+       -0.02388322293367199,
+       0.0907223010504786
+      ],
+      "slopes": {
+       "dlog_length": -0.0665980548858128,
+       "dkey_terms": 0.0007119092424057127
+      }
+     },
+     "secondary": {
+      "cited": {
+       "n": 52,
+       "mean_d": 0.04326923076923077,
+       "sd": 0.09306404402126935,
+       "p": 0.0011699883001169988,
+       "ci95": [
+        0.019230769230769232,
+        0.06850961538461539
+       ],
+       "ci90": [
+        0.02283653846153846,
+        0.06490384615384616
+       ]
+      },
+      "pawc": {
+       "n": 52,
+       "mean_d": 0.01547664787122596,
+       "sd": 0.02943461082078976,
+       "p": 0.00034999650003499967,
+       "ci95": [
+        0.007849291588243382,
+        0.02359504771144586
+       ],
+       "ci90": [
+        0.008912561295450169,
+        0.02222946571011373
+       ]
+      },
+      "valid_rate": {
+       "n": 52,
+       "mean_d": 0.0,
+       "sd": 0.0,
+       "p": 1.0,
+       "ci95": [
+        0.0,
+        0.0
+       ],
+       "ci90": [
+        0.0,
+        0.0
+       ]
+      }
+     },
+     "label": "reported without a verdict"
+    },
+    {
+     "arm": "9P",
+     "ref": "original",
+     "status": "ok",
+     "dropped_cells": 0,
+     "n": 52,
+     "mean_d": -0.01201923076923077,
+     "sd": 0.06060353311373248,
+     "p": 0.17318826811731883,
+     "ci95": [
+      -0.028846153846153848,
+      0.003605769230769231
+     ],
+     "ci90": [
+      -0.026141826923076924,
+      0.001201923076923077
+     ],
+     "p_holm": null,
+     "mde": 0.024156738975835933,
+     "mde_alpha": 0.05,
+     "per_judge": {
+      "gemma-4-12b": {
+       "mean_d": -0.017427884615384616,
+       "p": 0.11838881611183888
+      },
+      "qwen3.8-27b": {
+       "mean_d": -0.006610576923076923,
+       "p": 0.6369936300636994
+      }
+     },
+     "confound": {
+      "n": 52,
+      "regressors": [
+       "dlog_length",
+       "dkey_terms"
+      ],
+      "dropped": {},
+      "identifiable": true,
+      "intercept": -0.035220163585902325,
+      "se": 0.016980574553504484,
+      "ci95": [
+       -0.06934390572085175,
+       -0.0010964214509528933
+      ],
+      "slopes": {
+       "dlog_length": 0.7040455146693534,
+       "dkey_terms": 0.008509104092087376
+      }
+     },
+     "secondary": {
+      "cited": {
+       "n": 52,
+       "mean_d": -0.004807692307692308,
+       "sd": 0.08101507689786028,
+       "p": 0.7537024629753702,
+       "ci95": [
+        -0.026442307692307692,
+        0.016856971153845716
+       ],
+       "ci90": [
+        -0.02283653846153846,
+        0.013221153846153846
+       ]
+      },
+      "pawc": {
+       "n": 52,
+       "mean_d": -0.009390080881113512,
+       "sd": 0.03470943627842403,
+       "p": 0.055799442005579944,
+       "ci95": [
+        -0.019045677590501166,
+        -0.00044899675388372466
+       ],
+       "ci90": [
+        -0.017484671461082193,
+        -0.001869393159706583
+       ]
+      },
+      "valid_rate": {
+       "n": 52,
+       "mean_d": 0.0,
+       "sd": 0.0,
+       "p": 1.0,
+       "ci95": [
+        0.0,
+        0.0
+       ],
+       "ci90": [
+        0.0,
+        0.0
+       ]
+      }
+     },
+     "label": "reported without a verdict"
+    }
+   ],
+   "reading": {
+    "case": "query words",
+    "text": "The query'\u2026's advice becomes \"use your reader's words near the top\", and question headings stay mixed evidence."
+   },
+   "versions": {
+    "9": {
+     "applicable": 53,
+     "valid": 52,
+     "invalid": 1,
+     "mean_edit_distance": 43.65384615384615,
+     "mean_length_ratio": 1.0416800064441665,
+     "mean_key_terms_delta": 9.173076923076923,
+     "failed": [
+      {
+       "query_id": "cseo-web-134",
+       "reason": "invalid: The page length went from 1627 to 2022 words (1.24x; allowed 0.00-1.15x)."
+      }
+     ]
+    },
+    "9W": {
+     "applicable": 52,
+     "valid": 52,
+     "invalid": 0,
+     "mean_edit_distance": 43.65384615384615,
+     "mean_length_ratio": 1.0416800064441665,
+     "mean_key_terms_delta": 9.173076923076923,
+     "failed": []
+    },
+    "9P": {
+     "applicable": 52,
+     "valid": 52,
+     "invalid": 0,
+     "mean_edit_distance": 36.38461538461539,
+     "mean_length_ratio": 1.0332012762645628,
+     "mean_key_terms_delta": 0.038461538461538464,
+     "failed": []
+    }
+   }
+  }
+ },
+ "e2b": {
+  "set": "main",
+  "editor": "Qwen/Qwen3.8-27B",
+  "mode": "two-judge",
+  "judges": [
+   "gemma-4-12b",
+   "qwen3.5-9b"
+  ],
+  "secondary_judges": [],
+  "n_queries": 80,
+  "refused_queries": [],
+  "contrasts": [
+   {
+    "arm": "12",
+    "ref": "P12",
+    "status": "insufficient n",
+    "dropped_cells": 0,
+    "n": 29,
+    "mean_d": 0.02894088669950739,
+    "sd": 0.08105274582775843,
+    "p": 0.050959490405095946,
+    "ci95": [
+     0.0026939655172413795,
+     0.06111453201970443
+    ],
+    "ci90": [
+     0.00646551724137931,
+     0.05518780788177341
+    ],
+    "p_holm": null,
+    "mde": 0.04326241586956259,
+    "mde_alpha": 0.05,
+    "per_judge": {
+     "gemma-4-12b": {
+      "mean_d": 0.03848522167487685,
+      "p": 0.016989830101698983
+     },
+     "qwen3.5-9b": {
+      "mean_d": 0.01939655172413793,
+      "p": 0.44627553724462754
+     }
+    },
+    "confound": {
+     "n": 29,
+     "regressors": [
+      "dlog_length",
+      "dkey_terms"
+     ],
+     "dropped": {},
+     "identifiable": true,
+     "intercept": -0.018062827477791716,
+     "se": 0.021253353435780026,
+     "ci95": [
+      -0.06174972113491917,
+      0.025624066179335738
+     ],
+     "slopes": {
+      "dlog_length": -1.1409184306211286,
+      "dkey_terms": 0.012653685239480848
+     }
+    },
+    "secondary": {
+     "cited": {
+      "n": 29,
+      "mean_d": 0.00646551724137931,
+      "sd": 0.07717245657737735,
+      "p": 0.7661323386766132,
+      "ci95": [
+       -0.021551724137931036,
+       0.034482758620689655
+      ],
+      "ci90": [
+       -0.017241379310344827,
+       0.03017241379310345
+      ]
+     },
+     "pawc": {
+      "n": 29,
+      "mean_d": 0.02514466503862307,
+      "sd": 0.07303532708903916,
+      "p": 0.00994990050099499,
+      "ci95": [
+       0.005132775848834045,
+       0.05515671496299845
+      ],
+      "ci90": [
+       0.00704688256939723,
+       0.04993046608453515
+      ]
+     },
+     "valid_rate": {
+      "n": 29,
+      "mean_d": 0.0021551724137931034,
+      "sd": 0.011605958636065745,
+      "p": 1.0,
+      "ci95": [
+       0.0,
+       0.00646551724137931
+      ],
+      "ci90": [
+       0.0,
+       0.00646551724137931
+      ]
+     }
+    },
+    "e1_mean_d": 0.035376082251082255,
+    "e1_n": 33,
+    "e1_label": "helps, possibly through length or query-term overlap",
+    "few_queries": true,
+    "label": "stands"
+   },
+   {
+    "arm": "ALL",
+    "ref": "P_ALL",
+    "status": "ok",
+    "dropped_cells": 0,
+    "n": 44,
+    "mean_d": 0.06924715909090909,
+    "sd": 0.11050587130775329,
+    "p": 4.999950000499995e-05,
+    "ci95": [
+     0.03799715909090909,
+     0.10369318181818182
+    ],
+    "ci90": [
+     0.04296875,
+     0.09765625
+    ],
+    "p_holm": null,
+    "mde": 0.04788517176951463,
+    "mde_alpha": 0.05,
+    "per_judge": {
+     "gemma-4-12b": {
+      "mean_d": 0.07386363636363637,
+      "p": 0.00024999750002499977
+     },
+     "qwen3.5-9b": {
+      "mean_d": 0.06463068181818182,
+      "p": 0.0017099829001709984
+     }
+    },
+    "confound": {
+     "n": 44,
+     "regressors": [
+      "dlog_length",
+      "dkey_terms"
+     ],
+     "dropped": {},
+     "identifiable": true,
+     "intercept": 0.04179616098871135,
+     "se": 0.029651026174501344,
+     "ci95": [
+      -0.018085301186323642,
+      0.10167762316374634
+     ],
+     "slopes": {
+      "dlog_length": 0.1393889574204975,
+      "dkey_terms": 0.001966467368540195
+     }
+    },
+    "secondary": {
+     "cited": {
+      "n": 44,
+      "mean_d": 0.05539772727272727,
+      "sd": 0.12802723091272303,
+      "p": 0.0007299927000729993,
+      "ci95": [
+       0.022727272727272728,
+       0.09659090909090909
+      ],
+      "ci90": [
+       0.026988636363636364,
+       0.08948863636363637
+      ]
+     },
+     "pawc": {
+      "n": 44,
+      "mean_d": 0.036451793162852644,
+      "sd": 0.048946882428788877,
+      "p": 9.99990000099999e-06,
+      "ci95": [
+       0.023197284972701283,
+       0.051453545529108344
+      ],
+      "ci90": [
+       0.02509634783085938,
+       0.04899087101583998
+      ]
+     },
+     "valid_rate": {
+      "n": 44,
+      "mean_d": 0.0,
+      "sd": 0.0,
+      "p": 1.0,
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "ci90": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "e1_mean_d": 0.0710495283018868,
+    "e1_n": 53,
+    "e1_label": "helps, possibly through length or query-term overlap",
+    "few_queries": false,
+    "label": "stands"
+   }
+  ],
+  "reported": [
+   {
+    "arm": "12",
+    "ref": "original",
+    "status": "ok",
+    "dropped_cells": 0,
+    "n": 49,
+    "mean_d": 0.028380102040816327,
+    "sd": 0.08703568383074384,
+    "p": 0.023159768402315976,
+    "ci95": [
+     0.006058673469387755,
+     0.05389030612244898
+    ],
+    "ci90": [
+     0.009247448979591837,
+     0.04942602040816327
+    ],
+    "p_holm": null,
+    "mde": 0.03573891310053886,
+    "mde_alpha": 0.05,
+    "per_judge": {
+     "gemma-4-12b": {
+      "mean_d": 0.02614795918367347,
+      "p": 0.04405955940440596
+     },
+     "qwen3.5-9b": {
+      "mean_d": 0.030612244897959183,
+      "p": 0.10847891521084789
+     }
+    },
+    "confound": {
+     "n": 49,
+     "regressors": [
+      "dlog_length",
+      "dkey_terms"
+     ],
+     "dropped": {},
+     "identifiable": true,
+     "intercept": -0.034363306791538754,
+     "se": 0.018373516232002448,
+     "ci95": [
+      -0.07134727675161118,
+      0.0026206631685336615
+     ],
+     "slopes": {
+      "dlog_length": 0.7289190178997951,
+      "dkey_terms": 0.011418472524120357
+     }
+    },
+    "secondary": {
+     "cited": {
+      "n": 49,
+      "mean_d": 0.02040816326530612,
+      "sd": 0.08594957784639078,
+      "p": 0.12816871831281687,
+      "ci95": [
+       -0.002551020408163265,
+       0.044642857142857144
+      ],
+      "ci90": [
+       0.0012755102040816326,
+       0.04081632653061224
+      ]
+     },
+     "pawc": {
+      "n": 49,
+      "mean_d": 0.03036690950187712,
+      "sd": 0.06978120787279102,
+      "p": 4.999950000499995e-05,
+      "ci95": [
+       0.013884465575921608,
+       0.05188123077249802
+      ],
+      "ci90": [
+       0.015865955584800404,
+       0.04796660589871558
+      ]
+     },
+     "valid_rate": {
+      "n": 49,
+      "mean_d": -0.0012755102040816326,
+      "sd": 0.008928571428571428,
+      "p": 1.0,
+      "ci95": [
+       -0.003826530612244898,
+       0.0
+      ],
+      "ci90": [
+       -0.003826530612244898,
+       0.0
+      ]
+     }
+    },
+    "label": "reported without a verdict"
+   },
+   {
+    "arm": "P12",
+    "ref": "original",
+    "status": "insufficient n",
+    "dropped_cells": 0,
+    "n": 29,
+    "mean_d": -0.003617610837438424,
+    "sd": 0.05098247581051285,
+    "p": 0.7386926130738692,
+    "ci95": [
+     -0.021782635467980295,
+     0.014316502463054185
+    ],
+    "ci90": [
+     -0.018857758620689655,
+     0.0114685960591133
+    ],
+    "p_holm": null,
+    "mde": 0.027212219006884694,
+    "mde_alpha": 0.05,
+    "per_judge": {
+     "gemma-4-12b": {
+      "mean_d": -0.013700738916256158,
+      "p": 0.1780682193178068
+     },
+     "qwen3.5-9b": {
+      "mean_d": 0.00646551724137931,
+      "p": 0.7251527484725153
+     }
+    },
+    "confound": {
+     "n": 29,
+     "regressors": [
+      "dlog_length",
+      "dkey_terms"
+     ],
+     "dropped": {},
+     "identifiable": true,
+     "intercept": -0.006539564965981451,
+     "se": 0.011153542004212726,
+     "ci95": [
+      -0.029465998900780523,
+      0.01638686896881762
+     ],
+     "slopes": {
+      "dlog_length": -2.15595018387094,
+      "dkey_terms": -0.01937729866454875
+     }
+    },
+    "secondary": {
+     "cited": {
+      "n": 29,
+      "mean_d": 0.0021551724137931034,
+      "sd": 0.06781580929361371,
+      "p": 1.0,
+      "ci95": [
+       -0.021551724137931036,
+       0.02586206896551724
+      ],
+      "ci90": [
+       -0.017241379310344827,
+       0.021551724137931036
+      ]
+     },
+     "pawc": {
+      "n": 29,
+      "mean_d": 0.0018316697795995442,
+      "sd": 0.022249838322477577,
+      "p": 0.6677733222667773,
+      "ci95": [
+       -0.006257783648645285,
+       0.009276018457845805
+      ],
+      "ci90": [
+       -0.005042969210879379,
+       0.008264204055916635
+      ]
+     },
+     "valid_rate": {
+      "n": 29,
+      "mean_d": -0.0021551724137931034,
+      "sd": 0.011605958636065745,
+      "p": 1.0,
+      "ci95": [
+       -0.00646551724137931,
+       0.0
+      ],
+      "ci90": [
+       -0.00646551724137931,
+       0.0
+      ]
+     }
+    },
+    "label": "reported without a verdict"
+   },
+   {
+    "arm": "ALL",
+    "ref": "original",
+    "status": "ok",
+    "dropped_cells": 0,
+    "n": 77,
+    "mean_d": 0.05519480519480519,
+    "sd": 0.09207607894976948,
+    "p": 9.99990000099999e-06,
+    "ci95": [
+     0.03571428571428571,
+     0.07650162337662338
+    ],
+    "ci90": [
+     0.03855519480519481,
+     0.07284902597402597
+    ],
+    "p_holm": null,
+    "mde": 0.030160843884288035,
+    "mde_alpha": 0.05,
+    "per_judge": {
+     "gemma-4-12b": {
+      "mean_d": 0.04748376623376623,
+      "p": 0.0005799942000579994
+     },
+     "qwen3.5-9b": {
+      "mean_d": 0.06290584415584416,
+      "p": 9.99990000099999e-06
+     }
+    },
+    "confound": {
+     "n": 77,
+     "regressors": [
+      "dlog_length",
+      "dkey_terms"
+     ],
+     "dropped": {},
+     "identifiable": true,
+     "intercept": 0.015655966253232664,
+     "se": 0.018932644037393673,
+     "ci95": [
+      -0.022068150470052,
+      0.05338008297651733
+     ],
+     "slopes": {
+      "dlog_length": 0.13181989559332857,
+      "dkey_terms": 0.0034073829005371718
+     }
+    },
+    "secondary": {
+     "cited": {
+      "n": 77,
+      "mean_d": 0.045454545454545456,
+      "sd": 0.1099661485537763,
+      "p": 6.999930000699993e-05,
+      "ci95": [
+       0.022727272727272728,
+       0.07142857142857142
+      ],
+      "ci90": [
+       0.025974025974025976,
+       0.06655844155844155
+      ]
+     },
+     "pawc": {
+      "n": 77,
+      "mean_d": 0.03197963368296974,
+      "sd": 0.04308786482079585,
+      "p": 9.99990000099999e-06,
+      "ci95": [
+       0.02305016855852217,
+       0.04213842316989175
+      ],
+      "ci90": [
+       0.0242965510869876,
+       0.04033532409097785
+      ]
+     },
+     "valid_rate": {
+      "n": 77,
+      "mean_d": 0.0,
+      "sd": 0.0,
+      "p": 1.0,
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "ci90": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "label": "reported without a verdict"
+   },
+   {
+    "arm": "P_ALL",
+    "ref": "original",
+    "status": "ok",
+    "dropped_cells": 0,
+    "n": 44,
+    "mean_d": -0.0035511363636363635,
+    "sd": 0.05484183334576953,
+    "p": 0.7041329586704133,
+    "ci95": [
+     -0.020241477272727272,
+     0.012073863636363636
+    ],
+    "ci90": [
+     -0.01740056818181818,
+     0.009588068181818182
+    ],
+    "p_holm": null,
+    "mde": 0.02376444417694046,
+    "mde_alpha": 0.05,
+    "per_judge": {
+     "gemma-4-12b": {
+      "mean_d": -0.012073863636363636,
+      "p": 0.2144278557214428
+     },
+     "qwen3.5-9b": {
+      "mean_d": 0.004971590909090909,
+      "p": 0.7473725262747373
+     }
+    },
+    "confound": {
+     "n": 44,
+     "regressors": [
+      "dlog_length",
+      "dkey_terms"
+     ],
+     "dropped": {},
+     "identifiable": true,
+     "intercept": -0.004321221001857509,
+     "se": 0.009387510925930155,
+     "ci95": [
+      -0.023279683927239482,
+      0.014637241923524466
+     ],
+     "slopes": {
+      "dlog_length": -1.0794620211880985,
+      "dkey_terms": 0.013820409186838564
+     }
+    },
+    "secondary": {
+     "cited": {
+      "n": 44,
+      "mean_d": 0.005681818181818182,
+      "sd": 0.0684894399353933,
+      "p": 0.6872431275687243,
+      "ci95": [
+       -0.014204545454545454,
+       0.025603693181817665
+      ],
+      "ci90": [
+       -0.011363636363636364,
+       0.022727272727272728
+      ]
+     },
+     "pawc": {
+      "n": 44,
+      "mean_d": 0.00111342323757003,
+      "sd": 0.024788509203756238,
+      "p": 0.7722122778772212,
+      "ci95": [
+       -0.006241415143562269,
+       0.008367792018133903
+      ],
+      "ci90": [
+       -0.0049062856009666,
+       0.007176320711734742
+      ]
+     },
+     "valid_rate": {
+      "n": 44,
+      "mean_d": 0.0,
+      "sd": 0.0,
+      "p": 1.0,
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "ci90": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "label": "reported without a verdict"
+   }
+  ],
+  "versions": {
+   "12": {
+    "applicable": 63,
+    "valid": 49,
+    "invalid": 14,
+    "mean_edit_distance": 9.428571428571429,
+    "mean_length_ratio": 1.0094280467320205,
+    "mean_key_terms_delta": 4.8979591836734695,
+    "failed": [
+     {
+      "query_id": "geo-test-104",
+      "reason": "invalid: Unknown span id '\u2026'; use only the ids given (title, s1, s2)."
+     },
+     {
+      "query_id": "geo-test-129",
+      "reason": "invalid: Add only the query's key terms and function words (not: especially)."
+     },
+     {
+      "query_id": "geo-test-154",
+      "reason": "invalid: Add only the query's key terms and function words (not: make)."
+     },
+     {
+      "query_id": "geo-test-160",
+      "reason": "invalid: Add only the query's key terms and function words (not: like)."
+     },
+     {
+      "query_id": "geo-test-166",
+      "reason": "invalid: Unknown span id '\u2026'; use only the ids given (title, s1, s2)."
+     },
+     {
+      "query_id": "geo-test-187",
+      "reason": "invalid: Unknown span id '\u2026'; use only the ids given (title, s1, s2)."
+     },
+     {
+      "query_id": "geo-test-228",
+      "reason": "invalid: Unknown span id '\u2026'; use only the ids given (title, s1, s2)."
+     },
+     {
+      "query_id": "geo-test-30",
+      "reason": "invalid: Unknown span id '\u2026'; use only the ids given (title, s1, s2)."
+     },
+     {
+      "query_id": "geo-test-317",
+      "reason": "invalid: Do not add facts that are not in the allowed sources: name '\u2026'."
+     },
+     {
+      "query_id": "geo-test-328",
+      "reason": "invalid: Work the missing query key terms into the title, the first heading or the first paragraph."
+     },
+     {
+      "query_id": "geo-test-344",
+      "reason": "invalid: Add only the query's key terms and function words (not: ithistory)."
+     },
+     {
+      "query_id": "geo-test-349",
+      "reason": "invalid: Do not add facts that are not in the allowed sources: name '\u2026'."
+     },
+     {
+      "query_id": "geo-test-60",
+      "reason": "invalid: Do not add facts that are not in the allowed sources: name '\u2026'."
+     },
+     {
+      "query_id": "geo-test-62",
+      "reason": "invalid: Add only the query's key terms and function words (not: though)."
+     }
+    ]
+   },
+   "P12": {
+    "applicable": 49,
+    "valid": 29,
+    "invalid": 20,
+    "mean_edit_distance": 11.275862068965518,
+    "mean_length_ratio": 0.9989571629469138,
+    "mean_key_terms_delta": -0.034482758620689655,
+    "failed": [
+     {
+      "query_id": "geo-test-149",
+      "reason": "invalid: Do not add facts that are not in the allowed sources: name '\u2026'. | The paraphrase must keep the spans' length within 10% (7 -> 5 words)."
+     },
+     {
+      "query_id": "geo-test-16",
+      "reason": "invalid: Unknown span id '\u2026'; use only the ids given (title, s1)."
+     },
+     {
+      "query_id": "geo-test-168",
+      "reason": "invalid: Keep exactly the query key terms the spans contain (lost: ['\u2026'], added: [])."
+     },
+     {
+      "query_id": "geo-test-20",
+      "reason": "invalid: Unknown span id '\u2026'; use only the ids given (title, s1, s2)."
+     },
+     {
+      "query_id": "geo-test-251",
+      "reason": "invalid: The paraphrase changed the standalone-paragraphs check (0.368 -> 0.316); keep the same structure, figures, quotes and links. | The paraphrase must keep the spans' length within 10% (51 -> 42 words)."
+     },
+     {
+      "query_id": "geo-test-297",
+      "reason": "invalid: The paraphrase changed the standalone-paragraphs check (0.759 -> 0.724); keep the same structure, figures, quotes and links. | Do not add facts that are not in the allowed sources: name '\u2026'. | The paraphrase must keep the spans' length within 10% (98 -> 88 words)."
+     },
+     {
+      "query_id": "geo-test-300",
+      "reason": "invalid: The paraphrase changed the question-headings check (0.667 -> 0.333); keep the same structure, figures, quotes and links."
+     },
+     {
+      "query_id": "geo-test-303",
+      "reason": "invalid: Reword the spans: the answer left every span unchanged."
+     },
+     {
+      "query_id": "geo-test-311",
+      "reason": "invalid: Reword the spans: the answer left every span unchanged."
+     },
+     {
+      "query_id": "geo-test-322",
+      "reason": "invalid: The paraphrase must keep the spans' length within 10% (12 -> 10 words)."
+     },
+     {
+      "query_id": "geo-test-324",
+      "reason": "invalid: Unknown span id '\u2026'; use only the ids given (title, s1, s2)."
+     },
+     {
+      "query_id": "geo-test-338",
+      "reason": "invalid: The paraphrase must keep the spans' length within 10% (5 -> 4 words)."
+     },
+     {
+      "query_id": "geo-test-341",
+      "reason": "invalid: Do not add facts that are not in the allowed sources: name '\u2026's Main Benefits'\u2026' length within 10% (40 -> 33 words)."
+     },
+     {
+      "query_id": "geo-test-355",
+      "reason": "invalid: Do not add facts that are not in the allowed sources: name '\u2026'."
+     },
+     {
+      "query_id": "geo-test-41",
+      "reason": "invalid: Do not add facts that are not in the allowed sources: name '\u2026'. | The paraphrase must keep the spans' length within 10% (21 -> 17 words)."
+     },
+     {
+      "query_id": "geo-test-48",
+      "reason": "invalid: The paraphrase must keep the spans' length within 10% (14 -> 11 words)."
+     },
+     {
+      "query_id": "geo-test-57",
+      "reason": "invalid: Reword the spans: the answer left every span unchanged."
+     },
+     {
+      "query_id": "geo-test-7",
+      "reason": "invalid: Unknown span id '\u2026'; use only the ids given (title)."
+     },
+     {
+      "query_id": "geo-test-84",
+      "reason": "invalid: Unknown span id '\u2026'; use only the ids given (title, s1)."
+     },
+     {
+      "query_id": "geo-test-89",
+      "reason": "invalid: Unknown span id '\u2026'; use only the ids given (title, s1)."
+     }
+    ]
+   },
+   "ALL": {
+    "applicable": 79,
+    "valid": 77,
+    "invalid": 2,
+    "mean_edit_distance": 66.3896103896104,
+    "mean_length_ratio": 1.0577387853826157,
+    "mean_key_terms_delta": 9.493506493506494,
+    "failed": [
+     {
+      "query_id": "geo-test-16",
+      "reason": "invalid: every step failed"
+     },
+     {
+      "query_id": "geo-test-335",
+      "reason": "invalid: every step failed"
+     }
+    ]
+   },
+   "P_ALL": {
+    "applicable": 71,
+    "valid": 44,
+    "invalid": 27,
+    "mean_edit_distance": 41.13636363636363,
+    "mean_length_ratio": 0.9969816698882691,
+    "mean_key_terms_delta": -0.18181818181818182,
+    "failed": [
+     {
+      "query_id": "geo-test-100",
+      "reason": "invalid: The paraphrase changed the cited-sources check (0.333 -> 0.286); keep the same structure, figures, quotes and links."
+     },
+     {
+      "query_id": "geo-test-129",
+      "reason": "invalid: Do not add facts that are not in the allowed sources: name '\u2026'."
+     },
+     {
+      "query_id": "geo-test-154",
+      "reason": "invalid: Do not add facts that are not in the allowed sources: name '\u2026', name '\u2026'."
+     },
+     {
+      "query_id": "geo-test-160",
+      "reason": "invalid: The paraphrase must keep the spans' length within 10% (71 -> 63 words)."
+     },
+     {
+      "query_id": "geo-test-20",
+      "reason": "invalid: The paraphrase changed the standalone-paragraphs check (0.875 -> 0.917); keep the same structure, figures, quotes and links. | The paraphrase must keep the spans' length within 10% (243 -> 213 words)."
+     },
+     {
+      "query_id": "geo-test-204",
+      "reason": "invalid: Do not add facts that are not in the allowed sources: name '\u2026', name '\u2026'."
+     },
+     {
+      "query_id": "geo-test-228",
+      "reason": "invalid: The paraphrase changed the standalone-paragraphs check (0.800 -> 0.850); keep the same structure, figures, quotes and links."
+     },
+     {
+      "query_id": "geo-test-272",
+      "reason": "invalid: The paraphrase changed the statistics check (0.758 -> 0.782); keep the same structure, figures, quotes and links."
+     },
+     {
+      "query_id": "geo-test-297",
+      "reason": "invalid: The paraphrase changed the comparisons check (1.000 -> 0.000); keep the same structure, figures, quotes and links."
+     },
+     {
+      "query_id": "geo-test-303",
+      "reason": "invalid: Do not add facts that are not in the allowed sources: name '\u2026'."
+     },
+     {
+      "query_id": "geo-test-311",
+      "reason": "invalid: Do not add facts that are not in the allowed sources: name '\u2026's Legends While Receiving Best Rap Album GRAMMY For'\u2026'Guide To Contemporary Funk For The Dance Floor'\u2026'Idol Discusses Survival'."
+     },
+     {
+      "query_id": "geo-test-317",
+      "reason": "invalid: Do not add facts that are not in the allowed sources: name '\u2026', name '\u2026', name '\u2026', name '\u2026', name '\u2026', name '\u2026', name '\u2026'."
+     },
+     {
+      "query_id": "geo-test-322",
+      "reason": "invalid: The paraphrase changed the cited-sources check (0.333 -> 0.286); keep the same structure, figures, quotes and links."
+     },
+     {
+      "query_id": "geo-test-324",
+      "reason": "invalid: The paraphrase changed the cited-sources check (0.400 -> 0.444); keep the same structure, figures, quotes and links."
+     },
+     {
+      "query_id": "geo-test-333",
+      "reason": "invalid: Do not add facts that are not in the allowed sources: name '\u2026'. | Do not remove any link of the original (removed: '\u2026'). | The paraphrase must keep the spans' length within 10% (36 -> 32 words)."
+     },
+     {
+      "query_id": "geo-test-334",
+      "reason": "invalid: The paraphrase must keep the spans' length within 10% (52 -> 42 words)."
+     },
+     {
+      "query_id": "geo-test-338",
+      "reason": "invalid: Reword the spans: the answer left every span unchanged."
+     },
+     {
+      "query_id": "geo-test-341",
+      "reason": "invalid: The paraphrase changed the question-headings check (0.077 -> 0.000); keep the same structure, figures, quotes and links. | Do not add facts that are not in the allowed sources: name '\u2026'."
+     },
+     {
+      "query_id": "geo-test-345",
+      "reason": "invalid: The paraphrase changed the direct-answer-lead check (1.000 -> 0.833); keep the same structure, figures, quotes and links. | The paraphrase must keep the spans' length within 10% (196 -> 176 words)."
+     },
+     {
+      "query_id": "geo-test-348",
+      "reason": "invalid: The paraphrase changed the standalone-paragraphs check (0.513 -> 0.538); keep the same structure, figures, quotes and links. | The paraphrase must keep the spans' length within 10% (244 -> 217 words)."
+     },
+     {
+      "query_id": "geo-test-354",
+      "reason": "invalid: Do not add facts that are not in the allowed sources: name '\u2026'."
+     },
+     {
+      "query_id": "geo-test-41",
+      "reason": "invalid: Do not add facts that are not in the allowed sources: name '\u2026'."
+     },
+     {
+      "query_id": "geo-test-62",
+      "reason": "invalid: The paraphrase must keep the spans' length within 10% (187 -> 168 words)."
+     },
+     {
+      "query_id": "geo-test-66",
+      "reason": "invalid: The paraphrase changed the question-headings check (0.857 -> 0.571); keep the same structure, figures, quotes and links."
+     },
+     {
+      "query_id": "geo-test-7",
+      "reason": "invalid: Do not add facts that are not in the allowed sources: name '\u2026', name '\u2026'."
+     },
+     {
+      "query_id": "geo-test-84",
+      "reason": "invalid: Do not add facts that are not in the allowed sources: name '\u2026'."
+     },
+     {
+      "query_id": "geo-test-89",
+      "reason": "invalid: The paraphrase must keep the spans' length within 10% (31 -> 26 words)."
+     }
+    ]
+   }
+  }
+ }
+}

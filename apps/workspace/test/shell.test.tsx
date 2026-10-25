@@ -173,7 +173,10 @@ describe('About dialog', () => {
         .getByRole('link', { name: /GitHub/ })
         .getAttribute('href'),
     ).toBe(REPO_URL);
-    expect(route(within(dialog).getByRole('link', { name: /research/i }))).toBe('/research');
+    expect(route(within(dialog).getByRole('link', { name: 'How we tested this' }))).toBe(
+      '/research',
+    );
+    expect(text).not.toMatch(/grade/i);
   });
 
   it('opens from a #about link (the /about/ redirect) and drops the hash', async () => {

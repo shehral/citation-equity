@@ -23,6 +23,7 @@ import {
 } from 'react';
 import { Button } from '@/components/ui/button';
 import { classifyBenchError } from '@/lib/bench';
+import { CHECK_NAMES } from '@/lib/glossary';
 import { suggestWithLocalModel } from '@/lib/question-helper';
 import {
   editProblem,
@@ -46,7 +47,15 @@ interface ReaderQuestionsProps {
   coverage?: QuestionCoverage[];
   /** Selects a range in the editor. */
   onShowRange?(range: Range): void;
+  /**
+   * The page's own title and topic questions the reader's-words check measures while the list
+   * holds none of the author's own (typed or imported); shown so every question a card names
+   * is on screen.
+   */
+  pageQuestions?: string[];
 }
+
+const NO_PAGE_QUESTIONS: string[] = [];
 
 const field = cn(
   'h-8 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm',
@@ -84,7 +93,9 @@ export function ReaderQuestions({
   localModel,
   coverage = [],
   onShowRange,
+  pageQuestions = NO_PAGE_QUESTIONS,
 }: ReaderQuestionsProps) {
+  const pageListId = useId();
   const [draft, setDraft] = useState('');
   const [message, setMessage] = useState<ReactNode>(null);
   const [asking, setAsking] = useState(false);
@@ -219,6 +230,23 @@ export function ReaderQuestions({
         </ol>
       ) : (
         <p>No questions yet. Add one, or suggest some from your draft.</p>
+      )}
+
+      {pageQuestions.length > 0 && (
+        <div className="space-y-1 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+          <p id={pageListId} className="font-medium">
+            Page questions used for "{CHECK_NAMES['reader-words']}"
+          </p>
+          <ul aria-labelledby={pageListId} className="list-disc space-y-0.5 pl-5">
+            {pageQuestions.map((q) => (
+              <li key={q}>{q}</li>
+            ))}
+          </ul>
+          <p className="text-ink-soft text-xs">
+            Made from your title and topic. Add a question of your own, by typing or importing it,
+            and the check uses yours instead.
+          </p>
+        </div>
       )}
 
       <form onSubmit={add} className="flex items-center gap-2">

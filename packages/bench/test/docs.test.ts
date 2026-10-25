@@ -232,6 +232,18 @@ describe('README', () => {
     expect(md.match(/Bayat/g)).toHaveLength(1);
   });
 
+  it('leaves the evidence to a short pointer: no test numbers or study names', () => {
+    const section = md.split(/^## /m).find((s) => s.startsWith('How we tested it')) ?? '';
+    expect(section).toContain('](docs/evidence.md)');
+    expect(section).toContain('/research/');
+    expect(md).not.toMatch(/\bE[123]\b|RESULTS_E|\bCI\b|0\.03/);
+    expect(md).not.toContain('## What the test found');
+  });
+});
+
+describe('samples/README', () => {
+  const md = read('samples/README.md');
+
   it('quotes the sample scores a fresh analysis gives', async () => {
     const score = async (path: string) => {
       let stdout = '';
@@ -250,10 +262,12 @@ describe('README', () => {
     ]) {
       const before = await score(`samples/${slugName}/before.md`);
       const after = await score(`samples/${slugName}/after.md`);
-      expect(md).toContain(`${before} to ${after} (${label})`);
+      expect(md).toContain(`${before} to ${after} for ${label}`);
     }
   });
+});
 
+describe('the README screenshot', () => {
   it('ships a fresh 1440 by 900 screenshot under 400 KB', () => {
     const path = join(ROOT, 'docs/screenshot.png');
     expect(statSync(path).size).toBeLessThan(400 * 1024);

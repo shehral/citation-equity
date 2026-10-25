@@ -1,6 +1,7 @@
 import { generateQuestions } from '@citation-equity/engine';
 import { describe, expect, it } from 'vitest';
 import {
+  authorQuestionTexts,
   editProblem,
   hasQuestion,
   initialQuestions,
@@ -9,6 +10,22 @@ import {
   SOURCE_LABELS,
 } from '@/lib/questions';
 import { getSample, SAMPLES } from '@/lib/samples';
+
+describe('authorQuestionTexts', () => {
+  it('keeps the questions the author typed or imported, never the generated ones', () => {
+    expect(
+      authorQuestionTexts([
+        { text: 'Typed?', source: 'user' },
+        { text: 'From a heading?', source: 'draft-heading' },
+        { text: 'From a template?', source: 'template' },
+        { text: 'From the local model?', source: 'local-model' },
+        { text: 'Pack?', source: 'sample-pack' },
+        { text: 'Search Console?', source: 'search-console' },
+        { text: 'Bing?', source: 'bing-ai' },
+      ]),
+    ).toEqual(['Typed?', 'Pack?', 'Search Console?', 'Bing?']);
+  });
+});
 
 describe('initialQuestions', () => {
   it("prefills a sample from its pack's queries", () => {
