@@ -6,6 +6,10 @@ These are bench runs: a content check on a model over a fixed page set. They do 
 
 How the bench works and what it found on the sample drafts: [samples/README.md](../samples/README.md). Every `ce bench` option, including `--export-prompts` and `--answers`: [docs/cli.md](../docs/cli.md). The E1 study has its own folder, [e1/](e1/README.md), with its pre-registration in [PREREG_E1.md](PREREG_E1.md); the sensitivity test's results are in [RESULTS_sensitivity.md](RESULTS_sensitivity.md).
 
+## Data
+
+Every result of these experiments is on Hugging Face: [Shehral/citation-equity-experiments](https://huggingface.co/datasets/Shehral/citation-equity-experiments) (scores, per-query cells, metadata, plans; no page text) and the gated [Shehral/citation-equity-experiments-pages](https://huggingface.co/datasets/Shehral/citation-equity-experiments-pages) (the fetched pages, edited versions, prompts and answers, for non-commercial research).
+
 ## Files
 
 | File                                                     | What it is                                                                                   |

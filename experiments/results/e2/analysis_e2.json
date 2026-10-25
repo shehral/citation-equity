@@ -860,7 +860,7 @@
    ],
    "reading": {
     "case": "query words",
-    "text": "The query'\u2026's advice becomes \"use your reader's words near the top\", and question headings stay mixed evidence."
+    "text": "The query's words carry the gain; the tool's advice becomes \"use your reader's words near the top\", and question headings stay mixed evidence."
    },
    "versions": {
     "9": {
@@ -1506,15 +1506,15 @@
      },
      {
       "query_id": "geo-test-129",
-      "reason": "invalid: Add only the query's key terms and function words (not: especially)."
+      "reason": "invalid: Add only the query's key terms and function words (not: \u2026)."
      },
      {
       "query_id": "geo-test-154",
-      "reason": "invalid: Add only the query's key terms and function words (not: make)."
+      "reason": "invalid: Add only the query's key terms and function words (not: \u2026)."
      },
      {
       "query_id": "geo-test-160",
-      "reason": "invalid: Add only the query's key terms and function words (not: like)."
+      "reason": "invalid: Add only the query's key terms and function words (not: \u2026)."
      },
      {
       "query_id": "geo-test-166",
@@ -1542,7 +1542,7 @@
      },
      {
       "query_id": "geo-test-344",
-      "reason": "invalid: Add only the query's key terms and function words (not: ithistory)."
+      "reason": "invalid: Add only the query's key terms and function words (not: \u2026)."
      },
      {
       "query_id": "geo-test-349",
@@ -1554,7 +1554,7 @@
      },
      {
       "query_id": "geo-test-62",
-      "reason": "invalid: Add only the query's key terms and function words (not: though)."
+      "reason": "invalid: Add only the query's key terms and function words (not: \u2026)."
      }
     ]
    },

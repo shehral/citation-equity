@@ -35,6 +35,8 @@ No check is graded strong or moderate today. Nine are mixed and two are untested
 
 ## Our own test (E1)
 
+The data behind E1, E2 and E3 is on Hugging Face: every result, score and page hash in [Shehral/citation-equity-experiments](https://huggingface.co/datasets/Shehral/citation-equity-experiments), and the page text, edited versions, prompts and answers in the gated [Shehral/citation-equity-experiments-pages](https://huggingface.co/datasets/Shehral/citation-equity-experiments-pages) (research use only).
+
 E1 is this project's pre-registered test of the checks ([experiments/PREREG_E1.md](../experiments/PREREG_E1.md), results in [experiments/RESULTS_E1.md](../experiments/RESULTS_E1.md)). Each check's fix was applied to real pages, and two local models (Gemma-4-12B and Qwen3.8-27B judges, Gemma-edited) answered each query from a fixed set of four sources. d is the change in citation score, where a page cited first scores 1 and an uncited page 0, against a paraphrase of the same passages (or the original page where the plan says so). Labels below are for the main set's primary contrast. E1 changes no grade. For seven checks E1 had too few pages for a verdict; E3 (below) asked again with more pages, and its pooled result is the one the tool now uses for them. E1's numbers stay here as the record of what E1 found.
 
 | Check | E1 label | d and interval | What the tool does |

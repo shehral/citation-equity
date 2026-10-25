@@ -181,6 +181,27 @@ export default function ResearchPage() {
         ), and links to the studies.
       </p>
       <p className="mt-3 leading-relaxed">{E1_COMBINED_SENTENCE}</p>
+      <p className="mt-3 text-muted-foreground leading-relaxed">
+        The data is open:{' '}
+        <a
+          href="https://huggingface.co/datasets/Shehral/citation-equity-experiments"
+          target="_blank"
+          rel="noreferrer"
+          className={textLink}
+        >
+          every result and score
+        </a>{' '}
+        and, for research use,{' '}
+        <a
+          href="https://huggingface.co/datasets/Shehral/citation-equity-experiments-pages"
+          target="_blank"
+          rel="noreferrer"
+          className={textLink}
+        >
+          the pages, prompts and answers
+        </a>
+        .
+      </p>
       <ul
         aria-label={`Grades of the ${CHECK_DEFINITIONS.length} checks`}
         className="mt-4 flex flex-wrap gap-2"

@@ -1367,7 +1367,7 @@
   },
   "e1_queries_with_retries": {
    "status": "ok",
-   "title": "E1'\u2026's extra attempt",
+   "title": "E1's queries, with E3's extra attempt",
    "n_queries": 80,
    "contrasts": [
     {
