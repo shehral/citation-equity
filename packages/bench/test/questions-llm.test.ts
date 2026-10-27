@@ -3,8 +3,12 @@ import {
   DEFAULT_SETTINGS,
   fanOutPrompt,
   fanOutQuestions,
+  keywordQuestions,
+  keywordQuestionsPrompt,
   RecordedAdapter,
   recordingKey,
+  searchQueries,
+  searchQueriesPrompt,
 } from '../src/index';
 
 const INPUT = {
@@ -73,5 +77,78 @@ describe('fanOutQuestions', () => {
     expect(
       await fanOutQuestions(INPUT, recorded('Cold brew is nice.\nTry it.'), { model: MODEL }),
     ).toEqual([]);
+  });
+});
+
+describe('keywordQuestions', () => {
+  const KEYWORDS = ['espresso bitter', 'espresso shot time', 'how to dial in espresso'];
+  const keywordRecording = (answer: string, max = 10) =>
+    new RecordedAdapter({
+      [recordingKey(keywordQuestionsPrompt(KEYWORDS, max), {
+        model: MODEL,
+        seed: 1,
+        temperature: DEFAULT_SETTINGS.temperature,
+      })]: answer,
+    });
+
+  it('sends only the keywords, and keeps the lines that are questions', async () => {
+    const prompt = keywordQuestionsPrompt(KEYWORDS, 10);
+    expect(prompt).toContain('up to 10 questions');
+    for (const k of KEYWORDS) expect(prompt).toContain(`- ${k}`);
+    expect(prompt).toMatch(/one per line/);
+    const found = await keywordQuestions(
+      KEYWORDS,
+      keywordRecording(
+        'Questions:\n1. Why does espresso taste bitter?\n- What grind size fixes a fast shot?\nEspresso is great.\n1. why does espresso taste bitter?',
+      ),
+      { model: MODEL },
+    );
+    expect(found).toEqual([
+      { text: 'Why does espresso taste bitter?', source: 'local-model' },
+      { text: 'What grind size fixes a fast shot?', source: 'local-model' },
+    ]);
+  });
+
+  it('asks nothing for an empty list', async () => {
+    const adapter = keywordRecording('unused');
+    expect(await keywordQuestions([], adapter, { model: MODEL })).toEqual([]);
+  });
+});
+
+describe('searchQueries', () => {
+  const QUESTION = 'Why is my espresso bitter?';
+  const searchRecording = (answer: string, max = 8) =>
+    new RecordedAdapter({
+      [recordingKey(searchQueriesPrompt(QUESTION, max), {
+        model: MODEL,
+        seed: 1,
+        temperature: DEFAULT_SETTINGS.temperature,
+      })]: answer,
+    });
+
+  it('sends only the question, and keeps short search lines', async () => {
+    const prompt = searchQueriesPrompt(QUESTION, 8);
+    expect(prompt).toContain(QUESTION);
+    expect(prompt).toContain('up to 8 web searches');
+    const found = await searchQueries(
+      QUESTION,
+      searchRecording(
+        [
+          'Here are the searches:',
+          '1. espresso bitter causes',
+          '- "over extraction espresso"',
+          '* **espresso grind too fine**',
+          'Espresso bitter causes',
+          'This is a long sentence that explains the whole answer in far too many words for a search.',
+          '',
+        ].join('\n'),
+      ),
+      { model: MODEL },
+    );
+    expect(found).toEqual([
+      'espresso bitter causes',
+      'over extraction espresso',
+      'espresso grind too fine',
+    ]);
   });
 });

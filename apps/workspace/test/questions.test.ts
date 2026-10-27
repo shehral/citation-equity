@@ -73,6 +73,7 @@ describe('SOURCE_LABELS', () => {
     expect(Object.keys(SOURCE_LABELS).sort()).toEqual([
       'bing-ai',
       'draft-heading',
+      'keywords',
       'local-model',
       'sample-pack',
       'search-console',

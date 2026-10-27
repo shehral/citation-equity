@@ -18,6 +18,7 @@ export {
   unscoredNote,
 } from './e1';
 export { EVIDENCE } from './evidence';
+export { fanOutSearches, type QuestionType, questionType } from './fanout';
 export type {
   Artifacts,
   Heading,
@@ -90,6 +91,19 @@ export {
   rendersWithoutJs,
 } from './render-check';
 export { scoreChecks } from './score';
+export {
+  HOW_TO_VERBS,
+  isPluralPhrase,
+  type KeywordRow,
+  keywordQuestion,
+  parseKeywordList,
+  SITE_QUESTIONS_MAX,
+  type SiteQuestion,
+  type SiteQuestionSource,
+  type SiteQuestionTemplate,
+  siteQuestionNumbers,
+  siteQuestions,
+} from './site-questions';
 export type { Sentence } from './text';
 export { countWords, splitSentences, suggestionId } from './text';
 export * from './types';

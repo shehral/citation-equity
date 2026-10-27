@@ -39,6 +39,27 @@ export function setPastedCited(input: CitedInput): void {
   cited = input;
 }
 
+/**
+ * Puts `question` in a box of Who gets cited ("Ask an AI" on Your questions), so the answer can
+ * be pasted next to it: into the last box when it is empty, else a new box. Nothing changes when
+ * a box already holds the question.
+ */
+export function addCitedQuestion(question: string): void {
+  const key = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+  const current = cited ?? { entries: [], own: '' };
+  if (current.entries.some((e) => key(e.question) === key(question))) return;
+  const last = current.entries.at(-1);
+  if (last && last.question.trim() === '' && last.answer.trim() === '') {
+    cited = {
+      ...current,
+      entries: [...current.entries.slice(0, -1), { ...last, question }],
+    };
+    return;
+  }
+  const next = Math.max(-1, ...current.entries.map((e) => e.key)) + 1;
+  cited = { ...current, entries: [...current.entries, { key: next, question, answer: '' }] };
+}
+
 /** Forgets both, so the views fall back to the stored summary (or to the example). */
 export function clearPasted(): void {
   site = null;

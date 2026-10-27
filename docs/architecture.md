@@ -10,7 +10,7 @@ citation-equity/
                   src/        browser-safe core (retrieval, prompt, metrics, adapters)
                   src/node/   Node-only code (files, fetching, CLI), exported as @citation-equity/bench/node
   apps/
-    workspace/    Module C: Next.js static export (/, /draft, /site, /cited, /research)
+    workspace/    Module C: Next.js static export (/, /draft, /site, /cited, /questions, /research)
   samples/        sample drafts, synthetic packs and recorded bench runs
   experiments/    pre-registered experiments and cluster batch scripts
   docs/           evidence.md, this file, cli.md, roadmap.md, research notes
@@ -43,6 +43,8 @@ The registry (`registry.ts`, `evidence.ts`) holds each check's title, Prof. Baya
 Outside the score, the engine also holds:
 - `readiness.ts`: the seven site readiness items; the five page-level ones run on pasted HTML or front matter.
 - `questions.ts`: reader questions generated from a draft's title, headings and first paragraph.
+- `site-questions.ts`: questions for a whole site. `siteQuestions` turns a keyword list (one per line with an optional volume, or a keyword table) and imported Search Console or Bing rows into up to 50 ranked, deduplicated questions; a question as written stays as it is, and another keyword becomes a question only through an unambiguous template made of its own words (never one that asserts a claim), else stays exactly as written.
+- `fanout.ts`: `fanOutSearches`, up to 8 searches an answer engine is likely to run behind a question, from templates by question type and the question's own key words. Guidance only: no score, no check.
 - `import-queries.ts`, `bing-ai.ts`, `csv.ts`: parsers for Search Console and Bing AI Performance CSV exports.
 - `offpage.ts`: domain classification, the cited-sources tally and the evidence-graded advice for each kind of site.
 
@@ -54,7 +56,7 @@ Outside the score, the engine also holds:
 - `run.ts`: `runBench` repeats each question N = 8 times with seeds `baseSeed + 1000 × question + run` and a seeded shuffle of the source order; `compareReports` pairs before and after by question.
 - `metrics.ts`: Wilson intervals, the position-adjusted word count share (GEO paper port), the chance level, and an exact sign-flip test.
 - `adapters/`: `OllamaAdapter` (local, `num_ctx` sent), `OpenAICompatibleAdapter`, and `RecordedAdapter`/`RecordingAdapter` (replay and capture, keyed by `recordingKey`).
-- `questions-llm.ts`: question fan-out on a local model. `crawlers.ts`: the AI crawler list, from each operator's documentation. `robots-check.ts`: the crawler verdicts for a robots.txt, shared by `ce site` and the app's page check, so both give the same answer.
+- `questions-llm.ts`: on a local model, more questions from a draft's title and intro, more questions from a site's keywords, and more searches behind one question; each sends only that text. `crawlers.ts`: the AI crawler list, from each operator's documentation. `robots-check.ts`: the crawler verdicts for a robots.txt, shared by `ce site` and the app's page check, so both give the same answer.
 
 **Node-only** (`src/node/`, exported as `@citation-equity/bench/node`): the `ce` CLI (commander), pack builders (`from-urls.ts` with robots.txt and Defuddle; `cseo.ts`, downloaded at run time), `site.ts` (robots.txt and a no-JavaScript fetch), `signals/` (access logs, Bing export), `gemini.ts` and `live.ts` (`ce live`), and `sources.ts` (`ce sources`).
 
@@ -72,6 +74,7 @@ Next.js (App Router) with `output: 'export'`: `next build` writes plain files to
 | `/draft/` | Your draft: the editor and the fix rail (score card, Start here, fixes grouped by check, then Reader questions, All checks and Test it, collapsed). |
 | `/site/` | Your site: paste a page's HTML and, optionally, its robots.txt; a compact pass, warning or fail row per check. |
 | `/cited/` | Who gets cited: paste answers from AI tools; cited sites grouped by type, each with a Do and an Avoid line. |
+| `/questions/` | Your questions: paste keywords (with an optional volume) or import a Search Console or Bing export; a ranked list of reader questions, each with Copy, Use in my draft (adds it to the open draft's reader questions), Ask an AI (copies it and puts it in Who gets cited) and the searches behind it, collapsed. A header tab; the home keeps its three tiles. |
 | `/research/` | The evidence for every check: one grade and one plain sentence, with the studies on expand. |
 | `/evidence/`, `/off-page/`, `/about/` | Redirects from the earlier pages to `/research/`, `/cited/` and the About dialog. |
 
@@ -81,7 +84,8 @@ Next.js (App Router) with `output: 'export'`: `next build` writes plain files to
 - **Fixes** (`lib/apply.ts`): Apply replaces exactly the suggestion's range, and only if that text is unchanged; otherwise the card says "Out of date" and the analysis reruns. Start here shows three fixes, at most one per check: those of checks that count toward the score before those of unscored notes; within each, those of a check our own test measured as helping first, then those with a ready edit, then by expected score gain, then in document order. There is no bulk action.
 - **Storage** (`lib/storage.ts`, `lib/store.ts`): the draft, its reader questions and the Done and Skip statuses are saved per draft slot, and the home tiles read small summaries (score, pass counts, answers citing you) rather than the pasted HTML or answers, which stay in memory. Every `localStorage` access is wrapped in try/catch and backed by an in-memory copy, so the app works with storage blocked. "Clear my data" removes everything under the app's key prefix.
 - **Samples:** `scripts/gen-samples.mjs` runs before dev, build, test and typecheck and writes `lib/generated/samples.json` (gitignored) from `samples/`: drafts, packs and bench reports, without the recordings or answer text.
-- **Local model:** Test it, Rewrite with local AI and the question fan-out call `http://127.0.0.1:11434` only after a click, with `OllamaAdapter`.
+- **Your questions** (`lib/site-questions.ts`): the keywords, the imported export's top 200 queries and the local model's suggestions are stored under the same prefix with the same in-memory fallback, and Clear my data removes them. The list itself is recomputed with the engine. The searches behind a question (`components/questions/searches-behind.tsx`) also appear under each reader question in the draft view.
+- **Local model:** Test it, Rewrite with local AI, the question fan-out, Suggest more questions (only the keywords) and Suggest more searches (only the question) call `http://127.0.0.1:11434` only after a click, with `OllamaAdapter`.
 
 The engine and the bench are compiled from source: a custom export condition `@citation-equity/source` points Vitest and `tsx` at `src/`, and the Next.js config aliases both packages to their source entries for Turbopack.
 

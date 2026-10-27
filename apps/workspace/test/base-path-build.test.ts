@@ -20,6 +20,7 @@ const PAGES = [
   'draft/index.html',
   'site/index.html',
   'cited/index.html',
+  'questions/index.html',
   'research/index.html',
   // Redirects from the old routes.
   'evidence/index.html',
@@ -86,7 +87,7 @@ describe(`static export with NEXT_PUBLIC_BASE_PATH=${BASE}`, () => {
   it('links the header tabs and footer to the base-path pages, with trailing slashes', () => {
     const html = readFileSync(join(OUT, 'research/index.html'), 'utf8');
     const links = sameSite(urls(html));
-    for (const route of ['/', '/draft/', '/site/', '/cited/', '/research/']) {
+    for (const route of ['/', '/draft/', '/site/', '/cited/', '/questions/', '/research/']) {
       expect(links).toContain(`${BASE}${route}`);
     }
   });

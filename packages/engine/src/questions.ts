@@ -14,6 +14,7 @@ export type QuestionSource =
   | 'local-model'
   | 'search-console'
   | 'bing-ai'
+  | 'keywords'
   | 'user';
 export interface TargetQuestion {
   text: string;

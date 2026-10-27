@@ -1089,7 +1089,10 @@ describe('Draft view, Reader questions', () => {
     renderExample();
     advance();
     const panel = openSection('Reader questions');
-    const rows = panel.getAllByRole('listitem');
+    const list = panel.getByRole('list', { name: 'Your reader questions' });
+    const rows = within(list)
+      .getAllByRole('listitem')
+      .filter((li) => li.parentElement === list);
     expect(rows[0]?.textContent).toContain('Answered');
     expect(rows[1]?.textContent).toContain('Not answered yet');
     fireEvent.click(within(rows[0] as HTMLElement).getByRole('button', { name: /Show in draft/ }));

@@ -33,6 +33,7 @@ export const SOURCE_LABELS: Record<WorkspaceQuestionSource, string> = {
   'local-model': 'Local model',
   'search-console': 'Search Console',
   'bing-ai': 'Bing AI Performance',
+  keywords: 'Your keywords',
   user: 'By you',
 };
 

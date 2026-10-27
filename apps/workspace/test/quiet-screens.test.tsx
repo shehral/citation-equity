@@ -12,6 +12,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CitedPage from '@/app/cited/page';
+import QuestionsPage from '@/app/questions/page';
 import SitePage from '@/app/site/page';
 import { DraftView } from '@/components/draft/draft-view';
 import { Home } from '@/components/home/home';
@@ -20,6 +21,7 @@ import { AppShell } from '@/components/shell/app-shell';
 import { runExample } from '@/lib/examples';
 import { clearPasted } from '@/lib/pasted';
 import { SAMPLES } from '@/lib/samples';
+import { setSiteInput } from '@/lib/site-questions';
 import { clearAll, setActiveSlot } from '@/lib/store';
 
 const path = vi.hoisted(() => ({ current: '/' }));
@@ -187,6 +189,33 @@ describe('the working screens say nothing about the evidence', () => {
     shell(<CitedPage />);
     expect(screen.getAllByRole('link', { name: /^Learn more/ }).length).toBeGreaterThan(0);
     expectQuiet('cited');
+  });
+
+  it('Your questions, with keywords and an import, every list of searches open', () => {
+    path.current = '/questions/';
+    setSiteInput({
+      keywords:
+        'espresso bitter\nespresso shot time, 1900\nbest espresso grinder for beginners, 720',
+      imported: {
+        name: 'Queries.csv',
+        queries: [
+          { text: 'is espresso safe while pregnant', source: 'search-console', impressions: 90 },
+        ],
+      },
+      suggested: ['Does a darker roast taste more bitter?'],
+    });
+    shell(<QuestionsPage />);
+    const details = document.querySelectorAll('details');
+    expect(details.length).toBeGreaterThanOrEqual(2);
+    for (const d of details) d.open = true;
+    expectQuiet('questions');
+    // Headings are short, plain names.
+    for (const h of document.querySelectorAll('main h1, main h2, main h3, main summary')) {
+      expect(
+        (h.textContent ?? '').split(/\s+/).filter(Boolean).length,
+        h.textContent ?? '',
+      ).toBeLessThanOrEqual(6);
+    }
   });
 
   it('the About dialog', async () => {

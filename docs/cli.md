@@ -58,7 +58,7 @@ A test pack is the set of questions and competitor pages the citation test runs 
 | `ce site <url> [--json]` | Can AI read your published page. |
 | `ce signals logs <access.log> [--format combined\|jsonl] [--json]` | AI crawler visits and AI referrals in your log. |
 | `ce signals bing <export.csv> [--json]` | Citations from a Bing AI Performance export. |
-| `ce questions --from-search-console <q.csv> \| --from-bing <b.csv> \| --generate <draft.md> [--local-model] [--model <name>]` | Reader questions from real queries or a draft. |
+| `ce questions --from-search-console <q.csv> \| --from-bing <b.csv> \| --keywords <list> \| --generate <draft.md> [--fanout] [--local-model] [--model <name>]` | Reader questions from real queries, your keywords or a draft. |
 | `ce live --engine gemini --questions <q.txt> --url <page> [--runs 8] [--model <name>] [--out results]` | Does Gemini with Google Search cite your page. |
 | `ce sources --live <report.json> \| --pasted <answers.txt> [--own example.com]` | Which sites AI answers cite, grouped by type. |
 
@@ -77,6 +77,10 @@ Exit codes: 0 on success, 1 for a usage or input error, 2 when the model server 
 **`ce signals logs`** reads an access log in combined format or JSON lines (guessed from the first lines unless you pass `--format`). **`ce signals bing`** reads the AI Performance export from Bing Webmaster Tools.
 
 **`ce questions`** ranks reader questions from a Search Console Performance export (Queries table), a Bing AI Performance export (grounding queries) or a draft. With `--generate`, `--local-model` also asks your local Ollama for more.
+
+`--keywords <list>` makes the questions for your whole site, up to 50, from your keyword list: one keyword per line with an optional search volume after a comma or tab (`espresso shot time, 1900`), a table whose header names a Keyword column and optionally a Volume column (as keyword tools export it), or JSON (`["espresso bitter", {"keyword": "espresso shot time", "volume": 1900}]`). A keyword written as a question stays as it is. Another keyword becomes a question only when its pattern is unambiguous, and otherwise stays exactly as written, since a keyword is a fine query for an AI engine: "X vs Y" becomes "Which is better: X or Y?", "X safe" or "X worth it" a yes-or-no question ("Are weight loss pills safe?", never "Why ..."), "best X" "What is (or are) the best X?", "X explained" "How does X work?", a keyword that opens with a verb from a short fixed list "How to X?", and a short plural concept "What are X?". Local, service, place and brand keywords stay as written. They are ranked by volume, then in list order; add `--from-search-console` or `--from-bing` to rank your queries in the same list. With `--keywords`, `--local-model` sends only the keywords.
+
+`--fanout` adds, under each question, up to 8 searches an answer engine is likely to run before answering it, as `#` lines, so the output still works as a `--questions` file. They come from templates by question type (a definition, the steps of a how-to, causes, a comparison, the best options, cost or safety when asked) and use only the question's own words; a template that would not read as a search is left out, so some questions get fewer, or none. They are guidance only, not tested for citation.
 
 Microsoft and Google do not publish the column names of these exports, so the readers match the documented metric names through lists of likely headers and fail with the headers they found. If yours fails, please open an issue with the header row.
 

@@ -1,14 +1,19 @@
 import { AdapterUnavailableError } from '@citation-equity/bench';
+import { fanOutSearches } from '@citation-equity/engine';
 import { act, cleanup, fireEvent, render, within } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReaderQuestions } from '@/components/draft/reader-questions';
+import { SEARCHES_NOTE } from '@/components/questions/searches-behind';
 import { suggestWithLocalModel } from '@/lib/question-helper';
 import type { WorkspaceQuestion } from '@/lib/questions';
+import { suggestSearches } from '@/lib/search-helper';
 
 // The helper would call a local Ollama; the tests decide what it returns.
 vi.mock('@/lib/question-helper', () => ({ suggestWithLocalModel: vi.fn() }));
 const askMock = vi.mocked(suggestWithLocalModel);
+vi.mock('@/lib/search-helper', () => ({ suggestSearches: vi.fn() }));
+const searchesMock = vi.mocked(suggestSearches);
 
 const DRAFT =
   '# Cold brew at home\n\nCold brew is coffee steeped in cold water.\n\n## How to store it\n\nIn the fridge.\n';
@@ -45,6 +50,13 @@ function Harness({
 }
 
 const panel = () => within(document.body);
+/** The questions' own rows (each holds its searches, a list of its own). */
+const rows = () => {
+  const list = panel().getByRole('list', { name: 'Your reader questions' });
+  return within(list)
+    .getAllByRole('listitem')
+    .filter((li) => li.parentElement === list);
+};
 const inputs = () =>
   panel()
     .getAllByRole('textbox', { name: /^Question \d/ })
@@ -52,6 +64,7 @@ const inputs = () =>
 
 beforeEach(() => {
   askMock.mockReset();
+  searchesMock.mockReset();
 });
 afterEach(cleanup);
 
@@ -59,7 +72,7 @@ describe('Reader questions', () => {
   it('lists each question in its own labelled field, with a source label except for the sample', () => {
     render(<Harness />);
     expect(inputs()).toEqual(['Why is my cold brew sour?', 'How do you store it?']);
-    const items = panel().getAllByRole('listitem');
+    const items = rows();
     expect(items[0]?.textContent).not.toContain('Sample pack');
     expect(items[1]?.textContent).toContain('Template');
   });
@@ -74,7 +87,7 @@ describe('Reader questions', () => {
       START[0],
       { text: 'How long does cold brew keep?', source: 'user' },
     ]);
-    expect(panel().getAllByRole('listitem')[1]?.textContent).toContain('By you');
+    expect(rows()[1]?.textContent).toContain('By you');
   });
 
   it('never lets an edit empty a question or repeat another, and restores it on leaving', () => {
@@ -170,7 +183,7 @@ describe('Reader questions', () => {
       'How do you store it?',
       'Is cold brew stronger than coffee?',
     ]);
-    expect(panel().getAllByRole('listitem')[2]?.textContent).toContain('Local model');
+    expect(rows()[2]?.textContent).toContain('Local model');
   });
 
   it('keeps edits made while the local model is answering', async () => {
@@ -232,5 +245,35 @@ describe('Reader questions', () => {
     cleanup();
     render(<Harness />);
     expect(panel().queryByRole('list', { name: /Page questions used/ })).toBeNull();
+  });
+
+  it('shows the searches behind each question, collapsed, with one plain line', () => {
+    render(<Harness />);
+    const details = rows()[0]?.querySelector('details') as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    expect(details.querySelector('summary')?.textContent).toBe('Searches behind this question');
+    expect(details.textContent).toContain(SEARCHES_NOTE);
+    expect(
+      within(details)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(fanOutSearches('Why is my cold brew sour?'));
+    expect(panel().queryByRole('button', { name: 'Suggest more searches' })).toBeNull();
+  });
+
+  it('a label for questions from Your questions', () => {
+    render(<Harness initial={[{ text: 'Why is espresso bitter?', source: 'keywords' }]} />);
+    expect(rows()[0]?.textContent).toContain('Your keywords');
+  });
+
+  it('with the local model connected, suggests more searches, sending only the question', async () => {
+    searchesMock.mockResolvedValue(['cold brew sour taste', 'cold brew sour causes']);
+    render(<Harness localModel="llama3.2:3b" />);
+    const row = within(rows()[0] as HTMLElement);
+    await act(async () => {
+      fireEvent.click(row.getByRole('button', { name: 'Suggest more searches' }));
+    });
+    expect(searchesMock).toHaveBeenCalledWith('Why is my cold brew sour?', 'llama3.2:3b');
+    expect(row.getByText('cold brew sour taste')).toBeTruthy();
   });
 });

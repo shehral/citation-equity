@@ -21,6 +21,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { SearchesBehind } from '@/components/questions/searches-behind';
 import { Button } from '@/components/ui/button';
 import { classifyBenchError } from '@/lib/bench';
 import { CHECK_NAMES } from '@/lib/glossary';
@@ -191,7 +192,7 @@ export function ReaderQuestions({
       <p className="text-ink-soft">What should this page answer? Up to {MAX_QUESTIONS}.</p>
 
       {questions.length > 0 ? (
-        <ol className="space-y-2">
+        <ol aria-label="Your reader questions" className="space-y-2">
           {questions.map((q, i) => {
             const id = `question-${i}`;
             return (
@@ -224,6 +225,7 @@ export function ReaderQuestions({
                   <X aria-hidden="true" />
                 </Button>
                 <CoverageNote row={answered.get(questionKey(q.text))} onShowRange={onShowRange} />
+                <SearchesBehind question={q.text} localModel={localModel} className="pl-0.5" />
               </li>
             );
           })}

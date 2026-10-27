@@ -11,6 +11,7 @@ export const ROUTES = [
   '/draft/',
   '/site/',
   '/cited/',
+  '/questions/',
   '/research/',
   '/evidence/',
   '/off-page/',

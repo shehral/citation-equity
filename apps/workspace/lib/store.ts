@@ -13,7 +13,7 @@
 // Reactivity: subscribe() notifies after every write here. getSummary() returns the same object
 // for an unchanged stored value, so it can be a useSyncExternalStore snapshot directly.
 
-export type ViewId = 'home' | 'draft' | 'site' | 'cited';
+export type ViewId = 'home' | 'draft' | 'site' | 'cited' | 'questions';
 
 export interface DraftSummary {
   /** The draft slot the summary belongs to: MY_POST_SLOT or an example slug. */
@@ -70,7 +70,7 @@ type SummaryFor<K extends SummaryKind> = K extends 'draft'
 /** The slot for the user's own post; the other slots are example (sample) slugs. */
 export const MY_POST_SLOT = 'my-post';
 
-export const VIEW_IDS: readonly ViewId[] = ['home', 'draft', 'site', 'cited'];
+export const VIEW_IDS: readonly ViewId[] = ['home', 'draft', 'site', 'cited', 'questions'];
 
 const PREFIX = 'ce:v1:';
 const KEYS = {

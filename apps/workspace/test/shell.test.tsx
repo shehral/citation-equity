@@ -82,7 +82,7 @@ describe('header', () => {
     expect(screen.queryByRole('navigation', { name: 'Views' })).toBeNull();
   });
 
-  it('shows the three view tabs on a view, marks the current one and records it', () => {
+  it('shows the four view tabs on a view, marks the current one and records it', () => {
     renderShell('/site/');
     const tabs = screen.getByRole('navigation', { name: 'Views' });
     const links = within(tabs).getAllByRole('link');
@@ -90,6 +90,7 @@ describe('header', () => {
       ['Your draft', '/draft'],
       ['Your site', '/site'],
       ['Who gets cited', '/cited'],
+      ['Your questions', '/questions'],
     ]);
     expect(within(tabs).getByRole('link', { name: 'Your site' }).getAttribute('aria-current')).toBe(
       'page',

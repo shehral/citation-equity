@@ -342,6 +342,11 @@ export default function ResearchPage() {
             </div>
           ))}
         </dl>
+        <p className="mt-3 leading-relaxed">
+          Your questions and the searches behind each question are helpers for planning what to
+          write. They are not part of the score, and we have not tested whether they change which
+          pages AI cites.
+        </p>
         <p className="mt-5 font-medium">Why the score isn't a forecast</p>
         <ul className="mt-2 list-disc space-y-1 pl-6 leading-relaxed">
           {LIMITS.map((l) => (

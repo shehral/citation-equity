@@ -28,3 +28,5 @@ experiments/e1/local.env
 # model answers about third-party pages).
 /results/
 /packages/bench/results/
+experiments/e4/data/
+experiments/e4/out/

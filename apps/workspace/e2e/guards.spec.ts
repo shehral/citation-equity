@@ -84,7 +84,7 @@ test('with the example loaded, no view uses the retired grade word or leaves the
   await expect(page.getByRole('region', { name: 'Next up' })).toBeVisible();
   const traffic = watch(page, new URL(baseURL ?? '').origin);
   expect(await bodyText(page)).not.toContain(RETIRED_GRADE);
-  for (const route of ['/draft/', '/site/', '/cited/', '/research/']) {
+  for (const route of ['/draft/', '/site/', '/cited/', '/questions/', '/research/']) {
     await go(page, route, { waitUntil: 'networkidle' });
     if (route === '/draft/') {
       // Open every collapsed section of the rail, so their text is checked too.

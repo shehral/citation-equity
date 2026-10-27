@@ -9,7 +9,7 @@ Citation Equity helps independent writers get quoted by AI search. Paste a draft
 ## What it does
 
 1. **Check your draft**: eleven writing checks and an AI-ready score from 0 to 100.
-2. **Answer real questions**: import your Search Console or Bing queries.
+2. **Answer real questions**: turn your keywords, or your Search Console and Bing queries, into reader questions, with the searches AI may run behind each.
 3. **Fix one thing at a time**: preview an edit, then apply, mark done or skip; there is no apply-all.
 4. **Test before and after** on a free local model; live AI search may differ.
 5. **See who AI cites** for your questions, and whether AI crawlers can read your page.
@@ -19,7 +19,7 @@ Citation Equity helps independent writers get quoted by AI search. Paste a draft
 1. Open the demo and click **Try it with an example**, or paste your own post into Your draft.
 2. Work through **Start here**: three fixes, always including a ready edit when the draft has one. Preview it, then Apply.
 3. Open **All fixes** for the rest, grouped by check. **Helps** marks a check that helped in our tests; **Not scored** marks one that does not count toward the score unless you give it a weight.
-4. Add the questions your readers ask under **Reader questions**, or import them.
+4. Add the questions your readers ask under **Reader questions**, or build the list for your whole site in **Your questions** and use the ones this post answers.
 5. Paste your published page's HTML into **Your site**, and AI answers into **Who gets cited**.
 
 ## How the score works
@@ -59,7 +59,7 @@ Build once (`pnpm install && pnpm build`), then run `pnpm ce <command>` from the
 | `ce site`           | Check if AI can read your published page.           |
 | `ce signals logs`   | Count AI crawler visits in your access log.         |
 | `ce signals bing`   | Read a Bing AI Performance export.                  |
-| `ce questions`      | Reader questions from your queries or your draft.   |
+| `ce questions`      | Reader questions from queries, keywords or a draft. |
 | `ce live`           | Ask Gemini with Google Search whether it cites you. |
 | `ce sources`        | See which sites AI answers cite.                    |
 

@@ -18,7 +18,14 @@ export {
 export { PackError, validatePack } from './pack';
 export { competitorProfile, countStatistics, type DocProfile, profileDocument } from './profile';
 export { buildPrompt, type ParsedAnswer, parseAnswer, stripReasoning } from './prompt';
-export { fanOutPrompt, fanOutQuestions } from './questions-llm';
+export {
+  fanOutPrompt,
+  fanOutQuestions,
+  keywordQuestions,
+  keywordQuestionsPrompt,
+  searchQueries,
+  searchQueriesPrompt,
+} from './questions-llm';
 export { retrieve } from './retrieve';
 export { mulberry32, shuffle } from './rng';
 export {

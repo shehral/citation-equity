@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { generateQuestions } from '@citation-equity/engine';
+import { fanOutSearches, generateQuestions, siteQuestions } from '@citation-equity/engine';
 import { describe, expect, it } from 'vitest';
 import { runCli } from '../src/node/cli';
 
@@ -176,12 +176,137 @@ describe('ce questions', () => {
   it('rejects a missing source, --generate mixed with a CSV, and --local-model alone', async () => {
     const none = await ce(['questions']);
     expect(none.code).toBe(1);
-    expect(none.stderr).toContain('Pass --from-search-console, --from-bing or --generate.');
+    expect(none.stderr).toContain(
+      'Pass --from-search-console, --from-bing, --keywords or --generate.',
+    );
     const mixed = await ce(['questions', '--generate', fixture('basic.md'), '--from-bing', BING]);
     expect(mixed.code).toBe(1);
-    expect(mixed.stderr).toContain('--generate cannot be combined with the CSV options.');
+    expect(mixed.stderr).toContain(
+      '--generate cannot be combined with --keywords or the CSV options.',
+    );
     const alone = await ce(['questions', '--from-bing', BING, '--local-model']);
     expect(alone.code).toBe(1);
-    expect(alone.stderr).toContain('--local-model works with --generate.');
+    expect(alone.stderr).toContain('--local-model works with --generate or --keywords.');
+    const both = await ce(['questions', '--generate', fixture('basic.md'), '--keywords', KEYWORDS]);
+    expect(both.code).toBe(1);
+    expect(both.stderr).toContain(
+      '--generate cannot be combined with --keywords or the CSV options.',
+    );
+  });
+});
+
+const KEYWORDS = fixture('questions', 'keywords.txt');
+
+describe('ce questions --keywords', () => {
+  it('lists the site questions from a keyword list, ranked by volume, each with its keyword', async () => {
+    const { code, stdout, stderr } = await ce(['questions', '--keywords', KEYWORDS]);
+    expect(stderr).toBe('');
+    expect(code).toBe(0);
+    expect(questionLines(stdout)).toEqual(
+      siteQuestions({ keywords: await readFile(KEYWORDS, 'utf8') }).map((q) => q.text),
+    );
+    expect(questionLines(stdout)).toEqual([
+      'Which is better: espresso or drip coffee?',
+      'espresso shot time',
+      'What is the best espresso grinder for beginners?',
+      'espresso bitter',
+      'How to dial in espresso?',
+    ]);
+    expect(stdout).toContain(
+      '# Questions for your site from keywords.txt, ranked by volume, then list order.',
+    );
+    expect(stdout).toContain(
+      '# 1. Your keywords: volume 2,400. Keyword: "espresso vs drip coffee"\n',
+    );
+    expect(stdout).toContain('# 5. Your keywords.\nHow to dial in espresso?');
+    expect(stdout).not.toContain('Searches');
+  });
+
+  it('reads the list as JSON or as a table with a header row', async () => {
+    const json = await ce(['questions', '--keywords', fixture('questions', 'keywords.json')]);
+    expect(json.code).toBe(0);
+    expect(questionLines(json.stdout)).toEqual([
+      'Which is better: espresso or drip coffee?',
+      'espresso shot time',
+      'espresso bitter',
+    ]);
+    const table = await ce(['questions', '--keywords', fixture('questions', 'keywords.csv')]);
+    expect(table.code).toBe(0);
+    expect(questionLines(table.stdout)).toEqual(['espresso shot time', 'espresso bitter']);
+  });
+
+  it('exits 1 on a JSON file that is not a keyword list', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'ce-kw-'));
+    const file = join(dir, 'bad.json');
+    await writeFile(file, '{"keywords": 3}');
+    const { code, stderr } = await ce(['questions', '--keywords', file]);
+    await rm(dir, { recursive: true, force: true });
+    expect(code).toBe(1);
+    expect(stderr).toContain('--keywords: a JSON list of keywords');
+  });
+
+  it('ranks keywords together with a Search Console export', async () => {
+    const { code, stdout } = await ce([
+      'questions',
+      '--keywords',
+      KEYWORDS,
+      '--from-search-console',
+      SC,
+    ]);
+    expect(code).toBe(0);
+    expect(questionLines(stdout).slice(0, 3)).toEqual([
+      'Which is better: espresso or drip coffee?',
+      'espresso grind size',
+      'espresso shot time',
+    ]);
+    expect(stdout).toContain('from keywords.txt and Queries.csv (Search Console)');
+    expect(stdout).toContain('# 2. Search Console: 2,310 impressions.\nespresso grind size\n');
+  });
+
+  it('--fanout adds the searches behind each question, as comment lines', async () => {
+    const { code, stdout } = await ce(['questions', '--keywords', KEYWORDS, '--fanout']);
+    expect(code).toBe(0);
+    // Still a valid --questions file: the searches are comments.
+    expect(questionLines(stdout)).toHaveLength(5);
+    expect(stdout).toContain('Answer engines often search for these before answering.');
+    const question = 'Which is better: espresso or drip coffee?';
+    const block = stdout.split('\n# 1. ')[1]?.split('\n# 2. ')[0] ?? '';
+    expect(block).toContain(`${question}\n#   Searches behind this question:\n`);
+    for (const s of fanOutSearches(question)) expect(block).toContain(`#   - ${s}\n`);
+    // A keyword kept as written that no template fits lists no searches.
+    const kept = stdout.split('\n# 4. ')[1]?.split('\n# 5. ')[0] ?? '';
+    expect(kept).toContain('espresso bitter');
+    expect(kept).not.toContain('Searches behind');
+  });
+
+  it('--fanout works on imported queries and generated questions too', async () => {
+    const bing = await ce(['questions', '--from-bing', BING, '--fanout']);
+    expect(bing.code).toBe(0);
+    expect(bing.stdout).toContain(`#   - ${fanOutSearches('Why is my espresso bitter?')[0]}\n`);
+    const gen = await ce(['questions', '--generate', fixture('basic.md'), '--fanout']);
+    expect(gen.code).toBe(0);
+    expect(gen.stdout).toContain('#   Searches behind this question:');
+  });
+
+  it('--keywords --local-model asks the local model with the keywords only', async () => {
+    const prompts: string[] = [];
+    const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (!String(input).endsWith('/api/chat')) return new Response('not found', { status: 404 });
+      prompts.push(JSON.parse(String(init?.body)).messages[0].content);
+      return Response.json({
+        message: { role: 'assistant', content: '1. Does a darker roast taste more bitter?' },
+        done: true,
+      });
+    }) as typeof fetch;
+    const { code, stdout } = await ce(
+      ['questions', '--keywords', KEYWORDS, '--local-model', '--model', 'tiny:1b'],
+      fetchImpl,
+    );
+    expect(code).toBe(0);
+    expect(prompts).toHaveLength(1);
+    expect(prompts[0]).toContain('- espresso bitter');
+    expect(prompts[0]).not.toContain('1900');
+    expect(questionLines(stdout).at(-1)).toBe('Does a darker roast taste more bitter?');
+    expect(stdout).toContain('# 6. Local model (tiny:1b).');
   });
 });

@@ -1,16 +1,23 @@
 'use client';
 
-import { FileCode, type LucideIcon, MessagesSquare, PenLine } from 'lucide-react';
+import {
+  FileCode,
+  type LucideIcon,
+  MessageCircleQuestionMark,
+  MessagesSquare,
+  PenLine,
+} from 'lucide-react';
 import Link from 'next/link';
 import type { ViewId } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { VIEW_HREF } from '@/lib/views';
 
-/** The three views, named by what they hold. */
+/** The views, named by what they hold. The home's tiles cover the first three. */
 export const VIEW_TABS: { view: Exclude<ViewId, 'home'>; label: string; icon: LucideIcon }[] = [
   { view: 'draft', label: 'Your draft', icon: PenLine },
   { view: 'site', label: 'Your site', icon: FileCode },
   { view: 'cited', label: 'Who gets cited', icon: MessagesSquare },
+  { view: 'questions', label: 'Your questions', icon: MessageCircleQuestionMark },
 ];
 
 /** The header's view tabs. Below 640px each tab shows its icon; the label stays for screen readers. */
