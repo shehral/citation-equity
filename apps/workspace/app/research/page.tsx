@@ -190,17 +190,9 @@ export default function ResearchPage() {
           className={textLink}
         >
           every result and score
-        </a>{' '}
-        and, for research use,{' '}
-        <a
-          href="https://huggingface.co/datasets/Shehral/citation-equity-experiments-pages"
-          target="_blank"
-          rel="noreferrer"
-          className={textLink}
-        >
-          the pages, prompts and answers
         </a>
-        .
+        , with where each page came from and a hash of its text. The page text, edited versions,
+        prompts and answers are not shared, since the pages belong to their publishers.
       </p>
       <ul
         aria-label={`Grades of the ${CHECK_DEFINITIONS.length} checks`}

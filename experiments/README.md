@@ -8,7 +8,7 @@ How the bench works and what it found on the sample drafts: [samples/README.md](
 
 ## Data
 
-Every result of these experiments is on Hugging Face: [Shehral/citation-equity-experiments](https://huggingface.co/datasets/Shehral/citation-equity-experiments) (scores, per-query cells, metadata, plans; no page text) and the gated [Shehral/citation-equity-experiments-pages](https://huggingface.co/datasets/Shehral/citation-equity-experiments-pages) (the fetched pages, edited versions, prompts and answers, for non-commercial research).
+Every result of these experiments is on Hugging Face: [Shehral/citation-equity-experiments](https://huggingface.co/datasets/Shehral/citation-equity-experiments) (scores, per-query cells, metadata, plans; no page text). The fetched pages, edited versions, prompts and answers are not shared, since the pages belong to their publishers; the metadata gives each page's source and the sha256 of its text.
 
 ## Files
 

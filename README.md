@@ -29,7 +29,7 @@ Citation Equity helps independent writers get quoted by AI search. Paste a draft
 
 ## How we tested it
 
-No check is graded strong yet, so the score is a writing checklist, not a forecast. The studies behind each check, our own tests and their numbers are in [docs/evidence.md](docs/evidence.md) and on the [Research page](https://shehral.github.io/citation-equity/research/). The data is on Hugging Face: [every result and score](https://huggingface.co/datasets/Shehral/citation-equity-experiments) (public) and [the page text, prompts and answers](https://huggingface.co/datasets/Shehral/citation-equity-experiments-pages) (gated, for research use).
+No check is graded strong yet, so the score is a writing checklist, not a forecast. The studies behind each check, our own tests and their numbers are in [docs/evidence.md](docs/evidence.md) and on the [Research page](https://shehral.github.io/citation-equity/research/). The data is on Hugging Face: [every result and score](https://huggingface.co/datasets/Shehral/citation-equity-experiments), with where each page came from and a hash of its text. The page text, edited versions, prompts and answers are not shared, since the pages belong to their publishers.
 
 ## Quick start
 
@@ -74,7 +74,7 @@ The web app has no server: drafts stay in your browser; the only request goes to
 - [docs/cli.md](docs/cli.md): every command, and how to make a test pack
 - [samples/README.md](samples/README.md): the sample drafts and the test method
 - [experiments/README.md](experiments/README.md): larger models on a GPU cluster
-- [Hugging Face datasets](https://huggingface.co/datasets/Shehral/citation-equity-experiments): the experiments' results, plus [gated page text](https://huggingface.co/datasets/Shehral/citation-equity-experiments-pages)
+- [Hugging Face datasets](https://huggingface.co/datasets/Shehral/citation-equity-experiments): the experiments' results (no page text)
 - [docs/roadmap.md](docs/roadmap.md): what comes next
 
 ## Development
