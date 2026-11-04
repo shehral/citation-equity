@@ -1,11 +1,13 @@
 // The example behind the home's "Try it with an example": the espresso post,
 // the page it was published as, that site's robots.txt and three AI answers to the post's
 // questions. All of it is synthetic, written for this project, and meant not to flatter: the
-// page passes 5 of its 7 checks (1 warning, 1 fail) and the post is cited in 1 of 3 answers.
-// Nothing below is a stored number: runExample() computes every summary with the engine.
+// post covers none of its four questions, the site's robots.txt blocks a crawler AI search
+// needs (one blocker), the page has no canonical link (a page note) and the post is cited in
+// 1 of 3 answers. Nothing below is a stored number: runExample() computes every summary with
+// the engine.
 
 import { citedReport, citedSummary } from '@/components/cited/tally';
-import { checkPastedSite } from '@/components/site/site-check';
+import { checkPastedSite, siteSummaryOf } from '@/components/site/site-check';
 import { selectDraftSlot } from './draft-summary';
 import { type CitedInput, clearPasted, type SiteInput } from './pasted';
 import { setSummary } from './store';
@@ -145,6 +147,6 @@ export function runExample(at: Date = new Date()): void {
   const site = checkPastedSite({ html: EXAMPLE_PAGE_HTML, robotsTxt: EXAMPLE_ROBOTS_TXT });
   const cited = citedSummary(citedReport([...EXAMPLE_ANSWERS], EXAMPLE_SITE), iso);
   selectDraftSlot(EXAMPLE_SLUG, at);
-  setSummary('site', { ...site.summary, example: true, at: iso });
+  setSummary('site', { ...siteSummaryOf(site), example: true, at: iso });
   setSummary('cited', { ...cited, example: true });
 }

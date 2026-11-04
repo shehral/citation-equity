@@ -31,7 +31,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'Citation Equity',
   description:
-    'Paste a draft, fix what makes it hard for AI search to quote, check your page and see who AI cites. It suggests; you decide.',
+    "Start from your readers' questions, see which ones your draft covers, and check that AI search can reach your page. Stays in your browser.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

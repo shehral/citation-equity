@@ -88,7 +88,7 @@ describe('fix card copy', () => {
   it("names the reader's missing words, at most 3, and warns against forcing them in", () => {
     const md = '# Bitter espresso\n\nGrind finer and the shot slows down.\n';
     const questions = ['What water temperature is best?', 'Is my espresso sour?'];
-    const result = analyze(md, { questions, authorQuestions: questions });
+    const result = analyze(md, { questions });
     const advice = result.checks.find((c) => c.checkId === 'reader-words')?.suggestions ?? [];
     expect(advice.map((s) => fixCopy(s))).toEqual([
       {

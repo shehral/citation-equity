@@ -1,13 +1,16 @@
 import type { Artifacts } from '../gather';
 import type { CheckId, CheckResult } from '../types';
 
-/** What a check may read besides the draft: the target questions. */
+/**
+ * What a check may read besides the draft: the questions readers ask. `analyze` passes the same
+ * set as both fields (the given questions, else the page's own title and topic questions).
+ */
 export interface CheckContext {
-  /** Every target question (question-coverage). */
+  /** The questions question-coverage measures. */
   questions: string[];
   /**
-   * The questions reader-words measures: the author's own when there are any, else the page's
-   * title and topic questions. When absent, the check works out the page's questions itself.
+   * The questions reader-words measures. When absent, the check works out the page's own title
+   * and topic questions itself.
    */
   readerQuestions?: string[];
 }

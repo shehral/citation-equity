@@ -21,6 +21,21 @@ import type { Sample } from './samples';
  */
 export type ReportView = Omit<BenchReport, 'runs'> & { runs: Omit<RunRecord, 'answer'>[] };
 
+/** The draft a local run compares the editor's text against. */
+export interface RunBaseline {
+  /** The column label, e.g. "Example before". */
+  label: string;
+  title: string;
+  markdown: string;
+}
+
+/** A test pack loaded for the author's own post, with the text as it stood at the load. */
+export interface LoadedPack {
+  name: string;
+  pack: Pack;
+  baseline: RunBaseline;
+}
+
 /** The sample's pack and its recorded results (samples/<slug>/results), as far as they exist. */
 export interface SampleBench {
   pack: Pack;

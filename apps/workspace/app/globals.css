@@ -1,6 +1,6 @@
 /*
  * The visual system: warm paper surfaces, ink text, one indigo brand colour, with semantic
- * tokens for score, grades and fix kinds in light and dark.
+ * tokens for states, grades and fix kinds in light and dark.
  *
  * The @theme / :root / .dark structure and the shadcn variable names (--primary, --card,
  * --muted-foreground, --ring ...) follow shadcn-ui/ui (https://github.com/shadcn-ui/ui), the
@@ -65,8 +65,6 @@
   --color-brand-foreground: var(--brand-foreground);
   --color-mark: var(--mark);
   --color-mark-fill: var(--mark-fill);
-  --color-score: var(--score);
-  --color-score-track: var(--score-track);
   --color-done: var(--done);
   --color-done-soft: var(--done-soft);
   --color-stale: var(--stale);
@@ -124,9 +122,6 @@
   /* Draft markers: dotted underline under flagged text; fill on the active passage only. */
   --mark: oklch(0.62 0.15 277);
   --mark-fill: oklch(0.92 0.05 277);
-  /* Score. */
-  --score: var(--brand);
-  --score-track: oklch(0.92 0.012 277);
   /* States. */
   --done: oklch(0.5 0.13 155);
   --done-soft: oklch(0.95 0.04 155);
@@ -165,7 +160,6 @@
   --destructive: oklch(0.72 0.17 25);
   --mark: oklch(0.7 0.12 280);
   --mark-fill: oklch(0.74 0.13 280 / 20%);
-  --score-track: oklch(0.3 0.02 277);
   --done: oklch(0.75 0.13 155);
   --done-soft: oklch(0.3 0.05 155);
   --stale: oklch(0.82 0.11 80);

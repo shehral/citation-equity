@@ -25,15 +25,17 @@ interface FixCardProps extends FixActions {
   suggestion: Suggestion;
   copy: FixCopy;
   editable: boolean;
-  /** A prefix that keeps ids unique when one fix is on screen twice (Start here and its group). */
+  /** A prefix that keeps ids unique when one fix is on screen twice (the Quick edit and its group). */
   idPrefix: string;
-  /** The number shown on the card (Start here 1 to 3, or the fix's place in its group). */
+  /** The number shown on the card (1 on the Quick edit, else the fix's place in its group). */
   number?: number;
   active?: boolean;
   stale?: boolean;
   /** True when Suggest wording may be offered: an advisory, a model connected, not data. */
   canSuggest?: boolean;
   wording?: WordingState;
+  /** Shown after the title, such as the label chip of the Quick edit. */
+  chip?: ReactNode;
 }
 
 const itemClass = cn(
@@ -57,11 +59,17 @@ export function FixCard({
   stale = false,
   canSuggest = false,
   wording,
+  chip,
   ...actions
 }: FixCardProps) {
   const titleId = `${idPrefix}-${s.id}-title`;
   const asking = wording?.status === 'asking';
   const line = excerpt(s.before);
+  const title = (
+    <h3 id={titleId} className="font-semibold text-sm leading-snug">
+      {copy.title}
+    </h3>
+  );
   return (
     <article
       aria-labelledby={titleId}
@@ -82,9 +90,14 @@ export function FixCard({
           </span>
         )}
         <div className="min-w-0 flex-1 space-y-1">
-          <h3 id={titleId} className="font-semibold text-sm leading-snug">
-            {copy.title}
-          </h3>
+          {chip === undefined ? (
+            title
+          ) : (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              {title}
+              {chip}
+            </div>
+          )}
           {line !== '' && (
             <p className="truncate font-serif text-ink-soft text-sm italic">{line}</p>
           )}

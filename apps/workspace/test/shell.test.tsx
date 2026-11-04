@@ -27,10 +27,8 @@ vi.mock('@/lib/base-path', async (importOriginal) => ({
 }));
 
 const SITE: SiteSummary = {
-  pass: 5,
-  warn: 1,
-  fail: 1,
-  total: 7,
+  blockers: ['crawler-access'],
+  checks: [],
   needsLiveSite: 1,
   example: true,
   at: '2026-10-24T10:00:00.000Z',
@@ -86,11 +84,12 @@ describe('header', () => {
     renderShell('/site/');
     const tabs = screen.getByRole('navigation', { name: 'Views' });
     const links = within(tabs).getAllByRole('link');
+    // The flow's four steps, in order: the home is the questions view.
     expect(links.map((a) => [a.textContent, route(a)])).toEqual([
+      ['Your questions', '/'],
       ['Your draft', '/draft'],
       ['Your site', '/site'],
-      ['Who gets cited', '/cited'],
-      ['Your questions', '/questions'],
+      ['Results', '/cited'],
     ]);
     expect(within(tabs).getByRole('link', { name: 'Your site' }).getAttribute('aria-current')).toBe(
       'page',
@@ -110,7 +109,10 @@ describe('header', () => {
       </AppShell>,
     );
     expect(getLastView()).toBe('home');
-    expect(screen.getByRole('navigation', { name: 'Views' })).toBeTruthy();
+    const tabs = screen.getByRole('navigation', { name: 'Views' });
+    expect(
+      within(tabs).getByRole('link', { name: 'Your questions' }).getAttribute('aria-current'),
+    ).toBe('page');
   });
 
   it('records no view for pages that are not views (Research)', () => {

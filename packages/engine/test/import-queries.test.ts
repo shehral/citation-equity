@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { uniqueQuestions } from '../src/import-queries';
 import {
   type ImportedQuery,
   parseBingAiPerformanceCsv,
@@ -175,6 +176,22 @@ describe('questionKey', () => {
       questionKey('Why is my espresso bitter?'),
     );
     expect(questionKey('What is crema?')).not.toBe(questionKey('What is a crema?'));
+  });
+});
+
+describe('uniqueQuestions', () => {
+  it('trims, drops blanks and repeats by questionKey, and keeps the first wording in order', () => {
+    expect(
+      uniqueQuestions([
+        '  ',
+        ' Why is my espresso bitter? ',
+        'What is crema?',
+        'why is my  espresso bitter',
+        '?',
+        'What is crema',
+      ]),
+    ).toEqual(['Why is my espresso bitter?', 'What is crema?']);
+    expect(uniqueQuestions([])).toEqual([]);
   });
 });
 

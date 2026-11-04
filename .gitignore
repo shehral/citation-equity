@@ -18,6 +18,8 @@ experiments/e2/data/
 experiments/e2/out/
 experiments/e3/data/
 experiments/e3/out/
+experiments/e5/data/
+experiments/e5/out/
 __pycache__/
 *.pyc
 # Cluster settings for the experiment scripts (experiments/explorer/local.env.example and

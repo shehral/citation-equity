@@ -1,17 +1,17 @@
 # Evidence behind the checks
 
-Citation Equity scores a draft on eleven checks. Six come from Prof. Akram Bayat's design for the project (her concept-level list of what makes content easy for AI answer engines to use); four more were added because the research literature tests them: cited sources, a direct-answer lead, answers to the author's target questions, and explicit comparisons; and one, your reader's words up top, was added because it helped in this project's own test (E1). This page says, for each check, how strong the evidence is, what the studies actually did, and where to read them. Every source listed here was opened and read on 2026-10-23; the working notes with quotes are in [research/evidence-notes.md](research/evidence-notes.md).
+Citation Equity runs eleven checks on a draft. Six come from Prof. Akram Bayat's design for the project (her concept-level list of what makes content easy for AI answer engines to use); four more were added because the research literature tests them: cited sources, a direct-answer lead, answers to the author's target questions, and explicit comparisons; and one, your reader's words up top, was added because it helped in this project's own test (E1). This page says, for each check, how strong the evidence is, what the studies actually did, what our own tests found, and where to read them. Every source listed here was opened and read on 2026-10-23; the working notes with quotes are in [research/evidence-notes.md](research/evidence-notes.md).
 
-## Why the score is not a prediction
+## Why the labels are not a prediction
 
-The AI-ready score is a content check. It counts things in your draft that some studies have linked to being cited or used by AI answer engines. It is not a prediction of whether ChatGPT, Perplexity or Google will cite your page, for four reasons:
+The checks are content checks: they look for things in your draft that some studies, or our own tests, have linked to being cited or used by AI answer engines. A grade says what the studies found and a label what our own tests found; neither is a prediction of whether ChatGPT, Perplexity or Google will cite your page, for four reasons:
 
 1. **Most results come from fixed test setups.** The best-known numbers come from experiments where the page was already one of a handful of sources pasted into the model's prompt. Whether a page gets found in the first place (crawling, search, ranking) was not part of the test. When SAGEO Arena put retrieval back in, rewrites that helped in the fixed setup often made pages harder to find.
 2. **The studies disagree.** The rewrites that looked best in the original GEO paper (adding statistics, quotations and citations) mostly showed no gain, or a loss, in the larger C-SEO Bench study, which measured citation rank instead of share of answer text.
 3. **Engines differ and change.** Results vary by model, by topic and over time. A check that helps on one engine may do nothing on another.
-4. **Our weights are ours.** Neither Prof. Bayat's design nor any study gives weights or thresholds for a score. Every number in the score is a choice we made, and you can see and change it.
+4. **The effects are small.** The edits that helped in our tests raised a 0 to 1 citation score by about 0.03, with local models answering from four fixed sources. A label says which way a result went, not how much your page will gain.
 
-The Martinez (2026) survey of 45 studies sums up the state of the field: content that is already in front of the model can change whether and how it is cited, but no technique has shown a stable effect on being found across engines over time, and citation scores have not been shown to predict clicks or revenue. The test bench in this project reports a measured outcome separately from the score, on a local model and a fixed page set, for the same reason.
+The Martinez (2026) survey of 45 studies sums up the state of the field: content that is already in front of the model can change whether and how it is cited, but no technique has shown a stable effect on being found across engines over time, and citation scores have not been shown to predict clicks or revenue. For the same reason, the test bench in this project runs on a local model over a fixed page set, and every result it gives says it does not predict live AI engines.
 
 ## How grades are assigned
 
@@ -21,7 +21,7 @@ Each check gets one of four grades. The grade describes the research, not your d
 |---|---|
 | **strong** | At least two independent controlled studies found a gain, including one with real retrieval or live engines, and no study we opened found a null or negative result. |
 | **moderate** | The studies we opened point the same way (toward a gain), at least one of them is controlled, and none found a null or negative result. The evidence may be indirect. |
-| **mixed** | At least one study found a null or negative result (no effect, or harm), whether or not other studies found a gain. Mixed checks are still reported; in the evidence preset they get a low weight. |
+| **mixed** | At least one study found a null or negative result (no effect, or harm), whether or not other studies found a gain. Mixed checks are still reported. |
 | **untested** | No study we opened tests the check directly. The check rests on how these systems work or on practitioner advice. |
 
 Rules we followed:
@@ -31,27 +31,54 @@ Rules we followed:
 - Observational studies (which compare pages that happen to differ) can support a grade but cannot by themselves make it strong, because better pages may differ in many ways at once.
 - A study that tests a nearby practice (for example, a whole-page summary rather than a per-section answer) counts as indirect evidence, and the summary says so.
 
-No check is graded strong or moderate today. Nine are mixed and two are untested. Seven of the eleven checks count toward the score; four (question headings, lists, cited sources and direct answer first) are notes that are not scored, because our own tests found no effect larger than 0.03 for them. Our tests change no grade.
+No check is graded strong or moderate today. Nine are mixed and two are untested. Our own tests change no grade; they give each check a label instead (next section).
+
+## How labels are assigned
+
+A label says, in fixed words, what our own tests (E1 and E3 below) found for a check. The app shows it beside the check, on the draft view and on the Research page. Like a grade, it describes the evidence, not your draft. The rule:
+
+| Our test's result | Label |
+|---|---|
+| helps (with or without the note "possibly through length or query-term overlap") | Helped in our test |
+| no effect larger than 0.03 | No effect in our test |
+| inconclusive, insufficient n, descriptive, not run (no edit passed the checks), or the two judge models disagree | Unclear |
+| hurts | Hurt in our test |
+| a smaller gain when the question was a guess (E5, below) | May help less |
+
+A test that ran without a verdict reads Unclear, not Not tested, since it ran. Not tested is kept for questions our tests did not use and for the site readiness notes. The E1 and E3 tables below give each check's label and where it shows.
+
+Labels of the eleven checks today: 2 Helped in our test, 4 No effect in our test and 5 Unclear.
+
+The two Helped labels are for your readers' own questions, since E1 to E3 used the reader's exact question. Your reader's words up top and question coverage are measured per question, as its two lines: its key words up top, and a section that answers it. Each line's label depends on where the question came from:
+
+| Where the question came from | Words up top | Answered |
+|---|---|---|
+| `reader`: typed as a question, imported from Search Console or Bing, or a sample's pack | Helped in our test | Helped in our test |
+| `keyword`: a keyword from your list, turned into a question by a template or kept as typed | No effect in our test | May help less |
+| `local-model`: written by a local AI | Not tested | No effect in our test |
+| `page`: made from your page, from its title, its topic or its headings | Not tested | Not tested |
+
+A question made from the page always reads Not tested (in E5 it is a placebo); a guess from a keyword or a local AI takes the label E5 found for it (below). "Questions covered: N of M" counts the questions where both tested edits are in place; the count itself was not tested.
 
 ## Our own test (E1)
 
-The data behind E1, E2 and E3 is on Hugging Face: every result, score and page hash in [Shehral/citation-equity-experiments](https://huggingface.co/datasets/Shehral/citation-equity-experiments). The page text, edited versions, prompts and answers are not shared, since the pages belong to their publishers.
+The data behind E1, E2 and E3 is on Hugging Face: every result, citation score and page hash in [Shehral/citation-equity-experiments](https://huggingface.co/datasets/Shehral/citation-equity-experiments). The page text, edited versions, prompts and answers are not shared, since the pages belong to their publishers.
 
-E1 is this project's pre-registered test of the checks ([experiments/PREREG_E1.md](../experiments/PREREG_E1.md), results in [experiments/RESULTS_E1.md](../experiments/RESULTS_E1.md)). Each check's fix was applied to real pages, and two local models (Gemma-4-12B and Qwen3.8-27B judges, Gemma-edited) answered each query from a fixed set of four sources. d is the change in citation score, where a page cited first scores 1 and an uncited page 0, against a paraphrase of the same passages (or the original page where the plan says so). Labels below are for the main set's primary contrast. E1 changes no grade. For seven checks E1 had too few pages for a verdict; E3 (below) asked again with more pages, and its pooled result is the one the tool now uses for them. E1's numbers stay here as the record of what E1 found.
+E1 is this project's pre-registered test of the checks ([experiments/PREREG_E1.md](../experiments/PREREG_E1.md), results in [experiments/RESULTS_E1.md](../experiments/RESULTS_E1.md)). Each check's fix was applied to real pages, and two local models (Gemma-4-12B and Qwen3.8-27B judges, Gemma-edited) answered each query from a fixed set of four sources. d is the change in citation score, where a page cited first scores 1 and an uncited page 0, against a paraphrase of the same passages (or the original page where the plan says so). Results below are for the main set's primary contrast. E1 changes no grade. For seven checks E1 had too few pages for a verdict; E3 (below) asked again with more pages, and its pooled result is the one the tool now uses for them. E1's numbers stay here as the record of what E1 found.
 
-| Check | E1 label | d and interval | What the tool does |
+| Check | E1 result | d and interval | What the tool does |
 |---|---|---|---|
-| `standalone-paragraphs` | descriptive, no verdict by design | d +0.007, 95% CI [-0.008, +0.023], n 24 | Grade kept, E1 shown |
-| `question-headings` | insufficient n | d -0.015, 95% CI [-0.031, +0.000], n 17 | Replaced by E3 |
-| `lists` | no effect larger than 0.03 | d -0.007, 90% CI [-0.027, +0.013], n 33 | Not scored: weight 0 in both presets; still reported and still suggests |
-| `tables` | not run (no valid edit) | none | Replaced by E3 |
-| `statistics` | insufficient n | d +0.023, 95% CI [-0.020, +0.062], n 4 | Replaced by E3 |
-| `expert-quotes` | insufficient n | d +0.029, 95% CI [-0.008, +0.075], n 26 | Replaced by E3 |
-| `cited-sources` | insufficient n | d -0.013, 95% CI [-0.038, +0.009], n 25 | Replaced by E3 |
-| `direct-answer-lead` | insufficient n | d +0.008, 95% CI [-0.016, +0.030], n 20 | Replaced by E3 |
-| `question-coverage` | helps, possibly through length or query-term overlap | d +0.027, 95% CI [+0.010, +0.043], n 54, Holm p 0.006; replication d +0.036, 95% CI [+0.016, +0.059], n 52 | Weight kept; the measured label is shown on the check and its suggestions |
-| `comparisons` | insufficient n | d +0.004, 95% CI [-0.016, +0.027], n 8 | Replaced by E3 |
-| `reader-words` | helps, possibly through length or query-term overlap | d +0.035, 95% CI [+0.008, +0.066], n 33, Holm p 0.037 (the candidate check for query wording) | Added as a check at the usual weight; the measured label is shown on the check and its suggestions |
+| `standalone-paragraphs` | descriptive, no verdict by design | d +0.007, 95% CI [-0.008, +0.023], n 24 | Writing note, labelled Unclear |
+| `question-headings` | insufficient n | d -0.015, 95% CI [-0.031, +0.000], n 17 | Label from E3 |
+| `lists` | no effect larger than 0.03 | d -0.007, 90% CI [-0.027, +0.013], n 33 | Writing note, labelled No effect in our test |
+| `tables` | not run (no valid edit) | none | Label from E3 |
+| `statistics` | insufficient n | d +0.023, 95% CI [-0.020, +0.062], n 4 | Label from E3 |
+| `expert-quotes` | insufficient n | d +0.029, 95% CI [-0.008, +0.075], n 26 | Label from E3 |
+| `cited-sources` | insufficient n | d -0.013, 95% CI [-0.038, +0.009], n 25 | Label from E3 |
+| `direct-answer-lead` | insufficient n | d +0.008, 95% CI [-0.016, +0.030], n 20 | Label from E3 |
+| `question-coverage` | helps, possibly through length or query-term overlap | d +0.027, 95% CI [+0.010, +0.043], n 54, Holm p 0.006; replication d +0.036, 95% CI [+0.016, +0.059], n 52 | A line of each question (a section that answers it), labelled Helped in our test for your readers' own questions |
+| `comparisons` | insufficient n | d +0.004, 95% CI [-0.016, +0.027], n 8 | Label from E3 |
+| `reader-words` | helps, possibly through length or query-term overlap | d +0.035, 95% CI [+0.008, +0.066], n 33, Holm p 0.037 (the candidate check for query wording) | Added as a check: a line of each question (its key words up top), labelled Helped in our test for your readers' own questions |
 
 Applying every applicable fix together raised the citation score by +0.049 (95% CI [+0.024, +0.076], n 78) against the original page and by +0.071 against a paraphrase of the same passages, possibly through length or query-term overlap. A candidate check for query wording (working the query's missing key terms into the title, the first heading and the first paragraph) also helped, by d +0.035 against its paraphrase (Holm p 0.037), possibly through query-term overlap; it is now the `reader-words` check. These are local models in a fixed context of four sources, not ChatGPT, Perplexity or Google.
 
@@ -59,19 +86,41 @@ A follow-up test, E2 ([experiments/RESULTS_E2.md](../experiments/RESULTS_E2.md))
 
 ## E3: seven checks, more pages
 
-E3 asked E1's question again for the seven checks E1 could not judge ([experiments/PLAN_E3.md](../experiments/PLAN_E3.md), results in [experiments/RESULTS_E3.md](../experiments/RESULTS_E3.md)). It used E1's editor, prompts, judges (Gemma-4-12B and Qwen3.8-27B, Gemma-edited), seeds, score and statistics, and added pages: 260 queries in all, 80 from E1 and 180 new, with one more attempt for each edit to pass E1's validity checks. A check gets a verdict when at least 30 queries have a valid edit and placebo; four did, and they were tested together with Holm's correction. A "no effect larger than 0.03" verdict means the 90% interval lies within ±0.03. E3 changes no grade either.
+E3 asked E1's question again for the seven checks E1 could not judge ([experiments/PLAN_E3.md](../experiments/PLAN_E3.md), results in [experiments/RESULTS_E3.md](../experiments/RESULTS_E3.md)). It used E1's editor, prompts, judges (Gemma-4-12B and Qwen3.8-27B, Gemma-edited), seeds, citation score and statistics, and added pages: 260 queries in all, 80 from E1 and 180 new, with one more attempt for each edit to pass E1's validity checks. A check gets a verdict when at least 30 queries have a valid edit and placebo; four did, and they were tested together with Holm's correction. A "no effect larger than 0.03" verdict means the 90% interval lies within ±0.03. E3 changes no grade either.
 
-| Check | E3 label | d and interval | What the tool does |
+| Check | E3 result | d and interval | What the tool does |
 |---|---|---|---|
-| `question-headings` | no effect larger than 0.03 | d -0.016, 90% CI [-0.028, -0.004] (95% CI [-0.030, -0.002]), n 57, Holm p 0.164 | Not scored: weight 0 in both presets; still reported and still suggests, its "?" edit included |
-| `tables` | insufficient n | d -0.027, 95% CI [-0.054, -0.001], n 11 | Grade kept, E3 shown |
-| `statistics` | insufficient n | d -0.007, 95% CI [-0.045, +0.026], n 11 | Grade kept, E3 shown |
-| `expert-quotes` | inconclusive | d +0.026, 95% CI [+0.001, +0.053], n 62, Holm p 0.179 | Grade kept, E3 shown ("unclear, leaning positive") |
-| `cited-sources` | no effect larger than 0.03 | d -0.010, 90% CI [-0.023, +0.002] (95% CI [-0.026, +0.004]), n 49, Holm p 0.228 | Not scored: weight 0 in both presets; still reported and still suggests |
-| `direct-answer-lead` | no effect larger than 0.03 | d +0.012, 90% CI [+0.002, +0.022] (95% CI [+0.000, +0.023]), n 66, Holm p 0.179 | Not scored: weight 0 in both presets; still reported and still suggests |
-| `comparisons` | insufficient n | d +0.003, 95% CI [-0.020, +0.026], n 24 | Grade kept, E3 shown |
+| `question-headings` | no effect larger than 0.03 | d -0.016, 90% CI [-0.028, -0.004] (95% CI [-0.030, -0.002]), n 57, Holm p 0.164 | Writing note, labelled No effect in our test; its "?" edit can still be the Quick edit |
+| `tables` | insufficient n | d -0.027, 95% CI [-0.054, -0.001], n 11 | Writing note, labelled Unclear |
+| `statistics` | insufficient n | d -0.007, 95% CI [-0.045, +0.026], n 11 | Writing note, labelled Unclear |
+| `expert-quotes` | inconclusive | d +0.026, 95% CI [+0.001, +0.053], n 62, Holm p 0.179 | Writing note, labelled Unclear; it leaned positive |
+| `cited-sources` | no effect larger than 0.03 | d -0.010, 90% CI [-0.023, +0.002] (95% CI [-0.026, +0.004]), n 49, Holm p 0.228 | Writing note, labelled No effect in our test |
+| `direct-answer-lead` | no effect larger than 0.03 | d +0.012, 90% CI [+0.002, +0.022] (95% CI [+0.000, +0.023]), n 66, Holm p 0.179 | Writing note, labelled No effect in our test |
+| `comparisons` | insufficient n | d +0.003, 95% CI [-0.020, +0.026], n 24 | Writing note, labelled Unclear |
 
-"No effect larger than 0.03" is not "no effect": an effect smaller than that, either way, cannot be ruled out. Attributed quotes leaned positive, but not by enough to survive the correction for testing four checks at once. Tables, statistics and comparisons still had too few valid pages for a verdict. In Start here, fixes of an unscored check come after those of the scored checks, and a custom weight can count any of them again. As with E1, these are local models in a fixed context of four sources, not ChatGPT, Perplexity or Google.
+"No effect larger than 0.03" is not "no effect": an effect smaller than that, either way, cannot be ruled out. Attributed quotes leaned positive, but not by enough to survive the correction for testing four checks at once. Tables, statistics and comparisons still had too few valid pages for a verdict. Every note of these checks still suggests its fix; in Writing notes those labelled No effect in our test come after those labelled Unclear. As with E1, these are local models in a fixed context of four sources, not ChatGPT, Perplexity or Google.
+
+## E5: when the question is a guess
+
+E5 asked whether the gain from the reader's own question holds when the writer has only a keyword ([experiments/PLAN_E5.md](../experiments/PLAN_E5.md), results in [experiments/RESULTS_E5.md](../experiments/RESULTS_E5.md)). With E1's pages, judges, seeds, citation score and statistics, on 260 main queries (80 from E1 and 180 that E1 never used) and 60 replication queries, it judged every answer against the reader's true question while only the text used to make the edit changed: the reader's exact question as a section under the title (9), a heading of the keyword's two rarest key words (9K), a question a local model wrote from that keyword (9L), the keyword's missing words worked into the top (12K), and a question in the page's own words (9G), a placebo.
+
+The planned results on the main set: the gate first; the four guess tests are one Holm family, read because the gate passed; step 4 is its own test; step 5 is a cumulative estimate that includes E1's queries.
+
+| Step | Edit, compared with | Result | d and interval |
+|---|---|---|---|
+| Gate | the reader's exact question (9) vs the unedited page, on the new queries | helps, possibly through length or query-term overlap | d +0.039, 95% CI [+0.023, +0.056], n 115, p < 0.001 |
+| 2 | a keyword's two words (9K) vs the unedited page | helps, possibly through length or query-term overlap; mainly the Qwen3.8-27B judge | d +0.016, 95% CI [+0.006, +0.026], n 168, Holm p 0.006 |
+| 2 | 9K vs a section without the reader's words (9P) | helps, possibly through length or query-term overlap | d +0.018, 95% CI [+0.007, +0.029], n 166, Holm p 0.006 |
+| 2 | a local model's question (9L) vs the unedited page | no effect larger than 0.03 | d +0.008, 90% CI [-0.000, +0.016], n 169, Holm p 0.142 |
+| 2 | 9L vs 9P | no effect larger than 0.03 | d +0.010, 90% CI [+0.001, +0.019], n 167, Holm p 0.142 |
+| 4 | the keyword's missing words (12K) vs a rewording of the same spans (placebo) | no effect larger than 0.03 | d +0.004, 90% CI [-0.009, +0.017], n 69, p 0.677 |
+| 5 | 9 vs the unedited page, every main query with a valid edit | helps, possibly through length or query-term overlap | d +0.035, 95% CI [+0.023, +0.048], n 169, p < 0.001 |
+
+By the plan's reading both guesses lose the gain (the exact question beats the guess with a 95% interval above 0): by d +0.019 (95% CI [+0.008, +0.031], n 168) for the keyword's two words and by d +0.027 (95% CI [+0.015, +0.039], n 169) for the local model's question. On the new queries the keyword kept 0.65 of the exact question's gain (90% CI [0.41, 0.93]), about two thirds, and the local model's question 0.28 (90% CI [0.00, 0.54]). Reported without a verdict, the shortfall follows the exact question's wording, which the judge's prompt also shows, more than the key words the keyword drops. On the replication set (C-SEO Bench, 53 queries, its own Holm family, no gate) both guesses helped against a section without the reader's words and showed no effect larger than 0.03 against the unedited page. The drift check found no shift between runs (mean difference -0.001, 95% CI [-0.004, +0.002]).
+
+What the tool does. Your readers' own questions keep Helped in our test on both lines. Step 5 sets only the answered line, which it kept at helps; the words up top line keeps E1's label. A question guessed from a keyword reads May help less for a section that answers it (it helped against the unedited page, but kept less of the gain) and No effect in our test for its words up top (from step 4). A question a local AI wrote reads No effect in our test for a section that answers it (its result against the unedited page) and Not tested for its words up top, which E5 did not test. A question made from the page stays Not tested.
+
+The labels for guesses follow two rules chosen after the results. For the answered line: a guess that keeps the gain takes the reader's label; one partly kept, or one that loses the gain while still helping against the unedited page, reads May help less; any other guess takes its own result against the unedited page; a failed gate or a test that did not run reads Not tested. For the words up top line of a keyword's question: step 4 helping, with the edit also above the unedited page, gives the reader's label; no effect larger than 0.03 gives No effect in our test; any other verdict gives Unclear; a test that did not run gives Not tested. Under the plan's lines both guesses would read Not tested on the answered line, since both lose the gain, and a keyword's words up top would read Not tested, since step 4 did not help; the measured gain of a keyword's two words, and step 4 ruling out an effect larger than 0.03, are why the rules differ. The plan's statistical readings are unchanged.
 
 ## The studies
 
@@ -136,7 +185,7 @@ Grade: **mixed**
 
 Adding statistics raised visibility in the original GEO experiment, where the page was already one of five sources given to the model, but C-SEO Bench found that adding statistics lowered a page's citation rank in 19 of 24 settings. Pages that contain real numbers are used more in AI answers, so aim for relevant, checkable figures rather than more numbers.
 
-**What the studies did.** In GEO, an LLM rewrote one of the five sources to "include quantitative statistics instead of qualitative discussion, wherever possible", and that source's position-weighted share of the answer rose from 19.3 to 25.2. C-SEO Bench applied the same kind of rewrite across six domains and four engine models and measured citation rank instead: the paper reports that the rewrite lowered rankings in 19 of 24 evaluated settings (it does not say how those 24 divide across domains and models), and in the main experiment no rewrite helped in question answering. Observational data still links numbers to use: cited pages containing numbers had a 61.55% higher influence score. Martinez puts it plainly: the criterion is not to add numbers, but to give relevant, verifiable, dated and attributed evidence. A made-up figure may get reused and still mislead readers.
+**What the studies did.** In GEO, an LLM rewrote one of the five sources to "include quantitative statistics instead of qualitative discussion, wherever possible", and that source's position-weighted share of the answer rose from 19.3 to 25.2. C-SEO Bench applied the same kind of rewrite across six domains and four engine models and measured citation rank instead: the paper reports that the rewrite lowered rankings in 19 of 24 evaluated settings (it does not say how those 24 divide across domains and models), and in the main experiment no rewrite helped in question answering. Observational data still links numbers to use: cited pages containing numbers had a 61.55% higher influence on AI answers. Martinez puts it plainly: the criterion is not to add numbers, but to give relevant, verifiable, dated and attributed evidence. A made-up figure may get reused and still mislead readers.
 
 **Sources**
 
@@ -149,9 +198,9 @@ Adding statistics raised visibility in the original GEO experiment, where the pa
 
 Grade: **untested**
 
-No study we opened tests tables on their own. Comparison content, which tables often carry, was linked to more citations and more use in answers, while formatting-only changes showed little effect, so use a table to present a real comparison rather than to raise a score.
+No study we opened tests tables on their own. Comparison content, which tables often carry, was linked to more citations and more use in answers, while formatting-only changes showed little effect, so use a table to present a real comparison rather than for the format alone.
 
-**What the studies did.** What Gets Cited found that a page without comparisons to alternatives lost the first citation more often (one of the factors significant in at least four of six models), but it tested the comparison content, not the table format, and formatting-only edits had no consistent effect. The observational study found that cited pages with comparison content had a 55.28% higher influence score; it reports no result for tables. Martinez advises testing tables without assuming which way the effect goes.
+**What the studies did.** What Gets Cited found that a page without comparisons to alternatives lost the first citation more often (one of the factors significant in at least four of six models), but it tested the comparison content, not the table format, and formatting-only edits had no consistent effect. The observational study found that cited pages with comparison content had a 55.28% higher influence on AI answers; it reports no result for tables. Martinez advises testing tables without assuming which way the effect goes.
 
 **Sources**
 
@@ -211,9 +260,9 @@ Grade: **mixed**
 
 Relevance to the question is the most repeatable finding in the studies we opened: in controlled tests, edits that made a page address the question more directly made models use it more. This check measures a narrow stand-in for that (the question's key words in a short opening sentence), and in the largest controlled study, pages missing the question's terms lost the first citation in only four of six models. Answer the questions your readers really ask, in plain words, and do not repeat key words for their own sake.
 
-**What the check looks for.** You enter the questions your readers ask (the check does not apply without them). For each question, the check takes its key words (small words like "what", "is" and "the" are dropped, and endings like "-s" and "-ing" are trimmed), finds the H2 or H3 heading that shares at least half of them, or else the paragraph whose first sentence matches best, and counts the question as answered when that section opens with a plain sentence of 8 to 40 words that is not itself a question and contains at least 60% of the key words. These thresholds are ours.
+**What the check looks for.** It measures the questions you typed or imported when there are any; otherwise the page's own questions, made from its title (when the title is a question) and its topic, the same questions the reader's-words check measures. For each question, the check takes its key words (small words like "what", "is" and "the" are dropped, and endings like "-s" and "-ing" are trimmed), finds the H2 or H3 heading that shares at least half of them, or else the paragraph whose first sentence matches best, and counts the question as answered when that section opens with a plain sentence of 8 to 40 words that is not itself a question and contains at least 60% of the key words. These thresholds are ours.
 
-**What the studies did.** ConflictingQA edited pages on contested questions one way at a time: edits that made a page more relevant to the question, such as adding a single sentence that makes its stance on the question obvious or starting it with "The following text is about the question", had a substantial positive effect on how often models sided with the page, while stylistic edits did not. What Gets Cited tested pages that lacked query terms the competing page had (its "Keyword Gap" factor): the page with the terms won the first citation, significantly in four of six models (Kimi K2, GPT-5 Nano, GPT-5 Mini, GPT-5.2) and not significantly in Gemini 2.5 Flash or Claude 3.5 Sonnet. In SAGEO Arena's reranking case studies, adding content that directly addresses the query's information need and placing the answer early raised a page's rank, and rewrites that mentioned the query's terms without addressing the question did well at retrieval but lost at reranking and generation. Martinez rates query-document relevance as strong in controlled settings, on the condition of a well-defined intent and no fabrication. None of these tests our exact rule, so the check is a writing habit with good reasons behind it, not a measured lever.
+**What the studies did.** ConflictingQA edited pages on contested questions one way at a time: edits that made a page more relevant to the question, such as adding a single sentence that makes its stance on the question obvious or starting it with "The following text is about the question", had a substantial positive effect on how often models sided with the page, while stylistic edits did not. What Gets Cited tested pages that lacked query terms the competing page had (its "Keyword Gap" factor): the page with the terms won the first citation, significantly in four of six models (Kimi K2, GPT-5 Nano, GPT-5 Mini, GPT-5.2) and not significantly in Gemini 2.5 Flash or Claude 3.5 Sonnet. In SAGEO Arena's reranking case studies, adding content that directly addresses the query's information need and placing the answer early raised a page's rank, and rewrites that mentioned the query's terms without addressing the question did well at retrieval but lost at reranking and generation. Martinez rates query-document relevance as strong in controlled settings, on the condition of a well-defined intent and no fabrication. None of these studies tests our exact rule; our own test, E1, did.
 
 **Sources**
 
@@ -230,7 +279,7 @@ In a controlled study, product pages with no comparison to alternatives lost the
 
 **What the check looks for.** In drafts of 300 words or more, any heading, sentence or table row with explicit comparison language: "vs", "versus", "compared with" or "compared to", "than" (but not "more than 25 seconds"), "unlike", "instead of", "rather than", "alternatives", "pros and cons", "which is better", or a question heading of the form "X or Y?". One is enough to pass. The check never writes a comparison for you, because only you know the real differences.
 
-**What the studies did.** What Gets Cited compared matched product pages that differed only in whether they compared the product with alternatives. The page with the comparison won the first citation with odds ratios of 7.45 (Gemini 2.5 Flash), 4.55 (Claude 3.5 Sonnet), 4.72 (Kimi K2) and 2.14 (GPT-5 Nano), all significant, and 1.78 (GPT-5 Mini) and 1.61 (GPT-5.2), which were not significant. The test used shopping-style pages with two sources per trial. Zhang, He and Yao found that cited pages with comparison content had a 55.28% higher mean influence score (0.1389 against 0.0894), and that comparison was the second most influential role a cited passage played in an answer; they list "adding comparison sections will increase future absorption" as a claim their observational data cannot establish. Martinez rates extractable evidence, including comparisons, as moderate to strong support when it is truthful and fits the reader's intent.
+**What the studies did.** What Gets Cited compared matched product pages that differed only in whether they compared the product with alternatives. The page with the comparison won the first citation with odds ratios of 7.45 (Gemini 2.5 Flash), 4.55 (Claude 3.5 Sonnet), 4.72 (Kimi K2) and 2.14 (GPT-5 Nano), all significant, and 1.78 (GPT-5 Mini) and 1.61 (GPT-5.2), which were not significant. The test used shopping-style pages with two sources per trial. Zhang, He and Yao found that cited pages with comparison content had a 55.28% higher mean influence on AI answers (0.1389 against 0.0894), and that comparison was the second most influential role a cited passage played in an answer; they list "adding comparison sections will increase future absorption" as a claim their observational data cannot establish. Martinez rates extractable evidence, including comparisons, as moderate to strong support when it is truthful and fits the reader's intent.
 
 **Sources**
 
@@ -244,7 +293,7 @@ Grade: **mixed**
 
 Using your reader's own words where the page opens can help it get picked, but piling in query words is not the same thing. In an early controlled study, a rewrite that added more of the query's keywords lowered the page's share of the answer, and in the largest controlled study, pages missing the query's terms lost the first citation in only four of six models. Work the reader's words into the title or opening where they fit naturally, and leave them out where they do not.
 
-**What the check looks for.** It measures the questions you typed or imported when there are any; otherwise the page's own questions, made from its title (when the title is a question) and its topic ("What is ...?", "How does ... work?"). It never uses a question made from a section heading, and without any question it does not apply. For each question it takes the same key words as the question-coverage check, leaving out common verbs ("work", "use", "take", "make"), and counts how many appear in the title (the first H1), the first heading after it or the first paragraph. A question section does not push those down: the check reads every heading down to the first one that is not a question, and every paragraph down to the first one outside a question section, so with the same questions, adding a question section never lowers the score. On a page whose sections are all questions, this reaches further down than the title, first heading and first paragraph that our test edited. A question asked twice counts once. The score is that share, averaged over the questions. The advice names up to three missing words per question and says where they could go; it never names a word that is already there and never writes the words in for you.
+**What the check looks for.** It measures the questions you typed or imported when there are any; otherwise the page's own questions, made from its title (when the title is a question) and its topic ("What is ...?", "How does ... work?"). It never uses a question made from a section heading, and without any question it does not apply. For each question it takes the same key words as the question-coverage check, leaving out common verbs ("work", "use", "take", "make"), and counts how many appear in the title (the first H1), the first heading after it or the first paragraph. A question section does not push those down: the check reads every heading down to the first one that is not a question, and every paragraph down to the first one outside a question section, so with the same questions, adding a question section never turns a line from met to missing. On a page whose sections are all questions, this reaches further down than the title, first heading and first paragraph that our test edited. A question asked twice counts once. The result is that share, averaged over the questions. The advice names up to three missing words per question and says where they could go; it never names a word that is already there and never writes the words in for you.
 
 **What the studies did.** GEO's Keyword Stuffing rewrite ("Modifies content to include more keywords from the query, as expected in classical SEO optimization") lowered the source's position-weighted share of the answer from 19.3 at baseline to 17.7, and the authors find such methods offer "little to no improvement"; it added keywords anywhere in the page, not into the title and opening. What Gets Cited tested pages missing query terms that the competing page had: the page with the terms won the first citation, significantly in four of six models and not in Gemini 2.5 Flash or Claude 3.5 Sonnet. In SAGEO Arena, rewrites that mentioned the query's terms without addressing the question did well at retrieval but lost at reranking and generation. ConflictingQA found that opening a page with a line naming the question it answers substantially raised how often models sided with it. The rubric counts the stuffing result and the two null models as null or negative findings, so the grade is mixed.
 
@@ -259,7 +308,12 @@ Using your reader's own words where the page opens can help it get picked, but p
 
 ## Site readiness
 
-Site readiness is a separate report about the published page and its site, not the draft. It is not part of the AI-ready score: no readiness item changes a score, and the score never looks at readiness. Five items read the page's HTML (or the draft's front matter) and run in the browser on the workspace's Your site page (`/site`), which sends nothing anywhere; two need a fetch of the live site and run from the command line with `ce site <url>`.
+Site readiness is a separate report about the published page and its site, not the draft. Blockers can keep a page out of AI answers; the other items are notes.
+
+- **Blockers** (`crawler-access`, `indexing-directives`, `renders-without-js`): by the engines' own documentation, or a measurement of their crawlers, each can keep a page out of AI answers. The app lists them first, and the home shows any that fail.
+- **Notes** (`byline`, `dates`, `structured-data`, `canonical`): labelled Not tested, since our tests did not cover them.
+
+Five items read the page's HTML (or the draft's front matter) and run in the browser on the workspace's Your site page (`/site`), which sends nothing anywhere; two need a fetch of the live site and run from the command line with `ce site <url>`.
 
 The grades use the same four words, with one difference: for readiness, the documentation an answer engine publishes about its own crawlers and AI features counts as evidence, because it says what that engine does with a page. The rules:
 
@@ -382,7 +436,7 @@ A large measurement of crawler traffic found that the AI crawlers of OpenAI, Ant
 
 ## Off-page
 
-AI answers cite third-party pages heavily, so part of being cited happens off your own page: being present, accurately and openly, where answer engines already look. The workspace's Who gets cited page (`/cited`) and `ce sources` show which sites the answers to your own questions cite, grouped by kind, and give one advice card per kind: what to do, what to avoid, and how well the advice is supported. Like site readiness, this is not part of the AI-ready score.
+AI answers cite third-party pages heavily, so part of being cited happens off your own page: being present, accurately and openly, where answer engines already look. The Who AI search cites section of the workspace's Results page (`/cited`) and `ce sources` show which sites the answers to your own questions cite, grouped by kind, and give one advice card per kind: what to do, what to avoid, and how well the advice is supported. Like site readiness, it is reported apart from the draft's checks.
 
 The answers come from `ce live` (the Gemini API with Google Search) or from answers you copy by hand out of ChatGPT, Perplexity, Gemini or Copilot and paste in. Pasted text is parsed in your browser and sent nowhere. The tool never posts, contacts anyone, writes reviews or reads consumer AI apps for you.
 
@@ -521,4 +575,4 @@ Medium, a blogging platform, is in Google AI Overviews' top ten in Profound's da
 
 ## Keeping this current
 
-The registry behind this page lives in `packages/engine/src/evidence.ts` (checks, with their E1 and E3 outcomes from `packages/engine/src/e1.ts`), `packages/engine/src/readiness.ts` (site readiness) and `packages/engine/src/offpage.ts` (off-page). When a new study changes a grade, update the registry, this page and the notes together; the engine tests check that every graded check has a linked source and that this page states the same grade as the registry.
+The registry behind this page lives in `packages/engine/src/evidence.ts` (checks, with their E1 and E3 outcomes from `packages/engine/src/e1.ts`), `packages/engine/src/labels.ts` and `packages/engine/src/e5.ts` (the labels, and E5), `packages/engine/src/readiness.ts` (site readiness) and `packages/engine/src/offpage.ts` (off-page). When a new study changes a grade, update the registry, this page and the notes together; when E5's results arrive, fill `e5.ts` and rewrite this page's E5 section and question table. The engine tests check that every graded check has a linked source, that this page states the same grade and label as the registry, the same blockers as the readiness module, and that its E5 section reads pending exactly while E5 has no results.

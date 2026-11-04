@@ -13,6 +13,7 @@
 #   . ./local.env && JUDGE=qwen3.8-27b BATCH=main.qwen3.8-27b.tier1 sbatch --gres=gpu:h200:1 generate.sbatch
 # Answers land in $CE_ROOT/$RUN/answers/<BATCH>.jsonl; copy them to experiments/e1/data/answers/ for score.py.
 # E2b's second judge (experiments/PLAN_E2.md) is JUDGE=qwen3.5-9b, Qwen3.5-9B.
+# E5 (experiments/e5/README.md): batches e5-<set>.<judge>.tier<k>, always with RUN=e5 (and only them).
 # Check the settings first with CE_DRY_RUN=1 JUDGE=... BATCH=... bash generate.sbatch
 #SBATCH --job-name=ce-e1-gen
 #SBATCH --partition=gpu
@@ -58,6 +59,16 @@ LOCAL_ENV="${SLURM_SUBMIT_DIR:-.}/local.env"
 : "${HF_HOME:?set HF_HOME to the Hugging Face cache that holds the judge models (see local.env.example)}"
 PROJ=$CE_ROOT
 RUN=${RUN:-e1}
+# E5's batches go to E5's folder only, and E5's folder holds only E5's batches.
+case "$BATCH" in
+  e5-*) case "$RUN" in
+          e5|e5/*) ;;
+          *) echo "FATAL: batch $BATCH is E5's; set RUN=e5 so it reads and writes \$CE_ROOT/e5 (not \$CE_ROOT/$RUN)"; exit 2 ;;
+        esac ;;
+  *) case "$RUN" in
+       e5|e5/*) echo "FATAL: RUN=$RUN is E5's folder; E5's batches are named e5-<set>.<judge>.tier<k>"; exit 2 ;;
+     esac ;;
+esac
 PROMPTS=$PROJ/$RUN/batches/$BATCH.prompts.jsonl
 OUT=$PROJ/$RUN/answers/$BATCH.jsonl
 MODULES=${CE_MODULES-miniconda3/24.11.1}

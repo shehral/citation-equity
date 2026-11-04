@@ -5,12 +5,12 @@ Citation Equity is a pnpm monorepo with two libraries and one web app, all TypeS
 ```
 citation-equity/
   packages/
-    engine/       Module A: parse a draft, gather artifacts, run checks, score. Browser + Node.
+    engine/       Module A: parse a draft, gather artifacts, run checks, report its questions. Browser + Node.
     bench/        Module B: the citation test bench and the `ce` CLI.
                   src/        browser-safe core (retrieval, prompt, metrics, adapters)
                   src/node/   Node-only code (files, fetching, CLI), exported as @citation-equity/bench/node
   apps/
-    workspace/    Module C: Next.js static export (/, /draft, /site, /cited, /questions, /research)
+    workspace/    Module C: Next.js static export (/, /draft, /site, /cited, /research)
   samples/        sample drafts, synthetic packs and recorded bench runs
   experiments/    pre-registered experiments and cluster batch scripts
   docs/           evidence.md, this file, cli.md, roadmap.md, research notes
@@ -23,28 +23,28 @@ Prof. Akram Bayat's design has three modules. This build maps onto them as follo
 
 | Original design | This build | Where |
 | --- | --- | --- |
-| **A. Analytical diagnostic engine:** parses a draft and scores it on structural checks | The engine: Markdown or HTML in, eleven checks, two weightings, suggestions anchored to exact text ranges. Runs in the browser and in Node. | `packages/engine`, `ce analyze` |
-| **B. Automated data pipeline:** nightly queries of a frozen control group and live engines | The citation test bench (a frozen page set, a local model, repeated runs with intervals), a nightly GitHub Actions template (off by default), `ce live` for Gemini, and readers for your own logs and exports. It reports; it never retunes the weights. | `packages/bench`, `ce bench`, `ce live`, `ce signals` |
-| **C. Human-AI interactive workspace:** side-by-side suggestions the author accepts or rejects | The web app: a home dashboard with three tiles (your draft, your site, who gets cited), the draft view with its fixes, the page check, the citation report and the research page. | `apps/workspace` |
+| **A. Analytical diagnostic engine:** parses a draft and runs its structural checks | The engine: Markdown or HTML in, eleven checks, two of them measured per reader question, the rest labelled notes, with suggestions anchored to exact text ranges. Runs in the browser and in Node. | `packages/engine`, `ce analyze` |
+| **B. Automated data pipeline:** nightly queries of a frozen control group and live engines | The citation test bench (a frozen page set, a local model, repeated runs with intervals), a nightly GitHub Actions template (off by default), `ce live` for Gemini, and readers for your own logs and exports. It reports; it never retunes the checks. | `packages/bench`, `ce bench`, `ce live`, `ce signals` |
+| **C. Human-AI interactive workspace:** side-by-side suggestions the author accepts or rejects | The web app: the readers' questions first, then the draft view with the questions it covers and its notes, the page check, the before-and-after test with who gets cited, and the research page. | `apps/workspace` |
 
-Her design names the six original checks (standalone paragraphs, question headings, lists, statistics, tables, expert quotes); the Standard weighting gives them weight 1. The four added checks (cited sources, direct answer first, reader questions answered, explicit comparisons) come from the research literature, and a fifth (your reader's words up top) from our own test, where it helped; these five weigh 0.5 in Standard. Four checks weigh 0 in both built-in weightings, because our own tests found no effect larger than 0.03: lists (E1), and question headings, cited sources and direct answer first (E3, which asked E1's question again with more pages). They are still analyzed and still suggest fixes, after the scored checks' fixes in Start here, and a custom weight can count them. Every threshold and weight is ours.
+Her design names the six original checks (standalone paragraphs, question headings, lists, statistics, tables, expert quotes). The four added checks (cited sources, direct answer first, reader questions answered, explicit comparisons) come from the research literature, and a fifth (your reader's words up top) from our own test, where it helped. Two of the eleven, reader questions answered and your reader's words up top, are measured per reader question; the other nine are writing notes, each labelled with what our own tests found (see [evidence.md](evidence.md#how-labels-are-assigned)). Every threshold is ours.
 
 ## Module A: the engine (`packages/engine`)
 
-Pure TypeScript with no DOM and no Node APIs, so the same code scores a draft in the browser and in the CLI.
+Pure TypeScript with no DOM and no Node APIs, so the same code checks a draft in the browser and in the CLI.
 
 1. **Parse** (`parse.ts`): unified with remark-parse and remark-gfm; HTML input goes through rehype-parse and rehype-remark first, and offsets then refer to the converted Markdown. Front matter and fenced code are kept out of every count.
 2. **Gather** (`gather.ts`): immutable artifacts with source positions: sections, headings, paragraphs, sentences (`Intl.Segmenter`), lists, tables, quotes, links.
 3. **Check** (`checks/*.ts`): eleven pure functions `(artifacts, { questions }) => CheckResult`, each with a 0 to 1 score, findings and suggestions. A suggestion is an `edit` (a deterministic before/after, for example adding the missing "?" to a heading that already reads as a question) or an `advisory` the author carries out. Each carries the exact Markdown range it refers to.
-4. **Score** (`score.ts`): a weighted average of the applicable checks, 0 to 100, under the two weightings in `registry.ts` (Standard, `foundation` in code, and By evidence, `evidence` in code, which weights each check by its evidence grade) or custom weights. The app calls the result the AI-ready score. A draft with no applicable check has no score ("No content yet").
+4. **Questions** (`question-report.ts`): `questionReport` measures each question with the two question checks: its key words up top (`readerWords`) and a section that answers it (`questionCoverage`). A question is covered when both hold. The questions are the ones given (typed, ticked, imported or a sample's pack), else the page's own title and topic questions; both checks measure the same set. `AnalysisResult.questions` holds the rows and the count; an empty draft has no rows ("No content yet"). `scoreChecks` and the presets (`score.ts`, `registry.ts`) remain a research function the app and CLI never call.
 
-The registry (`registry.ts`, `evidence.ts`) holds each check's title, Prof. Bayat's category, evidence grade, summary, sources and default weights. `docs/evidence.md` is the long form of the same evidence, and `/research` renders it.
+The registry (`registry.ts`, `evidence.ts`) holds each check's title, Prof. Bayat's category, evidence grade, summary and sources. `labels.ts` turns our own tests' results into each check's label (E1 and E3, through `evidence.ts`) and each question line's (from `e5.ts`, by where the question came from); `rank.ts` orders the writing notes by label and picks the Quick edit. `docs/evidence.md` is the long form of the same evidence, and `/research` renders it.
 
-Outside the score, the engine also holds:
+Beside the checks, the engine also holds:
 - `readiness.ts`: the seven site readiness items; the five page-level ones run on pasted HTML or front matter.
 - `questions.ts`: reader questions generated from a draft's title, headings and first paragraph.
 - `site-questions.ts`: questions for a whole site. `siteQuestions` turns a keyword list (one per line with an optional volume, or a keyword table) and imported Search Console or Bing rows into up to 50 ranked, deduplicated questions; a question as written stays as it is, and another keyword becomes a question only through an unambiguous template made of its own words (never one that asserts a claim), else stays exactly as written.
-- `fanout.ts`: `fanOutSearches`, up to 8 searches an answer engine is likely to run behind a question, from templates by question type and the question's own key words. Guidance only: no score, no check.
+- `fanout.ts`: `fanOutSearches`, up to 8 searches an answer engine is likely to run behind a question, from templates by question type and the question's own key words. Guidance only: no check, no label.
 - `import-queries.ts`, `bing-ai.ts`, `csv.ts`: parsers for Search Console and Bing AI Performance CSV exports.
 - `offpage.ts`: domain classification, the cited-sources tally and the evidence-graded advice for each kind of site.
 
@@ -70,22 +70,24 @@ Next.js (App Router) with `output: 'export'`: `next build` writes plain files to
 
 | Route | View |
 | --- | --- |
-| `/` | Home dashboard: a headline, **Try it with an example**, and three tiles (Your draft, Your site, Who gets cited), each Not checked, Checked or Needs attention, then a Next up strip with one action. |
-| `/draft/` | Your draft: the editor and the fix rail (score card, Start here, fixes grouped by check, then Reader questions, All checks and Test it, collapsed). |
-| `/site/` | Your site: paste a page's HTML and, optionally, its robots.txt; a compact pass, warning or fail row per check. |
-| `/cited/` | Who gets cited: paste answers from AI tools; cited sites grouped by type, each with a Do and an Avoid line. |
-| `/questions/` | Your questions: paste keywords (with an optional volume) or import a Search Console or Bing export; a ranked list of reader questions, each with Copy, Use in my draft (adds it to the open draft's reader questions), Ask an AI (copies it and puts it in Who gets cited) and the searches behind it, collapsed. A header tab; the home keeps its three tiles. |
-| `/research/` | The evidence for every check: one grade and one plain sentence, with the studies on expand. |
-| `/evidence/`, `/off-page/`, `/about/` | Redirects from the earlier pages to `/research/`, `/cited/` and the About dialog. |
+| `/` | Your questions, "What will your readers ask?": type questions or paste keywords (with an optional volume), or import a Search Console or Bing export, for a ranked list where a tick adds a question to the open draft (each with Copy, Ask AI and the searches behind it, collapsed). Then **Try it with an example**, a banner when the page check found a blocker, and three step cards (Your draft, Your site, Results), each Not checked, Checked or Needs attention. |
+| `/draft/` | Your draft: the editor and a rail with Start here (the Questions covered card and one Quick edit), Writing notes (collapsed), a link to Test it on `/cited/` and Connect local AI. |
+| `/site/` | Your site, "Can engines reach it?": paste a page's HTML and, optionally, its robots.txt; the blockers first, the other page notes collapsed. |
+| `/cited/` | Results, "Did it change anything?": Test before and after (the bench on the open draft), then Who AI search cites (paste answers from AI tools; cited sites grouped by type, each with a Do and an Avoid line). |
+| `/research/` | The evidence for every check: its label and grade and one plain sentence, with the studies on expand, and the E5 entry. |
+| `/questions/`, `/evidence/`, `/off-page/`, `/about/` | Redirects from the earlier pages to `/`, `/research/`, `/cited/` and the About dialog. |
 
 - **Editor:** CodeMirror 6 on the Markdown source, styled as paper, so engine offsets map one to one onto editor positions. Only the passages of the selected fix are underlined; anchors map through the author's edits between analyses. `@codemirror/merge` shows an edit's before and after in the preview.
 - **Paste** (`lib/paste.ts`): clipboard HTML (a web page, Google Docs, Word) is cleaned in the browser (scripts, styles and embedded content dropped) and converted to Markdown by the engine's own HTML import, so headings and lists survive. Plain text pastes as is.
-- **Analysis** (`lib/use-analysis.ts`): runs `analyze` on the current text after a short debounce, with the draft's reader questions.
-- **Fixes** (`lib/apply.ts`): Apply replaces exactly the suggestion's range, and only if that text is unchanged; otherwise the card says "Out of date" and the analysis reruns. Start here shows three fixes, at most one per check: those of checks that count toward the score before those of unscored notes; within each, those of a check our own test measured as helping first, then those with a ready edit, then by expected score gain, then in document order. There is no bulk action.
-- **Storage** (`lib/storage.ts`, `lib/store.ts`): the draft, its reader questions and the Done and Skip statuses are saved per draft slot, and the home tiles read small summaries (score, pass counts, answers citing you) rather than the pasted HTML or answers, which stay in memory. Every `localStorage` access is wrapped in try/catch and backed by an in-memory copy, so the app works with storage blocked. "Clear my data" removes everything under the app's key prefix.
+- **Analysis** (`lib/use-analysis.ts`): `useAnalysis(markdown, questions)` runs `analyze` on the current text after a short debounce, with the draft's questions.
+- **Start here** (`components/draft/questions-card.tsx`, `quick-edit.tsx`): the Questions covered card shows each question's two lines, each with the label of where the question came from (`inputKindOf` and `labelsFor` in `lib/questions.ts`), and Show marks the passage. The Quick edit is the first ready edit among the open writing notes (engine `quickEdit`), so a draft with a ready edit always shows one.
+- **Writing notes and fixes** (`lib/apply.ts`): the other suggestions, grouped by check in label order (engine `groupNotes`), each group with its label, collapsed by default. Apply replaces exactly the suggestion's range, and only if that text is unchanged; otherwise the card says "Out of date" and the analysis reruns. There is no bulk action.
+- **Storage** (`lib/storage.ts`, `lib/store.ts`): the draft, its questions and the Done and Skip statuses are saved per draft slot, and the home's step cards read small summaries (questions covered, blockers, answers citing you) rather than the pasted HTML or answers, which stay in memory. Every `localStorage` access is wrapped in try/catch and backed by an in-memory copy, so the app works with storage blocked. "Clear my data" removes everything under the app's key prefix.
+- **Migration** (`lib/migrate.ts`, run once per page load by `components/shell/store-migration.tsx` before any page reads the store): an older build's draft summary (a score) is replaced by one computed from the stored draft, its site summary (pass counts) and score baselines are removed, and the heading questions it saved for My post on its own are dropped, so the page's own questions apply. A second run changes nothing; with storage blocked it does nothing.
 - **Samples:** `scripts/gen-samples.mjs` runs before dev, build, test and typecheck and writes `lib/generated/samples.json` (gitignored) from `samples/`: drafts, packs and bench reports, without the recordings or answer text.
-- **Your questions** (`lib/site-questions.ts`): the keywords, the imported export's top 200 queries and the local model's suggestions are stored under the same prefix with the same in-memory fallback, and Clear my data removes them. The list itself is recomputed with the engine. The searches behind a question (`components/questions/searches-behind.tsx`) also appear under each reader question in the draft view.
-- **Local model:** Test it, Rewrite with local AI, the question fan-out, Suggest more questions (only the keywords) and Suggest more searches (only the question) call `http://127.0.0.1:11434` only after a click, with `OllamaAdapter`.
+- **Your questions** (`lib/site-questions.ts`): the keywords, the imported export's top 200 queries and the local model's suggestions are stored under the same prefix with the same in-memory fallback, and Clear my data removes them. The list itself is recomputed with the engine; a tick adds a question to the open draft with where it came from, which sets its labels. The searches behind a question (`components/questions/searches-behind.tsx`) also appear under each question in the draft view's question editor.
+- **Test it on `/cited/`** (`components/draft/test-it.tsx`): the before-and-after bench runs on the open draft, with the recorded results for an example and a test pack you load for your own post.
+- **Local model** (`lib/local-model.ts`, one connection shared by every view): Test it, Suggest wording, the question editor's Local AI, Suggest more questions (only the keywords) and Suggest more searches (only the question) call `http://127.0.0.1:11434` only after a click, with `OllamaAdapter`.
 
 The engine and the bench are compiled from source: a custom export condition `@citation-equity/source` points Vitest and `tsx` at `src/`, and the Next.js config aliases both packages to their source entries for Turbopack.
 
@@ -95,16 +97,16 @@ Modules talk through typed JSON with a `schemaVersion`:
 
 | Type | From | Used by |
 | --- | --- | --- |
-| `AnalysisResult`, `CheckResult`, `Suggestion` | engine `analyze` | workspace, `ce analyze` |
+| `AnalysisResult` (schemaVersion 2, with the question report), `CheckResult`, `Suggestion` | engine `analyze` | workspace, `ce analyze` |
 | `ReadinessResult` | engine `analyzeReadiness` | `/site/`, inside `SiteReport` |
 | `Pack` | `samples/*/pack.json`, `ce pack` | bench |
-| `BenchReport`, `Comparison` | bench `runBench`, `compareReports` | Test it in the draft view, `samples/*/results/` |
+| `BenchReport`, `Comparison` | bench `runBench`, `compareReports` | Test it on `/cited/`, `samples/*/results/` |
 | `SiteReport` | `ce site` | CLI output |
 | `LiveReport` | `ce live` | `ce sources --live` |
 
 ## Testing and CI
 
-- **Vitest** (`pnpm test`): each package is a project; unit tests for every check (positive and negative fixtures), the scorer, anchoring, retrieval, metrics against hand-computed values, the recorded-adapter replay of both samples, CLI commands, and the workspace components under jsdom.
+- **Vitest** (`pnpm test`): each package is a project; unit tests for every check (positive and negative fixtures), the question report and the labels, the research-only weighting, anchoring, retrieval, metrics against hand-computed values, the recorded-adapter replay of both samples, CLI commands, and the workspace components under jsdom.
 - **Playwright** (`pnpm e2e`, `apps/workspace/e2e/`): both static exports, rebuilt before each run and served locally (the root build from `out/` at `/`, the GitHub Pages build under `/citation-equity/`): the first visit with Try it with an example, the draft flow (Preview, Apply, Undo, Done, Skip), a returning visit landing on the last view, the page check, phone width, keyboard focus, and no request leaving the origin on load. Vitest never loads `e2e/`.
 - **CI** (`.github/workflows/ci.yml`): lint, typecheck, test and build in one job; Chromium and the Playwright suite on both exports in another.
 

@@ -7,6 +7,7 @@ import { viewForPathname } from '@/lib/views';
 import { AboutDialog } from './about-dialog';
 import { Footer } from './footer';
 import { Header } from './header';
+import { StoreMigration } from './store-migration';
 
 const ABOUT_HASH = '#about';
 
@@ -14,6 +15,8 @@ const ABOUT_HASH = '#about';
  * The frame around every page (app/layout.tsx): header, the page, footer and the About dialog.
  *
  * - Pages render their own <main>; the shell adds none.
+ * - StoreMigration comes first, so an older build's stored values are updated before any page
+ *   effect reads the store.
  * - The shell records the current view with setLastView after each navigation. React runs a
  *   page's effects before the shell's, so a page can read the previous getLastView() on mount
  *   (the home's "land on the last view" rule relies on this).
@@ -45,6 +48,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const openAbout = () => setAboutOpen(true);
   return (
     <>
+      <StoreMigration />
       <Header view={view} onAbout={openAbout} />
       <div className="flex flex-1 flex-col">{children}</div>
       <Footer onAbout={openAbout} />

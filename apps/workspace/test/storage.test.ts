@@ -153,6 +153,33 @@ describe('target question storage', () => {
     expect(loaded?.[0]).toEqual({ text: 'Kept?', source: 'template' });
   });
 
+  it("keeps a question's template through a save and a load, and drops an invalid one", () => {
+    saveQuestions('espresso', [
+      { text: 'How to dial in espresso?', source: 'keywords', template: 'how-to' },
+      { text: 'Why is my espresso bitter?', source: 'keywords', template: 'as-written' },
+    ]);
+    expect(loadQuestions('espresso')).toEqual([
+      { text: 'How to dial in espresso?', source: 'keywords', template: 'how-to' },
+      { text: 'Why is my espresso bitter?', source: 'keywords', template: 'as-written' },
+    ]);
+    localStorage.setItem(
+      'ce:v1:questions:espresso',
+      JSON.stringify([
+        { text: 'Espresso grind?', source: 'keywords', template: 'guess' },
+        { text: 'Espresso ratio?', source: 'keywords', template: 3 },
+        { text: 'Espresso beans?', source: 'keywords' },
+      ]),
+    );
+    const loaded = loadQuestions('espresso');
+    // The question stays; only the unreadable template goes, so it reads as a keyword guess.
+    expect(loaded).toEqual([
+      { text: 'Espresso grind?', source: 'keywords' },
+      { text: 'Espresso ratio?', source: 'keywords' },
+      { text: 'Espresso beans?', source: 'keywords' },
+    ]);
+    for (const q of loaded ?? []) expect(q).not.toHaveProperty('template');
+  });
+
   it('drops duplicate questions an older build saved ("What is crema" and "What is crema?")', () => {
     localStorage.setItem(
       'ce:v1:questions:espresso',

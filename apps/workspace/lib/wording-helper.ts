@@ -42,16 +42,45 @@ export function rationaleForPrompt(rationale: string): string {
 const WORDING_OPTIONS = { seed: 1, temperature: 0.2 } as const;
 
 /**
+ * True when `s` marks a spot to write a new passage at (its range holds no text, as where a
+ * direct answer goes under a heading with no prose), not a passage to rewrite.
+ */
+const writesNew = (s: Suggestion): boolean => s.before.trim() === '';
+
+/**
  * The prompt for the local wording helper: rewrite only `s.before` so it
  * addresses the check, keeping meaning, facts and voice, with no new facts or
  * numbers. The section is context only. Missing facts become [placeholders].
+ * At an empty spot it asks instead for a new passage that draws only on the
+ * section, as there is no passage to rewrite.
  */
 export function buildWordingPrompt(s: Suggestion, sectionText: string): string {
+  const check = [
+    `Check: ${s.title}`,
+    ...(rationaleForPrompt(s.rationale) === '' ? [] : [`Why: ${rationaleForPrompt(s.rationale)}`]),
+  ];
+  if (writesNew(s)) {
+    return [
+      'You help an author add one passage to their draft. Write ONLY the new passage, so it addresses the writing check. Do not repeat or change the text around it.',
+      '',
+      ...check,
+      '',
+      'Rules:',
+      "- Say only what the section below already says, in the author's voice.",
+      '- Do not add new facts, numbers, names, quotations or sources. If the check asks for something the section does not contain (a source, a speaker, a figure), write a placeholder in square brackets, such as [source] or [figure], instead of inventing it.',
+      '- Write plain sentences: no heading, no list marks.',
+      '- Return only the new text: no explanation, no label, no quotation marks around it, no code fence.',
+      '',
+      'The section the new passage goes in, the only source of its facts:',
+      '<<<',
+      sectionText.trim(),
+      '>>>',
+    ].join('\n');
+  }
   return [
     'You help an author revise one passage of their draft. Rewrite ONLY the passage below so it addresses the writing check. Do not rewrite anything else.',
     '',
-    `Check: ${s.title}`,
-    ...(rationaleForPrompt(s.rationale) === '' ? [] : [`Why: ${rationaleForPrompt(s.rationale)}`]),
+    ...check,
     '',
     'Rules:',
     "- Keep the passage's meaning, its facts and the author's voice.",
@@ -126,6 +155,11 @@ const list = (items: string[]) =>
  * only the author's Apply click changes the draft. A proposal that adds a
  * number, quotation, "according to" or a name the passage lacks is rejected
  * with an Error. Adapter errors pass through.
+ *
+ * At an empty spot (`before` holds no text) the proposal is a new passage: it
+ * is judged against `sectionText`, since there is no passage to keep its facts
+ * from, and its `after` is the new text with no spacing added (the caller sets
+ * it apart, as with paragraphAt).
  */
 export async function proposeWording(
   s: Suggestion,
@@ -139,12 +173,13 @@ export async function proposeWording(
   });
   const text = clean(answer, s.before);
   if (text === '') throw new Error('The local model returned no text.');
-  const added = addedFacts(s.before, text);
+  const added = addedFacts(writesNew(s) ? sectionText : s.before, text);
   if (added.length > 0) {
     throw new Error(
       `its wording added ${list(added)} that your text does not have, so it is not offered. Facts, names and sources have to come from you.`,
     );
   }
+  if (writesNew(s)) return { ...s, kind: 'edit', after: `${s.before}${text}` };
   const lead = /^\s*/.exec(s.before)?.[0] ?? '';
   const trail = /\s*$/.exec(s.before)?.[0] ?? '';
   return { ...s, kind: 'edit', after: `${lead}${text}${trail}` };

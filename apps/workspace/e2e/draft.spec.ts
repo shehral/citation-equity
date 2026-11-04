@@ -1,27 +1,34 @@
 import { expect, test } from '@playwright/test';
 import {
-  ADVICE,
-  ADVICE_GROUP,
-  allFixes,
   basePath,
-  CAVEAT,
-  CHANCE,
-  card,
+  cardChips,
+  cardChipsOf,
+  coveredHeading,
   draftText,
+  EXAMPLE_QUESTIONS,
   freshVisit,
   go,
-  groupCard,
   HEADING_EDIT,
   HEADING_GROUP,
-  headingEdit,
+  noteGroup,
   openExample,
+  PARAGRAPHS_GROUP,
   pick,
-  startHere,
+  QUESTION_LABELS,
+  questionRow,
+  questionsCard,
+  quickCard,
+  quickEdit,
+  rail,
+  selectedPassage,
+  TEST_LABEL_TEXT,
+  TEST_LABELS,
 } from './support';
 
-// The draft view on the built site: the full fix flow (Preview, Apply, Undo, Done, Skip), the
-// Test it caveats and the keyboard path to the first Preview. Literal strings are the shipped
-// copy; the global constraints fix the caveat word for word, so a change to it fails here.
+// The draft view on the built site: the Questions covered card (its rows, chip and Show), the
+// Quick edit (Preview, Apply, Undo), the writing notes (Done, Skip, kept after a reload), the
+// keyboard path to the first Show and a paste over the example. Literal strings are the shipped
+// copy; labels our tests can change come from the engine.
 
 test.beforeEach(async ({ page }) => {
   await freshVisit(page);
@@ -29,8 +36,55 @@ test.beforeEach(async ({ page }) => {
 
 test('a new visitor gets the empty My post, not the example', async ({ page }) => {
   await go(page, '/draft/');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Your draft');
   await expect(page.getByText('No content yet')).toBeVisible();
   expect((await draftText(page)).trim()).toBe('');
+});
+
+test('the example: Questions covered 0 of 4 with its chip, a words line and an answer line per question, and Show marks a passage', async ({
+  page,
+}) => {
+  await openExample(page);
+  await expect(coveredHeading(page)).toHaveText('Questions covered: 0 of 4');
+  // The pack's questions are the reader's own: one chip for the card, none on the rows.
+  await expect(cardChipsOf(page)).toHaveText(cardChips(QUESTION_LABELS.reader));
+  const rows = questionsCard(page).getByRole('article');
+  await expect(rows).toHaveCount(EXAMPLE_QUESTIONS.length);
+  for (const [i, question] of EXAMPLE_QUESTIONS.entries()) {
+    await expect(rows.nth(i)).toHaveAccessibleName(question);
+    await expect(rows.nth(i)).toContainText('Not covered yet');
+    await expect(rows.nth(i)).toContainText(/Words up top|Missing up top: /);
+    await expect(rows.nth(i)).toContainText(/Answered|No direct answer yet/);
+    await expect(rows.nth(i).locator('[data-label-chip]')).toHaveCount(0);
+  }
+  const fix = questionRow(page, 'How do I fix bitter espresso?');
+  await expect(fix).toContainText('Missing up top: "fix"');
+
+  // Show on the words line selects the top of the draft, above its first section.
+  const text = await draftText(page);
+  const firstSection = text.indexOf('\n## ');
+  expect((await selectedPassage(page)).text).toBe('');
+  await fix
+    .getByRole('button', { name: 'Show where: words up top, "How do I fix bitter espresso?"' })
+    .click();
+  await expect.poll(async () => (await selectedPassage(page)).text).not.toBe('');
+  expect((await selectedPassage(page)).from).toBeLessThan(firstSection);
+  // Show on an answer line selects the passage, in a section, that matches the question.
+  const bitter = 'Why does my espresso taste bitter?';
+  await questionRow(page, bitter)
+    .getByRole('button', { name: `Show where: answer, "${bitter}"` })
+    .click();
+  await expect.poll(async () => (await selectedPassage(page)).from).toBeGreaterThan(firstSection);
+  expect((await selectedPassage(page)).text).toContain('bitter');
+  await expect(page.locator('.cm-content[aria-label="Draft text"]')).toBeFocused();
+  // Selecting is not editing.
+  expect(await draftText(page)).toBe(text);
+
+  // The rail sends the bench to Results.
+  await expect(rail(page).getByRole('link', { name: 'Test it' })).toHaveAttribute(
+    'href',
+    `${basePath()}cited/#test`,
+  );
 });
 
 test('pasting your own post over the example moves it to My post', async ({ page }) => {
@@ -57,9 +111,8 @@ test('pasting your own post over the example moves it to My post', async ({ page
     'Moved to My post.',
   );
 
-  // The home shows My post, not the example.
+  // The home's draft card shows My post, not the example.
   await page.getByRole('link', { name: 'Citation Equity home' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('My post');
   await expect(page.getByRole('region', { name: 'Your draft', exact: true })).not.toContainText(
     'Example',
   );
@@ -72,26 +125,14 @@ test('pasting your own post over the example moves it to My post', async ({ page
   expect(mine).toContain('# Sourdough at home');
 });
 
-test('draft flow: Preview, Apply, Undo, Done and Skip, and a reload keeps them', async ({
+test('Quick edit: Preview, Apply and Undo; writing notes: Done and Skip, kept after a reload', async ({
   page,
 }) => {
   await openExample(page);
-  await expect(page.getByRole('img', { name: /^AI-ready score: \d+ out of 100$/ })).toBeVisible();
-  // Start here: one fix per check, the measured reader-question advice first; the top three are
-  // all advice, so the third slot keeps the draft's one ready edit, the question-heading edit.
-  const titles = await startHere(page).getByRole('article').getByRole('heading').allTextContents();
-  expect(titles).toEqual([ADVICE, expect.stringMatching(/^Use the words of ".+"$/), HEADING_EDIT]);
-  await expect(card(page, HEADING_EDIT).getByRole('button', { name: 'Preview' })).toBeVisible();
-  // Its group says only "Not scored", and links the check's research for the curious.
-  await expect(await groupCard(page, HEADING_GROUP, HEADING_EDIT)).toBeVisible();
-  const group = allFixes(page).getByRole('listitem').filter({ hasText: HEADING_GROUP }).first();
-  await expect(group.getByText('Not scored', { exact: true })).toHaveAttribute(
-    'title',
-    'Our tests found no clear effect on AI citation.',
-  );
-  await expect(group.getByRole('link', { name: /^Learn more/ })).toHaveAttribute(
-    'href',
-    `${basePath()}research/#check-question-headings`,
+  // The one ready edit, with its note's label chip.
+  const edit = quickCard(page, HEADING_EDIT);
+  await expect(edit.locator('[data-label-chip]')).toHaveText(
+    TEST_LABEL_TEXT[TEST_LABELS['question-headings']],
   );
   // Nothing has Apply until a preview is open.
   await expect(page.getByRole('button', { name: 'Apply' })).toHaveCount(0);
@@ -100,7 +141,6 @@ test('draft flow: Preview, Apply, Undo, Done and Skip, and a reload keeps them',
   // Preview, then Apply: one heading changes, and only that one.
   const before = await draftText(page);
   expect(before).toContain('## Why espresso turns bitter\n');
-  const edit = await headingEdit(page);
   await edit.getByRole('button', { name: 'Preview' }).click();
   const dialog = page.getByRole('dialog', { name: HEADING_EDIT });
   await expect(dialog).toContainText('Nothing changes until you click Apply.');
@@ -108,69 +148,67 @@ test('draft flow: Preview, Apply, Undo, Done and Skip, and a reload keeps them',
   await expect
     .poll(() => draftText(page))
     .toBe(before.replace('## Why espresso turns bitter\n', '## Why espresso turns bitter?\n'));
-  await expect(edit).toHaveCount(0);
   await expect(toast).toContainText('Applied.');
+  // The example has one ready edit, so no Quick edit is left.
+  await expect(quickEdit(page)).toHaveCount(0);
 
-  // Undo in the toast puts the text back; apply it again.
+  // Undo in the toast puts the text back, and the Quick edit with it; apply it again.
   await toast.getByRole('button', { name: 'Undo' }).click();
   await expect.poll(() => draftText(page)).toBe(before);
-  await (await headingEdit(page)).getByRole('button', { name: 'Preview' }).click();
+  await quickCard(page, HEADING_EDIT).getByRole('button', { name: 'Preview' }).click();
   await page
     .getByRole('dialog', { name: HEADING_EDIT })
     .getByRole('button', { name: 'Apply' })
     .click();
   await expect.poll(() => draftText(page)).toContain('## Why espresso turns bitter?');
 
-  // Skip one fix from its overflow menu.
-  await pick(page, ADVICE, 'Skip');
-  await expect(card(page, ADVICE)).toHaveCount(0);
-  await expect(toast).toContainText('Skipped.');
+  // The same edit is a note of its group, which is collapsed with Writing notes until opened.
+  const headings = await noteGroup(page, HEADING_GROUP);
+  await expect(headings).toContainText('Applied:');
+  // Its Learn more goes to the check's section of Research, under the base path.
+  await expect(headings.getByRole('link', { name: /^Learn more/ })).toHaveAttribute(
+    'href',
+    `${basePath()}research/#check-question-headings`,
+  );
 
-  // Mark the first advice card left in Start here as Done. Done never changes the text.
-  const advice = startHere(page)
-    .getByRole('article')
-    .filter({ has: page.getByRole('button', { name: 'Show me' }) })
-    .first();
-  const doneTitle = (await advice.getByRole('heading').textContent())?.trim() ?? '';
-  expect(doneTitle).not.toBe('');
+  // Done and Skip on two notes of one group, each from its overflow menu. Neither changes the text.
+  const group = await noteGroup(page, PARAGRAPHS_GROUP);
+  const notes = group.getByRole('article');
+  const count = await notes.count();
+  expect(count).toBeGreaterThanOrEqual(2);
   const text = await draftText(page);
-  await pick(page, doneTitle, 'Done');
-  await expect(card(page, doneTitle)).toHaveCount(0);
+  await pick(page, notes.first(), 'Done');
   await expect(toast).toContainText('Done.');
-  expect(await draftText(page)).toBe(text);
-  // Undo brings the card back; Done again.
+  await expect(notes).toHaveCount(count - 1);
+  // Undo brings the note back; Done again.
   await toast.getByRole('button', { name: 'Undo' }).click();
-  await expect(card(page, doneTitle)).toBeVisible();
-  await pick(page, doneTitle, 'Done');
-  await expect(card(page, doneTitle)).toHaveCount(0);
+  await expect(notes).toHaveCount(count);
+  await pick(page, notes.first(), 'Done');
+  await expect(notes).toHaveCount(count - 1);
+  await pick(page, notes.first(), 'Skip');
+  await expect(toast).toContainText('Skipped.');
+  await expect(notes).toHaveCount(count - 2);
+  expect(await draftText(page)).toBe(text);
 
-  // After a reload the saved draft keeps the "?", and the skipped and done fixes stay handled.
-  // An applied edit is not a saved status.
+  // After a reload the saved draft keeps the "?", and the done and skipped notes stay handled.
+  // An applied edit is not a saved status, so its row (and its Undo) is gone.
   await page.reload();
   await expect.poll(() => draftText(page)).toContain('## Why espresso turns bitter?');
-  await expect(startHere(page)).toBeVisible();
-  await expect(card(page, ADVICE)).toHaveCount(0);
-  await expect(card(page, doneTitle)).toHaveCount(0);
-  const groups = page.getByRole('region', { name: 'All fixes' });
-  await groups.getByRole('button', { name: new RegExp(`^${ADVICE_GROUP}`) }).click();
-  await expect(groups).toContainText('Skipped:');
+  await expect(coveredHeading(page)).toBeVisible();
+  const kept = await noteGroup(page, PARAGRAPHS_GROUP);
+  await expect(kept.getByRole('article')).toHaveCount(count - 2);
+  await expect(kept).toContainText('Done:');
+  await expect(kept).toContainText('Skipped:');
+  await expect(await noteGroup(page, HEADING_GROUP)).not.toContainText('Applied:');
 });
 
-test('Test it shows the recorded result with its caveats', async ({ page }) => {
+test('keyboard: Tab reaches the first Show and its focus ring is visible', async ({ page }) => {
   await openExample(page);
-  await page.getByRole('button', { name: /^Test it/ }).click();
-  const test = page.getByRole('region', { name: 'Test it' });
-  await expect(test).toContainText(CHANCE);
-  await expect(test).toContainText(CAVEAT);
-});
-
-test('keyboard: Tab reaches the first Preview button and its focus ring is visible', async ({
-  page,
-}) => {
-  await openExample(page);
-  // Start here keeps one ready edit: the question-heading edit, its first Preview.
-  const edit = await headingEdit(page);
-  await expect(edit).toBeVisible();
+  // The first row's words are up top, so its first Show is on its answer line.
+  const first = questionsCard(page)
+    .getByRole('button', { name: /^Show where: / })
+    .first();
+  await expect(first).toHaveAccessibleName(`Show where: answer, "${EXAMPLE_QUESTIONS[0]}"`);
   // Buttons animate their ring (transition-all); measure end states, not a frame mid-transition.
   await page.addStyleTag({ content: '*, *::before, *::after { transition: none !important; }' });
   let reached = false;
@@ -178,29 +216,26 @@ test('keyboard: Tab reaches the first Preview button and its focus ring is visib
     await page.keyboard.press('Tab');
     reached = await page.evaluate(() => {
       const el = document.activeElement;
-      return el instanceof HTMLButtonElement && el.textContent?.trim() === 'Preview';
+      return el instanceof HTMLButtonElement && el.textContent?.trim() === 'Show';
     });
   }
-  expect(reached, 'Tab never reached a Preview button').toBe(true);
-  const firstPreview = edit.getByRole('button', { name: 'Preview' });
-  await expect(firstPreview).toBeFocused();
+  expect(reached, 'Tab never reached a Show button').toBe(true);
+  await expect(first).toBeFocused();
   const ringStyle = (el: Element) => {
     const s = getComputedStyle(el);
     return `${s.boxShadow}|${s.outlineStyle} ${s.outlineWidth}`;
   };
-  expect(await firstPreview.evaluate((el) => el.matches(':focus-visible'))).toBe(true);
-  const focused = await firstPreview.evaluate(ringStyle);
-  await firstPreview.blur();
-  const resting = await firstPreview.evaluate(ringStyle);
+  expect(await first.evaluate((el) => el.matches(':focus-visible'))).toBe(true);
+  const focused = await first.evaluate(ringStyle);
+  await first.blur();
+  const resting = await first.evaluate(ringStyle);
   expect(focused).not.toBe(resting);
 
-  // Enter opens the preview from the keyboard, and Escape closes it without a change.
+  // Enter selects the passage from the keyboard, without a change to the text.
   const text = await draftText(page);
-  await firstPreview.focus();
+  await first.focus();
   await page.keyboard.press('Enter');
-  const dialog = page.getByRole('dialog', { name: HEADING_EDIT });
-  await expect(dialog).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('.cm-content[aria-label="Draft text"]')).toBeFocused();
+  await expect.poll(async () => (await selectedPassage(page)).text).not.toBe('');
   expect(await draftText(page)).toBe(text);
 });

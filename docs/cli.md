@@ -51,7 +51,7 @@ A test pack is the set of questions and competitor pages the citation test runs 
 
 | Command | What it does |
 | --- | --- |
-| `ce analyze <draft.md> [--questions q.txt] [--format md\|html] [--json]` | Both scores, every check and the suggestions. |
+| `ce analyze <draft.md> [--questions q.txt] [--format md\|html] [--json]` | Which reader questions a draft covers, and its writing notes. |
 | `ce bench --draft <before.md> [--after <after.md>] --pack <pack.json> [--runs 8] [--k 8] [--model llama3.2:3b] [--temperature 0.5] [--seed 1] [--num-ctx 16384] [--out results] [--record]` | The citation test, before and after, on a local model. |
 | `ce pack from-urls --question "..." --urls <urls.txt> --id <packId> --out <pack.json>` | A one-question pack from pages you name. |
 | `ce pack cseo --out <pack.json> [--domains web,news] [--max-queries 20] [--max-doc-chars 4000] [--cache-dir .cache/cseo]` | A C-SEO Bench subset, downloaded and cached. |
@@ -66,13 +66,33 @@ Exit codes: 0 on success, 1 for a usage or input error, 2 when the model server 
 
 ## Details by command
 
-**`ce analyze`** prints the score under both weightings (Standard, called `Foundation score` in the output, and By evidence, called `Evidence score`, which weights each check by its evidence grade), each check with its grade, and every suggestion with the text it points at. Without `--questions`, the draft's own question headings are scored as its reader questions, and questions made from its title and headings are listed as suggestions, not scored. The reader's-words check measures the questions in `--questions` when given, else the page's own title and topic questions, which the output lists. HTML input is converted to Markdown first; `--format` overrides the guess from the file extension.
+**`ce analyze`** starts with `Questions covered: N of M`: for each question, whether its key words are up top (in the title, the first heading or the first paragraph; missing words are named, never inserted) and whether a section answers it directly. A question is covered when both hold. The questions are the ones in `--questions`, your readers' own, one per line; without the file they are the page's own title and topic questions, and the header says so. A label line says what our own tests found for those questions: `Label: helped in our test (your readers' own questions)`, or `Label: not tested (questions made from the page)`. Questions made from the draft's title and headings are listed next as suggestions, for you to add to a `--questions` file. Then come the writing notes, the other nine checks, each with its label and grade, and every suggestion with the line and text it points at. On the espresso sample with its pack's four questions:
+
+```text
+$ ce analyze samples/espresso-bitterness/before.md --questions espresso.txt
+Questions covered: 0 of 4 (from espresso.txt)
+Label: helped in our test (your readers' own questions)
+- Why does my espresso taste bitter?
+    words up top: yes
+    answered: no. The first sentence of the matching section uses 1 of the question's 3 key words.
+- How do I fix bitter espresso?
+    words up top: missing "fix"
+...
+
+Writing notes (each label says what our own tests found)
+Check                  Label                  Grade     Title
+standalone-paragraphs  unclear                untested  Standalone paragraphs
+question-headings      no effect in our test  mixed     Question headings
+...
+```
+
+`--json` prints the whole analysis (`AnalysisResult`, schemaVersion 2), with the question report under `questions`. An empty draft prints `No content yet` and no questions. The output has no total. HTML input is converted to Markdown first; `--format` overrides the guess from the file extension.
 
 **`ce bench`** talks to a local [Ollama](https://ollama.com/download) by default (`http://127.0.0.1:11434`; pull the model first with `ollama pull llama3.2:3b`). `--adapter openai --base-url <url>` uses any OpenAI-compatible server instead, which then receives the draft in every prompt. `OPENAI_API_KEY` is sent only to https URLs; a plain http server, such as one on your own network, needs `--send-key`. `--record` also writes `recording.json`, every answer keyed so the run can be replayed exactly. Every bench result carries this line: _Content check on a local model over a fixed page set. It does not predict live AI engines._ How the test works and what it found on the samples: [samples/README.md](../samples/README.md).
 
 **`ce bench --export-prompts` and `--answers`** split a run in two for larger models on a GPU cluster: the first writes every prompt to a JSONL file without calling a model, the second replays answers generated elsewhere into the normal reports. See [experiments/README.md](../experiments/README.md).
 
-**`ce site`** fetches the page and its robots.txt and checks crawler access for each AI crawler (from each operator's own documentation), rendering without JavaScript, indexing and snippet directives, canonical URL, byline, dates and structured data. The page check is reported on its own and never changes a draft's score.
+**`ce site`** fetches the page and its robots.txt and checks crawler access for each AI crawler (from each operator's own documentation), rendering without JavaScript, indexing and snippet directives, canonical URL, byline, dates and structured data. It prints the blockers first (`Blockers: none found`, or each blocker's id and detail, such as `Blockers: crawler-access (Blocked: PerplexityBot.)`), then a table of the crawlers and one of every item with its status and grade, and ends with the note: Blockers can keep a page out of AI answers; the other items are notes.
 
 **`ce signals logs`** reads an access log in combined format or JSON lines (guessed from the first lines unless you pass `--format`). **`ce signals bing`** reads the AI Performance export from Bing Webmaster Tools.
 

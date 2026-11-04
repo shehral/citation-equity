@@ -73,7 +73,6 @@ const GRAPHIC: [string, string][] = [
   ['--grade-moderate', '--surface'],
   ['--grade-mixed', '--surface'],
   ['--grade-untested', '--surface'],
-  ['--score', '--score-track'],
 ];
 
 describe.each([
@@ -94,6 +93,10 @@ describe('tokens', () => {
       expect(LIGHT[name], name).toBeDefined();
       expect(block('.dark')[name], name).toBeDefined();
     }
+  });
+
+  it('hold no score colours: the tool shows no score', () => {
+    expect(CSS).not.toMatch(/--(color-)?score/);
   });
 
   it('are the only place raw colours appear in the app source', () => {

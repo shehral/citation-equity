@@ -14,16 +14,16 @@
 // "How it works"; hyphenated compounds and "May 2024" are not auxiliaries)
 // in place of a single threshold warning.
 
-import { unscoredNote } from '../e1';
+import { noEffectNote } from '../e1';
 import { EVIDENCE } from '../evidence';
 import { issueCollector } from './structure-issues';
 import { type CheckFn, notApplicable } from './types';
 
 /**
- * Question headings is an unscored note (E3 found no effect larger than δ); its suggestions,
- * the "?" edit included, say so.
+ * Our own test (E3) found no effect larger than δ for question headings; its suggestions, the
+ * "?" edit included, say so.
  */
-const NOTE = unscoredNote(EVIDENCE['question-headings'].e1);
+const NOTE = noEffectNote(EVIDENCE['question-headings'].e1);
 
 const INTERROGATIVES = new Set([
   'what',

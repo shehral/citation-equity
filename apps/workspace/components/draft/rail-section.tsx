@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 interface RailSectionProps {
   title: string;
   icon: LucideIcon;
-  /** A short summary next to the title, e.g. "4 · 1 answered". */
+  /** A short summary next to the title, such as the number of open notes. */
   meta?: string;
   open: boolean;
   onOpenChange(open: boolean): void;
@@ -16,9 +16,9 @@ interface RailSectionProps {
 }
 
 /**
- * A collapsed section of the fix rail (Reader questions, All checks, Test it). Its body is
- * rendered from the first time it opens, so nothing in it is on the page at load; after that it
- * is only hidden, so collapsing never drops its state (a test run, a connection, a file read).
+ * A collapsed section of the draft's rail (Writing notes). Its body is rendered from the first
+ * time it opens, so nothing in it is on the page at load; after that it is only hidden, so
+ * collapsing never drops the state of what it holds.
  */
 export function RailSection({
   title,

@@ -2,7 +2,7 @@ export { analyze } from './analyze';
 export { type BingAiSignals, parseBingAiPerformanceCsv } from './bing-ai';
 export { CHECKS } from './checks/index';
 export { type QuestionCoverage, questionCoverage } from './checks/question-coverage';
-export { type ReaderWords, readerWords } from './checks/reader-words';
+export { MAX_NAMED, namedWords, type ReaderWords, readerWords } from './checks/reader-words';
 export type { CheckContext, CheckFn } from './checks/types';
 export {
   E1_COMBINED,
@@ -13,10 +13,22 @@ export {
   formatE1,
   formatE1Effect,
   measuredNote,
+  noEffectNote,
   OWN_TEST_RESULTS,
   signed3,
-  unscoredNote,
 } from './e1';
+export {
+  E5_INPUT_LABELS,
+  E5_PATHS,
+  E5_PLANNED,
+  E5_RESULTS,
+  E5_TEXT,
+  type E5Meaning,
+  type E5Planned,
+  type E5Results,
+  type E5Row,
+  plannedRows,
+} from './e5';
 export { EVIDENCE } from './evidence';
 export { fanOutSearches, type QuestionType, questionType } from './fanout';
 export type {
@@ -41,6 +53,23 @@ export {
   toTargetQuestions,
 } from './import-queries';
 export {
+  deriveInputLabels,
+  e5LabelOf,
+  helpedChecks,
+  NOTE_CHECKS,
+  QUESTION_CHECKS,
+  QUESTION_LABELS,
+  type QuestionInput,
+  type QuestionLineLabels,
+  shortAnswer,
+  TEST_LABEL_ORDER,
+  TEST_LABEL_TEXT,
+  TEST_LABELS,
+  type TestLabel,
+  testLabelOf,
+  testLabels,
+} from './labels';
+export {
   type CitedDomain,
   classifyDomain,
   groupByKind,
@@ -56,6 +85,12 @@ export {
 export type { ParsedDraft } from './parse';
 export { parseDraft } from './parse';
 export {
+  type QuestionReport,
+  type QuestionRow,
+  questionReport,
+  suggestionFor,
+} from './question-report';
+export {
   type GeneratedQuestion,
   generateQuestions,
   pageQuestions,
@@ -64,15 +99,11 @@ export {
   questionContext,
   type TargetQuestion,
 } from './questions';
-export {
-  groupFixes,
-  type RankedFix,
-  rankFixes,
-  START_HERE_COUNT,
-  startHereFixes,
-} from './rank';
+export { groupNotes, quickEdit, type RankedNote, rankNotes } from './rank';
 export {
   analyzeReadiness,
+  BLOCKER_IDS,
+  isBlocker,
   READINESS_EVIDENCE,
   READINESS_IDS,
   READINESS_NOTE,

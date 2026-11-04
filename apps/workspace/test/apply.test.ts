@@ -3,6 +3,9 @@ import {
   applySuggestion,
   mapApplied,
   mapRange,
+  moveRange,
+  paragraphAt,
+  replacesMostOf,
   revertSuggestion,
   sectionAround,
   textChange,
@@ -72,6 +75,45 @@ describe('textChange and mapRange', () => {
     const atStart = { from: 10, to: 10, insert: 'x' };
     expect(mapRange(range, atStart, 'touches')).toBeNull();
     expect(mapRange(range, atStart, 'outside')).toEqual({ start: 11, end: 21 });
+  });
+});
+
+describe('moveRange', () => {
+  const md = '## Shot time\n\nGrind fine.\n';
+  const sentence = { start: md.indexOf('Grind'), end: md.indexOf('fine.') + 'fine.'.length };
+  /** The empty spot right after the heading, where a new paragraph would go. */
+  const spot = { start: '## Shot time'.length, end: '## Shot time'.length };
+
+  it('keeps a range on the same text and moves it through a change above it', () => {
+    expect(moveRange(sentence, md, md)).toEqual(sentence);
+    expect(moveRange(sentence, md, `Intro.\n\n${md}`)).toEqual({
+      start: sentence.start + 8,
+      end: sentence.end + 8,
+    });
+    expect(moveRange(sentence, md, `${md}More.\n`)).toEqual(sentence);
+  });
+
+  it('is null when the change touches the range, or only borders it', () => {
+    expect(moveRange(sentence, md, md.replace('fine', 'finer'))).toBeNull();
+    expect(moveRange(sentence, md, md.replace('Grind', 'So: Grind'))).toBeNull();
+  });
+
+  it('moves an empty range through a change above it or well below it', () => {
+    expect(moveRange(spot, md, `Intro. ${md}`)).toEqual({
+      start: spot.start + 7,
+      end: spot.end + 7,
+    });
+    expect(moveRange(spot, md, md.replace('fine.', 'fine, always.'))).toEqual(spot);
+  });
+
+  it('counts the two characters on each side of an empty range as part of it', () => {
+    // Typing at the spot, or changing the blank line a new paragraph there was set apart by.
+    expect(moveRange(spot, md, md.replace('time\n', 'time, roughly\n'))).toBeNull();
+    expect(moveRange(spot, md, md.replace('\n\nGrind', '\nGrind'))).toBeNull();
+    expect(
+      moveRange(spot, md, md.replace('\n\nGrind', '\n\nAbout 30 seconds.\n\nGrind')),
+    ).toBeNull();
+    expect(moveRange({ start: 0, end: 0 }, md, `Intro. ${md}`)).toBeNull();
   });
 });
 
@@ -157,5 +199,63 @@ describe('sectionAround', () => {
     const start = md.indexOf('## Two');
     const { start: s, end: e } = sectionAround(md, { start, end: start + 6 });
     expect(md.slice(s, e)).toBe('## Two\n\nBody two.\n');
+  });
+});
+
+describe('replacesMostOf', () => {
+  it('is true for a change that replaces more than half of the draft, not for typing', () => {
+    const draft = 'A'.repeat(100);
+    expect(replacesMostOf(draft, `${draft}more`)).toBe(false);
+    expect(replacesMostOf(draft, `${'A'.repeat(60)}B`)).toBe(false);
+    expect(replacesMostOf(draft, 'Something pasted in its place')).toBe(true);
+    expect(replacesMostOf(draft, '')).toBe(true);
+    // An empty draft has nothing to replace.
+    expect(replacesMostOf('', 'Pasted post')).toBe(false);
+    expect(replacesMostOf('  \n', 'Pasted post')).toBe(false);
+  });
+});
+
+describe('paragraphAt', () => {
+  /** The draft with `text` inserted at `at` as paragraphAt words it. */
+  const insert = (md: string, at: number, text: string) =>
+    `${md.slice(0, at)}${paragraphAt(md, at, text)}${md.slice(at)}`;
+
+  it('puts a blank line between a heading and the text, and keeps the one before the next heading', () => {
+    const md = '# Espresso\n\n## How long should a shot take?\n\n## Grind\n\nGrind fine.\n';
+    const at = md.indexOf('?') + 1;
+    expect(insert(md, at, 'About half a minute.')).toBe(
+      '# Espresso\n\n## How long should a shot take?\n\nAbout half a minute.\n\n## Grind\n\nGrind fine.\n',
+    );
+  });
+
+  it('adds a blank line after the text when the next line follows at once', () => {
+    const md = '## Shot time\n- 25 seconds\n';
+    const at = md.indexOf('\n');
+    expect(insert(md, at, 'About half a minute.')).toBe(
+      '## Shot time\n\nAbout half a minute.\n\n- 25 seconds\n',
+    );
+  });
+
+  it('ends the draft on the text when the spot is at its end', () => {
+    expect(insert('## Shot time\n', 12, 'About half a minute.')).toBe(
+      '## Shot time\n\nAbout half a minute.\n',
+    );
+    expect(insert('## Shot time', 12, 'About half a minute.')).toBe(
+      '## Shot time\n\nAbout half a minute.',
+    );
+  });
+
+  it('splits a paragraph rather than run the text into it', () => {
+    const md = 'Shots vary. Grind matters.\n';
+    const at = 'Shots vary.'.length;
+    expect(insert(md, at, 'About half a minute.')).toBe(
+      'Shots vary.\n\nAbout half a minute.\n\n Grind matters.\n',
+    );
+  });
+
+  it('adds nothing where a blank line already stands, and trims the text', () => {
+    const md = '## Shot time\n\n';
+    expect(paragraphAt(md, md.length, '  About half a minute.\n')).toBe('About half a minute.');
+    expect(paragraphAt('Next.\n', 0, 'First.')).toBe('First.\n\n');
   });
 });

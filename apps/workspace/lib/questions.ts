@@ -1,4 +1,11 @@
-import { generateQuestions, type QuestionSource, questionKey } from '@citation-equity/engine';
+import {
+  QUESTION_LABELS,
+  type QuestionInput,
+  type QuestionLineLabels,
+  type QuestionSource,
+  questionKey,
+  type SiteQuestionTemplate,
+} from '@citation-equity/engine';
 import { sampleBench } from './bench';
 import type { Sample } from './samples';
 
@@ -7,23 +14,14 @@ export type WorkspaceQuestionSource = QuestionSource | 'sample-pack';
 export interface WorkspaceQuestion {
   text: string;
   source: WorkspaceQuestionSource;
+  /**
+   * How the home's list made it from what was typed there: kept as a question (`as-written`) or
+   * guessed from a keyword (any other template). It sets the input kind of a `keywords` question.
+   */
+  template?: SiteQuestionTemplate;
 }
 
 export const MAX_QUESTIONS = 8;
-
-/** Sources the tool generates; every other source is the author's own (typed or imported). */
-const GENERATED: ReadonlySet<WorkspaceQuestionSource> = new Set([
-  'draft-heading',
-  'template',
-  'local-model',
-]);
-
-/**
- * The questions the author typed or imported (a sample pack's count as imported), which the
- * reader-words check measures instead of the page's own title and topic questions.
- */
-export const authorQuestionTexts = (questions: WorkspaceQuestion[]): string[] =>
-  questions.filter((q) => !GENERATED.has(q.source)).map((q) => q.text);
 
 /** The small label each question carries. */
 export const SOURCE_LABELS: Record<WorkspaceQuestionSource, string> = {
@@ -37,29 +35,74 @@ export const SOURCE_LABELS: Record<WorkspaceQuestionSource, string> = {
   user: 'By you',
 };
 
+/** Every template the engine's keyword list can store, so a stored one can be checked. */
+const TEMPLATES: Record<SiteQuestionTemplate, true> = {
+  'as-written': true,
+  'what-is': true,
+  'how-to': true,
+  'how-it-works': true,
+  comparison: true,
+  best: true,
+  'yes-no': true,
+  kept: true,
+};
+
+/** True for one of the engine's keyword-list templates. */
+export const isQuestionTemplate = (v: unknown): v is SiteQuestionTemplate =>
+  typeof v === 'string' && Object.hasOwn(TEMPLATES, v);
+
+/**
+ * Where each source's questions came from, as our tests can speak to it. Our tests used the
+ * reader's exact question, so only questions the writer gives as the reader's own carry the
+ * measured label; a keyword guess and a local model's question carry what E5 found for guesses,
+ * and the page's own always read Not tested. `keywords` is decided by its template (see
+ * inputKindOf).
+ */
+const KIND: Record<Exclude<WorkspaceQuestionSource, 'keywords'>, QuestionInput> = {
+  user: 'reader',
+  'sample-pack': 'reader',
+  'search-console': 'reader',
+  'bing-ai': 'reader',
+  'local-model': 'local-model',
+  'draft-heading': 'page',
+  template: 'page',
+};
+
+/**
+ * A question's input kind. A home-list item typed as a question is the reader's own; one turned
+ * into a question from a keyword, or kept as typed, is a keyword guess, and so is one saved
+ * before templates were stored.
+ */
+export function inputKindOf(q: WorkspaceQuestion): QuestionInput {
+  if (q.source === 'keywords') return q.template === 'as-written' ? 'reader' : 'keyword';
+  return KIND[q.source];
+}
+
+/** A question row's two line labels (words up top, answered), from the engine's table. */
+export const labelsFor = (q: WorkspaceQuestion): QuestionLineLabels =>
+  QUESTION_LABELS[inputKindOf(q)];
+
 /** The engine's key: case, spacing and closing punctuation ignored, so "What is crema" = "What is crema?". */
 const keyOf = questionKey;
 
 /**
- * The questions a draft starts with: a sample's pack queries, or for a draft
- * without a pack (a custom draft), the questions its own title and headings
- * already ask. Template questions are suggestions: "Suggest from draft" adds
- * them, so none is scored until the author asks for it.
+ * The questions a draft starts with: a sample's pack queries, else none, so the page's own
+ * title and topic questions are measured until the author adds theirs. Heading questions wait
+ * for a click on the button that adds them.
  */
-export function initialQuestions(sample: Sample | null, markdown: string): WorkspaceQuestion[] {
+export function initialQuestions(sample: Sample | null): WorkspaceQuestion[] {
   const pack = sampleBench(sample)?.pack;
-  if (pack && pack.queries.length > 0) {
-    return mergeQuestions(
-      [],
-      pack.queries.map((q) => ({ text: q.query, source: 'sample-pack' as const })),
-    );
-  }
-  return generateQuestions(markdown, { max: MAX_QUESTIONS }).filter(
-    (q) => q.source === 'draft-heading',
+  if (!pack || pack.queries.length === 0) return [];
+  return mergeQuestions(
+    [],
+    pack.queries.map((q) => ({ text: q.query, source: 'sample-pack' as const })),
   );
 }
 
-/** `current` plus each of `incoming` not already there (ignoring case, spacing and a closing "?"), up to 8. */
+/**
+ * `current` plus each of `incoming` not already there (ignoring case, spacing and a closing "?"),
+ * up to 8. A question keeps its template, when it has one.
+ */
 export function mergeQuestions(
   current: WorkspaceQuestion[],
   incoming: WorkspaceQuestion[],
@@ -71,7 +114,11 @@ export function mergeQuestions(
     if (out.length >= MAX_QUESTIONS) break;
     if (key === '' || seen.has(key)) continue;
     seen.add(key);
-    out.push({ text: q.text.trim(), source: q.source });
+    out.push({
+      text: q.text.trim(),
+      source: q.source,
+      ...(q.template === undefined ? {} : { template: q.template }),
+    });
   }
   return out;
 }

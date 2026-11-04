@@ -164,3 +164,75 @@ describe('wording helper safeguards (no invented facts)', () => {
     );
   });
 });
+
+describe('proposeWording on an empty spot (a new passage, such as a direct answer)', () => {
+  const SHOT = '## How long should a shot take?\n\n- 25 to 30 seconds\n- Stop at 40 g\n';
+  /** Where a direct answer goes: right after the heading, whose section has no prose. */
+  const SPOT: Suggestion = {
+    id: 'adv00050-answer',
+    checkId: 'question-coverage',
+    kind: 'advisory',
+    range: { start: SHOT.indexOf('?') + 1, end: SHOT.indexOf('?') + 1 },
+    before: '',
+    title: 'Answer "How long should a shot take?" directly',
+    rationale: 'Use the question near the top of its section: one plain sentence that answers it.',
+    grade: 'moderate',
+  };
+
+  it('asks for a new passage that draws only on its section, not for a rewrite of nothing', () => {
+    const prompt = buildWordingPrompt(SPOT, SHOT);
+    expect(prompt).toContain(SPOT.title);
+    expect(prompt).toContain(SPOT.rationale);
+    expect(prompt).toContain(SHOT.trim());
+    expect(prompt).toMatch(/Write ONLY the new passage/);
+    expect(prompt).not.toMatch(/rewrite/i);
+    expect(prompt).not.toContain('The passage to rewrite');
+    expect(prompt).toContain('Do not add new facts');
+    expect(prompt).toMatch(/placeholder in square brackets/);
+    expect(prompt).toMatch(/only the new text/i);
+  });
+
+  it("judges the passage's facts against its section, so it may use them but add none", async () => {
+    const ok = adapterReturning('A shot should take 25 to 30 seconds, stopping at 40 g.');
+    const proposal = await proposeWording(SPOT, SHOT, ok.adapter, 'm');
+    expect(ok.generate.mock.calls[0]?.[0]).toBe(buildWordingPrompt(SPOT, SHOT));
+    expect(proposal).toMatchObject({
+      id: SPOT.id,
+      kind: 'edit',
+      range: SPOT.range,
+      before: '',
+      after: 'A shot should take 25 to 30 seconds, stopping at 40 g.',
+    });
+    await expect(
+      proposeWording(SPOT, SHOT, adapterReturning('A shot takes 20 seconds.').adapter, 'm'),
+    ).rejects.toThrow(/added a number that your text does not have/);
+    await expect(
+      proposeWording(
+        SPOT,
+        SHOT,
+        adapterReturning('Shots take [time], says Jane Doe.').adapter,
+        'm',
+      ),
+    ).rejects.toThrow(/added a name/);
+    expect(
+      (await proposeWording(SPOT, SHOT, adapterReturning('A shot takes [time].').adapter, 'm'))
+        .after,
+    ).toBe('A shot takes [time].');
+  });
+
+  it('keeps judging a rewrite against its passage alone', async () => {
+    const passage: Suggestion = {
+      ...SPOT,
+      range: { start: SHOT.indexOf('- Stop'), end: SHOT.length - 1 },
+      before: '- Stop at 40 g',
+    };
+    await expect(
+      proposeWording(
+        passage,
+        SHOT,
+        adapterReturning('- Stop at 40 g, after 25 seconds').adapter,
+        'm',
+      ),
+    ).rejects.toThrow(/added a number/);
+  });
+});

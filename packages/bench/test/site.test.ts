@@ -341,17 +341,47 @@ describe('ce site', () => {
     [URL_UNDER_TEST]: { body: ARTICLE(250) },
   };
 
-  it('prints the crawler table, the readiness items with grades, and the GEO Score line', async () => {
+  /** The line index of the crawler table's header. */
+  const tableAt = (lines: string[]) =>
+    lines.findIndex((l) => /^Crawler +Operator +Purpose/.test(l));
+
+  it('prints the blockers, the crawler table, the readiness items with grades, and the readiness note', async () => {
     const { code, stdout, stderr } = await ce(['site', URL_UNDER_TEST], site(routes).fetchImpl);
     expect(stderr).toBe('');
     expect(code).toBe(0);
+    // Only a training crawler is blocked: crawler access warns, which is not a blocker.
+    const lines = stdout.split('\n');
+    const blockers = lines.indexOf('Blockers: none found');
+    expect(blockers).toBeGreaterThan(0);
+    expect(tableAt(lines)).toBeGreaterThan(blockers);
     expect(stdout).toMatch(/GPTBot\s+OpenAI\s+training\s+blocked/);
     expect(stdout).toMatch(/OAI-SearchBot\s+OpenAI\s+search\s+allowed/);
     expect(stdout).toMatch(/crawler-access\s+warn\s+strong/);
     expect(stdout).toContain('renders-without-js');
     expect(
-      stdout.trimEnd().endsWith('Site readiness is reported separately from the GEO Score.'),
+      stdout
+        .trimEnd()
+        .endsWith('Blockers can keep a page out of AI answers; the other items are notes.'),
     ).toBe(true);
+  });
+
+  it('names each failing blocker with its detail before the crawler table', async () => {
+    const { fetchImpl } = site({
+      'https://example.com/robots.txt': robots('User-agent: Googlebot\nDisallow: /\n'),
+      [URL_UNDER_TEST]: { body: ARTICLE(250), headers: { 'x-robots-tag': 'noindex' } },
+    });
+    const { code, stdout } = await ce(['site', URL_UNDER_TEST], fetchImpl);
+    expect(code).toBe(0);
+    const lines = stdout.split('\n');
+    const blockers = lines.findIndex((l) => l.startsWith('Blockers: '));
+    expect(blockers).toBeGreaterThan(0);
+    expect(tableAt(lines)).toBeGreaterThan(blockers);
+    const report = await checkSite(URL_UNDER_TEST, { fetchImpl, now: NOW });
+    const indexing = readinessItem(report, 'indexing-directives');
+    expect(indexing.status).toBe('fail');
+    expect(lines[blockers]).toBe(
+      `Blockers: crawler-access (robots.txt disallows this URL for Googlebot (Google, search-engine). A blocked search engine crawler keeps the page out of that engine's results and the AI answers built on them.); indexing-directives (${indexing.detail})`,
+    );
   });
 
   it('prints the report as JSON with --json', async () => {

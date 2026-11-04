@@ -129,10 +129,13 @@ export function formatE1(result: E1Result): string {
   return result.effect === null ? label : `${label} (${formatE1Effect(result.effect)})`;
 }
 
-/** The sentence an unscored note's suggestions carry. */
-export function unscoredNote(result: E1Result): string {
+/**
+ * The sentence the suggestions of a check our own test found no effect for carry: which test
+ * found it (E1 or E3), with its numbers.
+ */
+export function noEffectNote(result: E1Result): string {
   const numbers = result.effect === null ? '' : ` (${formatE1Effect(result.effect)})`;
-  return `Not scored in Standard or By evidence: our own test (${result.test}) found no effect larger than ${E1_DELTA}${numbers}.`;
+  return `Our own test (${result.test}) found no effect larger than ${E1_DELTA}${numbers}.`;
 }
 
 /** The sentence a measured ("helps") check's suggestions carry. */

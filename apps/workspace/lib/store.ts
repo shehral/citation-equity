@@ -10,23 +10,25 @@
 // - Keys live under `ce:v1:`, the prefix the rest of the app uses too (draft text, statuses,
 //   questions, theme), so clearAll() is the "Clear my data" action for everything.
 //
-// Reactivity: subscribe() notifies after every write here. getSummary() returns the same object
-// for an unchanged stored value, so it can be a useSyncExternalStore snapshot directly.
+// Reactivity: subscribe() notifies after every write here (once per batch() inside one). getSummary()
+// returns the same object for an unchanged stored value, so it can be a useSyncExternalStore
+// snapshot directly. An older build's summary (a score, pass counts) reads as none; lib/migrate.ts
+// replaces or removes it on load.
 
-export type ViewId = 'home' | 'draft' | 'site' | 'cited' | 'questions';
+import { BLOCKER_IDS, type ReadinessId } from '@citation-equity/engine';
+
+/** The views. The home is the questions view, so an older build's stored `questions` reads as none. */
+export type ViewId = 'home' | 'draft' | 'site' | 'cited';
 
 export interface DraftSummary {
   /** The draft slot the summary belongs to: MY_POST_SLOT or an example slug. */
   slot: string;
-  /**
-   * The AI-ready score (0 to 100) under Standard scoring, whatever mode the draft view shows, so
-   * the home's "+N" compares it with baseline.standard.
-   */
-  score: number;
-  /** The score when this slot was first checked, per scoring mode ("+N since you started"). */
-  baseline: Record<'standard' | 'evidence', number>;
-  /** Start here fixes still open; above 0 makes the tile "Needs attention". */
-  openStartHere: number;
+  /** Questions covered: key words up top and a section that answers it. */
+  covered: number;
+  /** Questions measured (0 when the draft has none and its page asks none). */
+  total: number;
+  /** True when the page's own title and topic questions were measured, not the draft's list. */
+  fromPage: boolean;
   /** True when the example produced it; the tile then says Example. */
   example: boolean;
   /** ISO timestamp of the check. */
@@ -34,11 +36,10 @@ export interface DraftSummary {
 }
 
 export interface SiteSummary {
-  pass: number;
-  warn: number;
-  fail: number;
-  /** Rows in the check, including those that need the live site. */
-  total: number;
+  /** Blocker items that fail, in BLOCKER_IDS order. */
+  blockers: ReadinessId[];
+  /** Blocker items that warn, in the same order. */
+  checks: ReadinessId[];
   needsLiveSite: number;
   example: boolean;
   at: string;
@@ -70,7 +71,7 @@ type SummaryFor<K extends SummaryKind> = K extends 'draft'
 /** The slot for the user's own post; the other slots are example (sample) slugs. */
 export const MY_POST_SLOT = 'my-post';
 
-export const VIEW_IDS: readonly ViewId[] = ['home', 'draft', 'site', 'cited', 'questions'];
+export const VIEW_IDS: readonly ViewId[] = ['home', 'draft', 'site', 'cited'];
 
 const PREFIX = 'ce:v1:';
 const KEYS = {
@@ -88,6 +89,9 @@ const listeners = new Set<() => void>();
 const clearers = new Set<() => void>();
 /** Parsed summaries by key, reused while the raw string is unchanged. */
 const parsed = new Map<string, { raw: string; value: unknown }>();
+/** Open batch() calls, and whether a change inside them still owes the listeners a call. */
+let held = 0;
+let owed = false;
 
 function storage(): Storage | null {
   try {
@@ -122,7 +126,25 @@ function write(key: string, value: string): void {
 }
 
 function notify() {
+  if (held > 0) {
+    owed = true;
+    return;
+  }
   for (const listener of [...listeners]) listener();
+}
+
+/** Runs `fn` with notifications held, then notifies once if anything here changed. */
+export function batch(fn: () => void): void {
+  held++;
+  try {
+    fn();
+  } finally {
+    held--;
+    if (held === 0 && owed) {
+      owed = false;
+      notify();
+    }
+  }
 }
 
 /** True when localStorage can be written and read back now. */
@@ -148,20 +170,21 @@ export function subscribe(listener: () => void): () => void {
 }
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const isCount = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0;
 const isStr = (v: unknown): v is string => typeof v === 'string';
 const isObj = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
+const isBlockerList = (v: unknown): v is ReadinessId[] =>
+  Array.isArray(v) && v.every((id) => (BLOCKER_IDS as readonly unknown[]).includes(id));
 
 const VALID: { [K in SummaryKind]: (v: Record<string, unknown>) => boolean } = {
   draft: (v) =>
     isStr(v.slot) &&
-    isNum(v.score) &&
-    isObj(v.baseline) &&
-    isNum(v.baseline.standard) &&
-    isNum(v.baseline.evidence) &&
-    isNum(v.openStartHere),
-  site: (v) =>
-    isNum(v.pass) && isNum(v.warn) && isNum(v.fail) && isNum(v.total) && isNum(v.needsLiveSite),
+    isCount(v.covered) &&
+    isCount(v.total) &&
+    v.covered <= v.total &&
+    typeof v.fromPage === 'boolean',
+  site: (v) => isBlockerList(v.blockers) && isBlockerList(v.checks) && isNum(v.needsLiveSite),
   cited: (v) =>
     isNum(v.answers) &&
     isNum(v.citingYou) &&
@@ -186,6 +209,14 @@ export function getSummary<K extends SummaryKind>(k: K): SummaryFor<K> | null {
   }
   parsed.set(key, { raw, value });
   return value as SummaryFor<K> | null;
+}
+
+/**
+ * True when something is stored for a view's summary that does not read as one: an older build's
+ * shape (a score, pass counts) or an unreadable value. Never true with storage blocked.
+ */
+export function hasStaleSummary(k: SummaryKind): boolean {
+  return read(KEYS.summary(k)) !== null && getSummary(k) === null;
 }
 
 /** Stores a view's summary, replacing the previous one (an example's or the user's). */

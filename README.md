@@ -1,35 +1,35 @@
 # Citation Equity
 
-Citation Equity helps independent writers get quoted by AI search. Paste a draft, fix what makes it hard to quote, check your page and see who AI cites; it suggests, you decide.
+Citation Equity helps independent writers get cited by AI search. Start from the questions your readers ask, see which ones your draft covers, and check that AI search can reach your page; it suggests, you decide.
 
 **[Try the demo](https://shehral.github.io/citation-equity/)**: free, open source and in your browser, with no account.
 
-![The home after Try it with an example: the draft's AI-ready score, its page check and who AI cites](docs/screenshot.png)
+![The draft view after Try it with an example: Questions covered, a quick edit and the draft](docs/screenshot.png)
 
 ## What it does
 
-1. **Check your draft**: eleven writing checks and an AI-ready score from 0 to 100.
-2. **Answer real questions**: turn your keywords, or your Search Console and Bing queries, into reader questions, with the searches AI may run behind each.
-3. **Fix one thing at a time**: preview an edit, then apply, mark done or skip; there is no apply-all.
-4. **Test before and after** on a free local model; live AI search may differ.
-5. **See who AI cites** for your questions, and whether AI crawlers can read your page.
+1. **Start from your readers' questions**: type them, paste keywords, or import a Search Console or Bing Webmaster export.
+2. **See which questions your draft covers**: their key words up top, and a section that answers each.
+3. **Fix one thing at a time**: preview an edit, then apply; there is no apply-all.
+4. **Check that engines can reach your page**: blockers such as a crawler shut out by robots.txt.
+5. **Test before and after** on a free local model (live AI search may differ), and see who AI cites.
 
 ## How to use it
 
-1. Open the demo and click **Try it with an example**, or paste your own post into Your draft.
-2. Work through **Start here**: three fixes, always including a ready edit when the draft has one. Preview it, then Apply.
-3. Open **All fixes** for the rest, grouped by check. **Helps** marks a check that helped in our tests; **Not scored** marks one that does not count toward the score unless you give it a weight.
-4. Add the questions your readers ask under **Reader questions**, or build the list for your whole site in **Your questions** and use the ones this post answers.
-5. Paste your published page's HTML into **Your site**, and AI answers into **Who gets cited**.
+1. Open the demo and click **Try it with an example**, or type or import your readers' questions in **Your questions** and tick the ones your draft should answer.
+2. Paste your post into **Your draft**. **Start here** shows **Questions covered**: whether each question's key words are up top and a section answers it. The **Quick edit** holds one ready edit: Preview it, then Apply. Other notes wait under **Writing notes**.
+3. Paste your published page's HTML (and robots.txt) into **Your site** to see blockers: a crawler shut out, a noindex tag, or text that needs JavaScript.
+4. In **Results**, test your draft before and after on a local model, and paste AI answers to see who gets cited.
 
-## How the score works
+## What our tests found
 
-- Eleven checks, each scored 0 to 1; seven are averaged into the AI-ready score. The other four are shown as Not scored: they still suggest fixes, and a custom weight can count them.
-- Two weightings, Standard and By evidence, both adjustable under Adjust weights.
+Each writing check and question carries a label for what our own tests found: Helped in our test, May help less, Unclear, Not tested or No effect in our test.
+
+Of the single checks, only your reader's words near the top helped in our tests. Questions guessed from a keyword helped less in our test; questions a local AI wrote showed no clear gain. Details: [docs/evidence.md](docs/evidence.md).
 
 ## How we tested it
 
-No check is graded strong yet, so the score is a writing checklist, not a forecast. The studies behind each check, our own tests and their numbers are in [docs/evidence.md](docs/evidence.md) and on the [Research page](https://shehral.github.io/citation-equity/research/). The data is on Hugging Face: [every result and score](https://huggingface.co/datasets/Shehral/citation-equity-experiments), with where each page came from and a hash of its text. The page text, edited versions, prompts and answers are not shared, since the pages belong to their publishers.
+No check is graded strong yet, so the labels are a guide, not a forecast. The studies behind each check, our own tests and their numbers are in [docs/evidence.md](docs/evidence.md) and on the [Research page](https://shehral.github.io/citation-equity/research/). The data is on Hugging Face: [every result](https://huggingface.co/datasets/Shehral/citation-equity-experiments), with where each page came from and a hash of its text. The page text, edited versions, prompts and answers are not shared, since the pages belong to their publishers.
 
 ## Quick start
 
@@ -50,18 +50,18 @@ The app shows the right origin for wherever you opened it; without a local model
 
 Build once (`pnpm install && pnpm build`), then run `pnpm ce <command>` from the repository root. Options: [docs/cli.md](docs/cli.md).
 
-| Command             | What it does                                        |
-| ------------------- | --------------------------------------------------- |
-| `ce analyze`        | Score a draft and list its fixes.                   |
-| `ce bench`          | Test a draft before and after, on a local model.    |
-| `ce pack from-urls` | Build a test pack from pages you name.              |
-| `ce pack cseo`      | Build a test pack from C-SEO Bench.                 |
-| `ce site`           | Check if AI can read your published page.           |
-| `ce signals logs`   | Count AI crawler visits in your access log.         |
-| `ce signals bing`   | Read a Bing AI Performance export.                  |
-| `ce questions`      | Reader questions from queries, keywords or a draft. |
-| `ce live`           | Ask Gemini with Google Search whether it cites you. |
-| `ce sources`        | See which sites AI answers cite.                    |
+| Command             | What it does                                          |
+| ------------------- | ----------------------------------------------------- |
+| `ce analyze`        | Which reader questions a draft covers, and its notes. |
+| `ce bench`          | Test a draft before and after, on a local model.      |
+| `ce pack from-urls` | Build a test pack from pages you name.                |
+| `ce pack cseo`      | Build a test pack from C-SEO Bench.                   |
+| `ce site`           | Check if AI can read your published page.             |
+| `ce signals logs`   | Count AI crawler visits in your access log.           |
+| `ce signals bing`   | Read a Bing AI Performance export.                    |
+| `ce questions`      | Reader questions from queries, keywords or a draft.   |
+| `ce live`           | Ask Gemini with Google Search whether it cites you.   |
+| `ce sources`        | See which sites AI answers cite.                      |
 
 ## Privacy
 

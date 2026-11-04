@@ -1,0 +1,16 @@
+{
+  "engine_cli": {
+    "path": "experiments/e1/out/bundle/engine_cli.js",
+    "sha256": "1b8e30dbea4e01134302d302fe457e03e2e16baff658c891a9fb3e89fa5a4c47",
+    "note": "E1's engine bundle (built 2026-10-24), unchanged: applicability, spans and every validation. Never rebuilt for E5; smoke.sh and E1 README step 0 are not run."
+  },
+  "questions_cli": {
+    "path": "experiments/e5/out/bundle/questions_cli.js",
+    "sha256": "9aefe8aebbd79118b2078814d5ff1e55eeb0dfee60f7789d576b1265a75240ce",
+    "commit": "f6e89036a49f52e53c6b2fd1a6c2555da603c304",
+    "packages_commit": "eeaf5626aada1563c9d307e8270be5649c14295f",
+    "built": "2026-11-03T01:56-08:00",
+    "command": "pnpm exec tsup experiments/e5/questions_cli.ts --format esm --target node22 -d experiments/e5/out/bundle",
+    "note": "Built from feat/citation-equity at commit f6e8903 (questions_cli.ts as committed there) with a clean packages/ tree (the last commit touching packages/engine or packages/bench is eeaf562): keywordQuestion, pageQuestions and the current engine's question-coverage (tool_gate). Supersedes the first build (sha256 8542abc1..., from the same engine source before questions_cli.ts was reformatted); the edit texts and versions are identical under both."
+  }
+}

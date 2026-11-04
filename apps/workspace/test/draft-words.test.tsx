@@ -1,6 +1,6 @@
 // The draft view shows at most 350 words of interface text on load, not counting the
-// draft itself. Counted on the real engine and the real example (26 fixes on the espresso
-// draft), inside the app shell, so the header and footer count too.
+// draft itself. Counted on the real engine and the real example (its four questions, the Quick
+// edit and the collapsed notes), inside the app shell, so the header and footer count too.
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DraftView } from '@/components/draft/draft-view';
@@ -55,8 +55,8 @@ describe('draft view word budget', () => {
           <DraftView />
         </AppShell>,
       );
-      // The example is loaded and analyzed: its fixes are on screen.
-      expect(screen.getByRole('region', { name: 'Start here' })).toBeTruthy();
+      // The example is loaded and analyzed: its questions are on screen.
+      expect(screen.getByRole('heading', { name: /^Questions covered: \d+ of \d+$/ })).toBeTruthy();
       const words = interfaceWords();
       expect(words.length, words.join(' ')).toBeLessThanOrEqual(350);
     });
@@ -73,7 +73,7 @@ describe('draft view word budget', () => {
   });
 });
 
-describe('Start here on the real example', () => {
+describe('the Quick edit on the real example', () => {
   it('keeps one ready edit: on the espresso example, the question-heading edit with Preview', () => {
     setActiveSlot('espresso-bitterness');
     render(
@@ -81,13 +81,10 @@ describe('Start here on the real example', () => {
         <DraftView />
       </AppShell>,
     );
-    const cards = within(screen.getByRole('region', { name: 'Start here' })).getAllByRole(
-      'article',
-    );
-    expect(cards).toHaveLength(3);
-    // The first two are the measured advice; the third slot holds the draft's best ready edit.
-    expect(cards.slice(0, 2).map((c) => c.dataset.kind)).toEqual(['advisory', 'advisory']);
-    const edit = cards[2] as HTMLElement;
+    const start = within(screen.getByRole('region', { name: 'Start here' }));
+    const cards = within(start.getByRole('region', { name: 'Quick edit' })).getAllByRole('article');
+    expect(cards).toHaveLength(1);
+    const edit = cards[0] as HTMLElement;
     expect(edit.dataset.kind).toBe('edit');
     expect(within(edit).getByRole('heading').textContent).toBe('Add "?" or reword it');
     expect(within(edit).getByRole('button', { name: 'Preview' })).toBeTruthy();
@@ -97,18 +94,17 @@ describe('Start here on the real example', () => {
     for (const sample of SAMPLES) {
       setActiveSlot(sample.slug);
       const { unmount } = render(<DraftView />);
-      const cards = within(screen.getByRole('region', { name: 'Start here' })).getAllByRole(
-        'article',
-      );
-      const groups = within(screen.getByRole('region', { name: 'All fixes' }));
-      for (const t of groups.getAllByRole('button', { expanded: false })) fireEvent.click(t);
-      const anyEdit = groups.queryAllByRole('article').some((a) => a.dataset.kind === 'edit');
-      if (anyEdit) {
-        expect(
-          cards.filter((c) => c.dataset.kind === 'edit').length,
-          sample.slug,
-        ).toBeGreaterThanOrEqual(1);
-      }
+      fireEvent.click(screen.getByRole('button', { name: /^Writing notes/ }));
+      const notes = within(screen.getByRole('region', { name: 'Writing notes' }));
+      for (const t of notes.getAllByRole('button', { expanded: false })) fireEvent.click(t);
+      const anyEdit = notes.queryAllByRole('article').some((a) => a.dataset.kind === 'edit');
+      const quick = screen.queryByRole('region', { name: 'Quick edit' });
+      const quickEdits = quick
+        ? within(quick)
+            .getAllByRole('article')
+            .filter((a) => a.dataset.kind === 'edit')
+        : [];
+      expect(quickEdits.length, sample.slug).toBe(anyEdit ? 1 : 0);
       unmount();
       clearAll();
     }

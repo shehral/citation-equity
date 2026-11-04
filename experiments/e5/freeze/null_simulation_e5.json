@@ -1,0 +1,150 @@
+{
+  "sims": 1000,
+  "draws": 100000,
+  "resamples": 10000,
+  "seed": 1,
+  "alpha": 0.05,
+  "margin": 0.015,
+  "structure_source": "E5's real queries, applicability and deterministic versions; model-made versions drawn",
+  "n_per_contrast": {
+    "gate": 115,
+    "9K vs original": 168,
+    "9K vs 9P": 166,
+    "9L vs original": 153,
+    "9L vs 9P": 151,
+    "9K vs 9": 168,
+    "9L vs 9": 150,
+    "12K vs P12K": 72,
+    "step5 (9 vs original, pooled)": 169,
+    "replication 9K vs original": 53,
+    "replication 9K vs 9P": 53,
+    "replication 9L vs original": 49,
+    "replication 9L vs 9P": 49
+  },
+  "structure": {
+    "familywise_false_positive_rate": 0.048,
+    "definition": "share of simulations with the gate Holm-significant (p <= 0.05), or the gate passed (helps) and any family member Holm-significant",
+    "mc_se": 0.006759881655768835,
+    "with_e1_labels": {
+      "rate": 0.048,
+      "mc_se": 0.006759881655768835,
+      "count": 48
+    },
+    "gate_significant": {
+      "rate": 0.048,
+      "mc_se": 0.006759881655768835,
+      "count": 48
+    },
+    "gate_passed": {
+      "rate": 0.024,
+      "mc_se": 0.004839834707921336,
+      "count": 24
+    },
+    "family_significant_after_gate": {
+      "rate": 0.002,
+      "mc_se": 0.0014127986409959489,
+      "count": 2
+    },
+    "note": "a gate that passes is a significant gate, so this rate is the gate's own rate under the global null; the numbers that test the family are family_if_never_gated and family_significant_after_gate"
+  },
+  "family_if_never_gated": {
+    "holm": {
+      "rate": 0.044,
+      "mc_se": 0.006485676526007136,
+      "count": 44
+    },
+    "e1_labels": {
+      "rate": 0.044,
+      "mc_se": 0.006485676526007136,
+      "count": 44
+    },
+    "unadjusted_any": {
+      "rate": 0.159,
+      "mc_se": 0.011563693181678594,
+      "count": 159
+    }
+  },
+  "replication_family": {
+    "holm": {
+      "rate": 0.044,
+      "mc_se": 0.006485676526007136,
+      "count": 44
+    },
+    "e1_labels": {
+      "rate": 0.044,
+      "mc_se": 0.006485676526007136,
+      "count": 44
+    },
+    "unadjusted_any": {
+      "rate": 0.165,
+      "mc_se": 0.011737759581794134,
+      "count": 165
+    }
+  },
+  "arm12": {
+    "significant": {
+      "rate": 0.039,
+      "mc_se": 0.006122009474020765,
+      "count": 39
+    },
+    "e1_labels": {
+      "rate": 0.039,
+      "mc_se": 0.006122009474020765,
+      "count": 39
+    },
+    "missing_words_measured": {
+      "rate": 0.014,
+      "mc_se": 0.003715373467095872,
+      "count": 14
+    }
+  },
+  "step5": {
+    "significant": {
+      "rate": 0.046,
+      "mc_se": 0.006624499981130651,
+      "count": 46
+    },
+    "e1_labels": {
+      "rate": 0.046,
+      "mc_se": 0.006624499981130651,
+      "count": 46
+    }
+  },
+  "any_main_planned_test": {
+    "rate": 0.11,
+    "mc_se": 0.009894442884771228,
+    "count": 110
+  },
+  "retention": {
+    "9K": {
+      "readings": {
+        "descriptive (gate failed)": 976,
+        "partly kept, unclear": 22,
+        "loses the gain": 2
+      },
+      "loses_rule_ungated": {
+        "rate": 0.034,
+        "mc_se": 0.005730968504537431,
+        "count": 34
+      }
+    },
+    "9L": {
+      "readings": {
+        "descriptive (gate failed)": 976,
+        "partly kept, unclear": 19,
+        "loses the gain": 5
+      },
+      "loses_rule_ungated": {
+        "rate": 0.032,
+        "mc_se": 0.005565608681896348,
+        "count": 32
+      }
+    }
+  },
+  "method": "synthetic null E5 cells in E1's schema (2 judges, 8 answers per cell, pre-run validity rates), version labels permuted within query (E1's shuffle_labels), analyze_e5's planned code path with E1's sign-flip test; labels without the per-judge model-dependent check or the confound note",
+  "structure_files": {
+    "edit_texts.jsonl": "fa16a8c99c24a58ae3f15685a07788e2c6b4ebb425b81247ee08ca74054a12c6",
+    "versions.jsonl": "17d0d1360a972c7b5b55b2e1d5497bafd9981e99362b0759d9269734b04e6f6c",
+    "applicability.jsonl": "c37ea3383636e78748670413812e67a37c921d2240d5a76bfb0ffd547eb7c1ef"
+  }
+}

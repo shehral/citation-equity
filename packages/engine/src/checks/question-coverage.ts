@@ -89,7 +89,8 @@ function hits(terms: Set<string>, text: string): number {
 const share = (terms: Set<string>, text: string): number =>
   terms.size === 0 ? 0 : hits(terms, text) / terms.size;
 
-type Target =
+/** Where a question's answer is looked for: a section (its first prose sentence) or a paragraph. */
+export type Target =
   | { kind: 'section'; heading: Heading; sentence: Sentence | undefined }
   | { kind: 'paragraph'; sentence: Sentence }
   | null;
@@ -158,23 +159,37 @@ export interface QuestionCoverage {
   message: string | null;
 }
 
+/**
+ * One question, trimmed and non-blank, with its coverage as the check judges it and the target it
+ * was judged on, found once. `questionCoverage` and the question report both measure through it;
+ * the report reads the target for the passage a direct answer goes in.
+ */
+export function judgeQuestion(
+  a: Artifacts,
+  question: string,
+): { coverage: QuestionCoverage; target: Target } {
+  const terms = contentTerms(question);
+  const target = findTarget(a, terms);
+  const message = problem(target, terms);
+  const range: Range =
+    target === null
+      ? topOfDraft(a)
+      : target.kind === 'section'
+        ? target.heading.range
+        : target.sentence.range;
+  return { coverage: { question, covered: message === null, range, message }, target };
+}
+
+/** One question's coverage, as the check judges it (see `judgeQuestion`). */
+const coverageOf = (a: Artifacts, question: string): QuestionCoverage =>
+  judgeQuestion(a, question).coverage;
+
 /** Each non-blank question (trimmed, in order) with its coverage, as the check judges it. */
 export function questionCoverage(a: Artifacts, questions: string[]): QuestionCoverage[] {
   return questions
     .map((q) => q.trim())
     .filter((q) => q !== '')
-    .map((question) => {
-      const terms = contentTerms(question);
-      const target = findTarget(a, terms);
-      const message = problem(target, terms);
-      const range: Range =
-        target === null
-          ? topOfDraft(a)
-          : target.kind === 'section'
-            ? target.heading.range
-            : target.sentence.range;
-      return { question, covered: message === null, range, message };
-    });
+    .map((question) => coverageOf(a, question));
 }
 
 /**

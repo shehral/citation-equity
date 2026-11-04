@@ -109,6 +109,25 @@ export function mapRange(
 }
 
 /**
+ * Where `range`, measured on the text `from`, sits in the text `to`; null when the change between
+ * them touches it, or only borders it (mapRange's `'touches'`, what Apply needs). An empty range,
+ * a spot to write new text at, has no text of its own for Apply to check, so the two characters
+ * on each side of it count as part of it: typing at the spot, or changing the blank lines that set
+ * a new paragraph there apart (see paragraphAt), leaves it out of date too.
+ */
+export function moveRange(range: Range, from: string, to: string): Range | null {
+  if (from === to) return range;
+  const probe =
+    range.start === range.end
+      ? { start: Math.max(0, range.start - 2), end: Math.min(from.length, range.end + 2) }
+      : range;
+  const moved = mapRange(probe, textChange(from, to), 'touches');
+  if (!moved) return null;
+  const shift = moved.start - probe.start;
+  return { start: range.start + shift, end: range.end + shift };
+}
+
+/**
  * An applied edit, kept current through a change to the draft: its range
  * starts where its `after` text now sits. Left as it was when the change
  * touches that text, so Undo then reports it as edited. A change that could
@@ -124,6 +143,32 @@ export function mapApplied(s: Suggestion, change: TextChange): Suggestion {
   if (!mapped || mapped.start === s.range.start) return s;
   const shift = mapped.start - s.range.start;
   return { ...s, range: { start: s.range.start + shift, end: s.range.end + shift } };
+}
+
+/**
+ * True when one change replaces more than half of the previous draft: a paste over most of the
+ * text, which makes it another draft. Typing never does; an empty draft has nothing to replace.
+ */
+export function replacesMostOf(prev: string, next: string): boolean {
+  if (prev.trim() === '') return false;
+  const change = textChange(prev, next);
+  return change.to - change.from > prev.length / 2;
+}
+
+/**
+ * `text`, trimmed, with the blank lines it needs to stand as a paragraph of its own when it is
+ * inserted at `at` in `markdown` (an empty range: the spot right after a heading, say). Without
+ * them the text would join the heading's line or run into the paragraph beside it. Nothing is
+ * added where a blank line, or the start or end of the draft, already stands.
+ */
+export function paragraphAt(markdown: string, at: number, text: string): string {
+  const before = markdown.slice(0, at);
+  const after = markdown.slice(at);
+  const lead =
+    before === '' || before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n';
+  const trail =
+    after.trim() === '' || after.startsWith('\n\n') ? '' : after.startsWith('\n') ? '\n' : '\n\n';
+  return `${lead}${text.trim()}${trail}`;
 }
 
 const HEADING_LINE = /^#{1,6}[ \t]/;

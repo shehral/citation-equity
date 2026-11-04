@@ -5,7 +5,13 @@
 // lifetime: switching views inside the app keeps them, and the home tile agrees
 // with the draft view. A full reload then starts empty, as nothing was stored.
 
-import { MAX_QUESTIONS, mergeQuestions, SOURCE_LABELS, type WorkspaceQuestion } from './questions';
+import {
+  isQuestionTemplate,
+  MAX_QUESTIONS,
+  mergeQuestions,
+  SOURCE_LABELS,
+  type WorkspaceQuestion,
+} from './questions';
 import { onClearAll } from './store';
 
 export type SuggestionStatus = 'pending' | 'applied' | 'done' | 'ignored';
@@ -92,7 +98,8 @@ export function forgetDraft(draftKey: string): void {
 
 /**
  * The draft's saved target questions; null when none were saved (or the value
- * is unreadable), so the caller prefills. An empty list is a saved choice.
+ * is unreadable), so the caller prefills. An empty list is a saved choice. A question keeps its
+ * template when it is one the engine makes; an unreadable one is dropped and the question kept.
  */
 export function loadQuestions(draftKey: string): WorkspaceQuestion[] | null {
   const raw = read(questionsKey(draftKey));
@@ -106,10 +113,14 @@ export function loadQuestions(draftKey: string): WorkspaceQuestion[] | null {
   if (!Array.isArray(parsed)) return null;
   const out: WorkspaceQuestion[] = [];
   for (const item of parsed) {
-    const { text, source } = (item ?? {}) as Record<string, unknown>;
+    const { text, source, template } = (item ?? {}) as Record<string, unknown>;
     if (typeof text !== 'string' || text.trim() === '') continue;
     if (typeof source !== 'string' || !Object.hasOwn(SOURCE_LABELS, source)) continue;
-    out.push({ text, source: source as WorkspaceQuestion['source'] });
+    out.push({
+      text,
+      source: source as WorkspaceQuestion['source'],
+      ...(isQuestionTemplate(template) ? { template } : {}),
+    });
   }
   // Drops duplicates an older build may have saved, and keeps at most MAX_QUESTIONS.
   return mergeQuestions([], out).slice(0, MAX_QUESTIONS);

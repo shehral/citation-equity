@@ -2,7 +2,15 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { AI_CRAWLERS } from '@citation-equity/bench';
 import { describe, expect, it } from 'vitest';
-import { checkPastedSite, liveSiteLine, siteSummaryLine } from '@/components/site/site-check';
+import {
+  blockerName,
+  blockersLine,
+  checkPastedSite,
+  groupRows,
+  lastCheckLine,
+  liveSiteLine,
+  siteSummaryOf,
+} from '@/components/site/site-check';
 
 // The robots.txt fixtures ce site and the bench's browser check are pinned to
 // (packages/bench/test/robots-check.test.ts). Under jsdom the path is found from __dirname.
@@ -37,6 +45,100 @@ const row = (check: ReturnType<typeof checkPastedSite>, id: string) => {
   return r;
 };
 
+describe('siteSummaryOf', () => {
+  it('finds no blocker and no check when every row passes', () => {
+    const check = checkPastedSite({ html: page(), robotsTxt: ALLOW });
+    expect(siteSummaryOf(check)).toEqual({ blockers: [], checks: [], needsLiveSite: 1 });
+  });
+
+  it('lists a blocker item that warns as a check, and ignores a page note that warns', () => {
+    const check = checkPastedSite({
+      html: page({ author: '', bodyWords: 60 }),
+      robotsTxt: 'User-agent: GPTBot\nDisallow: /\n',
+    });
+    expect(row(check, 'byline').status).toBe('warn');
+    expect(siteSummaryOf(check)).toEqual({
+      blockers: [],
+      checks: ['crawler-access', 'renders-without-js'],
+      needsLiveSite: 1,
+    });
+  });
+
+  it('lists the blocker items that fail, in blocker order, never a page note', () => {
+    const check = checkPastedSite({
+      html: page({
+        canonical: '',
+        robotsMeta: '<meta name="robots" content="noindex">',
+        bodyWords: 10,
+      }),
+      robotsTxt: 'User-agent: *\nDisallow: /\n',
+    });
+    expect(row(check, 'canonical').status).toBe('warn');
+    expect(siteSummaryOf(check)).toEqual({
+      blockers: ['crawler-access', 'indexing-directives', 'renders-without-js'],
+      checks: [],
+      needsLiveSite: 1,
+    });
+  });
+
+  it('leaves crawler access out while it needs the live site', () => {
+    const check = checkPastedSite({ html: page() });
+    expect(row(check, 'crawler-access').status).toBe('live');
+    expect(siteSummaryOf(check)).toEqual({ blockers: [], checks: [], needsLiveSite: 2 });
+  });
+});
+
+describe('groupRows', () => {
+  it('puts the three blocker items first, in blocker order, and the four page notes after', () => {
+    const { rows } = checkPastedSite({ html: page(), robotsTxt: ALLOW });
+    const { blockers, notes } = groupRows(rows);
+    expect(blockers.map((r) => r.id)).toEqual([
+      'crawler-access',
+      'indexing-directives',
+      'renders-without-js',
+    ]);
+    // The notes keep the order of the check's rows.
+    expect(notes.map((r) => r.id)).toEqual(['byline', 'dates', 'structured-data', 'canonical']);
+  });
+
+  it('keeps each row as checked, whatever its status', () => {
+    const { rows } = checkPastedSite({
+      html: page({ author: '', robotsMeta: '<meta name="robots" content="noindex">' }),
+    });
+    const { blockers, notes } = groupRows(rows);
+    expect(blockers.map((r) => [r.id, r.status])).toEqual([
+      ['crawler-access', 'live'],
+      ['indexing-directives', 'fail'],
+      ['renders-without-js', 'pass'],
+    ]);
+    expect(notes.find((r) => r.id === 'byline')?.status).toBe('warn');
+    // Every row lands in exactly one group, unchanged.
+    const grouped = [...blockers, ...notes];
+    expect(grouped).toHaveLength(rows.length);
+    for (const r of rows) expect(grouped.filter((g) => g === r)).toHaveLength(1);
+  });
+});
+
+describe('blocker lines', () => {
+  it('count the blockers in plain words', () => {
+    expect(blockersLine([])).toBe('No blockers found');
+    expect(blockersLine(['crawler-access'])).toBe('1 blocker');
+    expect(blockersLine(['crawler-access', 'indexing-directives'])).toBe('2 blockers');
+    expect(blockersLine(['crawler-access', 'indexing-directives', 'renders-without-js'])).toBe(
+      '3 blockers',
+    );
+  });
+
+  it('name the blockers after a reload', () => {
+    expect(lastCheckLine([])).toBe('No blockers found');
+    expect(lastCheckLine(['crawler-access'])).toBe('1 blocker: AI crawlers allowed');
+    expect(lastCheckLine(['indexing-directives', 'renders-without-js'])).toBe(
+      '2 blockers: Search can show it, Text loads without JavaScript',
+    );
+    expect(blockerName('renders-without-js')).toBe('Text loads without JavaScript');
+  });
+});
+
 describe('checkPastedSite', () => {
   it('passes all seven rows for a complete page and an open robots.txt', () => {
     const check = checkPastedSite({ html: page(), robotsTxt: ALLOW });
@@ -64,7 +166,6 @@ describe('checkPastedSite', () => {
     const check = checkPastedSite({ html: page({ author: '' }), robotsTxt: ALLOW });
     expect(row(check, 'byline').status).toBe('warn');
     expect(check.summary).toMatchObject({ pass: 6, warn: 1, fail: 0, total: 7 });
-    expect(siteSummaryLine(check.summary)).toBe('6 of 7 pass, 1 warning');
   });
 
   it('counts fails as fixes and names the blocked AI search crawler', () => {
@@ -78,14 +179,12 @@ describe('checkPastedSite', () => {
     });
     expect(row(check, 'indexing-directives').status).toBe('fail');
     expect(check.summary).toMatchObject({ pass: 4, warn: 1, fail: 2, total: 7 });
-    expect(siteSummaryLine(check.summary)).toBe('4 of 7 pass, 1 warning, 2 to fix');
   });
 
   it('marks crawler access as needing the live site when no robots.txt is pasted', () => {
     const check = checkPastedSite({ html: page(), robotsTxt: '  \n' });
     expect(row(check, 'crawler-access')).toMatchObject({ status: 'live' });
     expect(check.summary).toEqual({ pass: 6, warn: 0, fail: 0, total: 7, needsLiveSite: 2 });
-    expect(siteSummaryLine(check.summary)).toBe('6 of 7 pass');
     expect(liveSiteLine(check.summary)).toBe('2 checks need your live site');
     expect(liveSiteLine({ needsLiveSite: 1 })).toBe('1 check needs your live site');
   });

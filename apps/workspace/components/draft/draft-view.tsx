@@ -5,19 +5,31 @@ import {
   type AnalysisResult,
   CHECK_IDS,
   type CheckId,
-  gather,
-  groupFixes,
-  PRESET_WEIGHTS,
-  pageQuestions,
-  parseDraft,
-  questionCoverage,
+  groupNotes,
+  NOTE_CHECKS,
+  QUESTION_LABELS,
+  type QuestionInput,
+  type QuestionRow,
+  questionKey,
+  quickEdit,
   type Range,
-  rankFixes,
+  type RankedNote,
+  rankNotes,
   type Suggestion,
-  startHereFixes,
-  type Weights,
+  suggestionFor,
+  TEST_LABEL_ORDER,
+  TEST_LABELS,
 } from '@citation-equity/engine';
-import { Laptop, List, ListChecks, PenLine, RotateCcw, Target } from 'lucide-react';
+import {
+  ArrowRight,
+  Laptop,
+  ListChecks,
+  NotebookText,
+  PenLine,
+  RefreshCw,
+  RotateCcw,
+} from 'lucide-react';
+import Link from 'next/link';
 import {
   type ReactNode,
   type Ref,
@@ -27,6 +39,7 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
+import { LabelChip } from '@/components/check-chip';
 import {
   type EditorHighlight,
   MarkdownEditor,
@@ -37,31 +50,26 @@ import { Button } from '@/components/ui/button';
 import {
   applySuggestion,
   mapApplied,
-  mapRange,
+  moveRange,
+  paragraphAt,
+  replacesMostOf,
   revertSuggestion,
   sectionAround,
   textChange,
 } from '@/lib/apply';
-import {
-  type Baseline,
-  loadBaseline,
-  replacesMostOf,
-  saveBaseline,
-  sinceStart,
-} from '@/lib/baseline';
 import { classifyBenchError } from '@/lib/bench';
 import { draftKeyFor, selectDraftSlot, slotFor } from '@/lib/draft-summary';
 import { fixCopy, STALE_MESSAGE } from '@/lib/fix-copy';
-import { chipFor } from '@/lib/glossary';
-import { authorQuestionTexts, initialQuestions, type WorkspaceQuestion } from '@/lib/questions';
+import { labelTooltip } from '@/lib/glossary';
 import {
-  exampleLabel,
-  MY_DRAFT_LABEL,
-  MY_DRAFT_SLUG,
-  SAMPLES,
-  sampleFor,
-  startingText,
-} from '@/lib/samples';
+  connect as connectLocalModel,
+  getLocalModel,
+  type LocalModel,
+  subscribeLocalModel,
+} from '@/lib/local-model';
+import { draftQuestionsFor, draftTextFor } from '@/lib/open-draft';
+import { initialQuestions, inputKindOf, labelsFor, type WorkspaceQuestion } from '@/lib/questions';
+import { exampleLabel, MY_DRAFT_SLUG, SAMPLES, sampleFor, startingText } from '@/lib/samples';
 import {
   clearDraft,
   forgetDraft,
@@ -74,28 +82,20 @@ import {
   saveQuestions,
   saveStatuses,
 } from '@/lib/storage';
-import {
-  getActiveSlot,
-  getSummary,
-  MY_POST_SLOT,
-  setSummary,
-  storageAvailable,
-  subscribe,
-} from '@/lib/store';
-import { type ActivePreset, useAnalysis } from '@/lib/use-analysis';
+import { getActiveSlot, MY_POST_SLOT, setSummary, storageAvailable, subscribe } from '@/lib/store';
+import { useAnalysis } from '@/lib/use-analysis';
 import { useScrollToHash } from '@/lib/use-scroll-to-hash';
 import { cn } from '@/lib/utils';
-import { START_HERE_ID } from '@/lib/views';
+import { START_HERE_ID, VIEW_HREF } from '@/lib/views';
 import { offersWordingHelper, proposeWording } from '@/lib/wording-helper';
-import { AllChecks } from './all-checks';
 import type { WordingState } from './fix-card';
-import { type FixGroup, FixGroups } from './fix-groups';
+import { type FixGroup, FixGroups, type FixItem, type HandledItem, NoteChip } from './fix-groups';
 import { ModelMissingNote, OllamaInstructions, UnreachableNote } from './ollama-help';
+import { QuestionsCard } from './questions-card';
+import { QuickEdit } from './quick-edit';
 import { RailSection } from './rail-section';
 import { ReaderQuestions } from './reader-questions';
-import { ScoreCard } from './score-card';
-import { type FixItem, type HandledItem, StartHere } from './start-here';
-import { TestIt } from './test-it';
+import { CONNECT_NOTE } from './test-it';
 import { type ToastState, UndoToast } from './undo-toast';
 
 type Statuses = Record<string, SuggestionStatus>;
@@ -115,7 +115,6 @@ interface ResetSnapshot {
   statuses: Statuses;
   applied: Suggestion[];
   undoStale: Set<string>;
-  baseline: Baseline | null;
 }
 
 /** What My post held before a paste into an example moved there, for Undo. */
@@ -124,7 +123,6 @@ interface MovedSnapshot {
   fromSlot: string;
   markdown: string | null;
   questions: WorkspaceQuestion[] | null;
-  baseline: Baseline | null;
 }
 
 /** What the toast's Undo reverses: one status, one applied edit, a reset, or a move to My post. */
@@ -134,16 +132,46 @@ type UndoTarget =
   | { kind: 'reset'; snapshot: ResetSnapshot }
   | { kind: 'moved'; snapshot: MovedSnapshot };
 
-/** Which column a phone shows; wider screens show both, whatever it says. */
-type Pane = 'draft' | 'fixes';
+/**
+ * The edit open in the preview, with the draft text its range was measured on (the analysis it
+ * came from, which may trail the editor or have caught up since), and who wrote its wording.
+ */
+interface Opened {
+  suggestion: Suggestion;
+  on: string;
+  note?: string;
+}
 
-/** The layout that shows the editor and the fix rail side by side (Tailwind's lg). */
+/** Which column a phone shows (the draft, or its questions and notes); wider screens show both. */
+type Pane = 'draft' | 'questions';
+
+/**
+ * Where a jump to a passage came from: a note (its id), or a line of the Questions covered card
+ * (no id, its question).
+ */
+type Jump = { id: string; question?: undefined } | { id: null; question: string };
+
+/** The layout that shows the editor and the rail side by side (Tailwind's lg). */
 const DESKTOP = '(min-width: 64rem)';
 const isDesktop = () =>
   typeof window !== 'undefined' && (window.matchMedia?.(DESKTOP).matches ?? false);
 
 /** The server and the first hydration render always show My post. */
 const serverSlot = () => MY_POST_SLOT;
+
+/** Order of the writing-note groups: by label (as the engine orders them), then registry order. */
+const byLabelThenCheck = (a: FixGroup, b: FixGroup) =>
+  TEST_LABEL_ORDER.indexOf(a.label) - TEST_LABEL_ORDER.indexOf(b.label) ||
+  CHECK_IDS.indexOf(a.checkId) - CHECK_IDS.indexOf(b.checkId);
+
+/** A record of per-key states with one key set, or cleared for null. */
+function withState<T>(states: Record<string, T>, key: string, state: T | null): Record<string, T> {
+  const { [key]: _, ...rest } = states;
+  return state === null ? rest : { ...rest, [key]: state };
+}
+
+/** The empty rail's line for a draft whose list already holds `n` questions. */
+const waiting = (n: number) => (n === 1 ? '1 question is waiting.' : `${n} questions are waiting.`);
 
 /** What each suggestion's check found at its range (its finding message), by suggestion id. */
 function findingsOf(result: AnalysisResult | null): Record<string, string> {
@@ -160,9 +188,10 @@ function findingsOf(result: AnalysisResult | null): Record<string, string> {
 }
 
 /**
- * Your draft: the paper editor and the fix rail (score, Start here, all fixes by check, then
- * Reader questions, All checks and Test it, collapsed). The draft changes only when the author
- * types, or clicks Apply in one edit's preview (or Undo); there is no bulk action.
+ * Your draft: the paper editor and the rail. Start here holds the Questions covered card (with
+ * the question editor) and the Quick edit; then the writing notes by check (collapsed), a link to
+ * Test it on Results, and the local AI. The draft changes only when the author types, or clicks
+ * Apply in one edit's preview (or Undo); there is no bulk action.
  */
 export function DraftView() {
   // The store's active slot; the server snapshot keeps the prerendered page on the empty My post,
@@ -177,45 +206,46 @@ export function DraftView() {
   /** Bumped when the draft is replaced wholesale (load, reset), so the editor's undo starts afresh. */
   const [docVersion, setDocVersion] = useState(0);
   const [questions, setQuestions] = useState<WorkspaceQuestion[]>(() =>
-    initialQuestions(sampleFor(draftKey), startingText(draftKey)),
+    initialQuestions(sampleFor(draftKey)),
   );
-  /** The model Connect local AI found (null until that click). */
-  const [localModel, setLocalModel] = useState<string | null>(null);
+  // The page's one connection to the local AI, shared with the other views. Nothing connects
+  // before a click, so the server and the first paint read it as not connected.
+  const connection = useSyncExternalStore(subscribeLocalModel, getLocalModel, getLocalModel);
+  /** The model Connect local AI found (null until that click succeeds). */
+  const localModel = connection.status === 'ready' ? connection.model : null;
   const [statuses, setStatuses] = useState<Statuses>({});
   /** The draft whose saved text and statuses are loaded; nothing is saved before that. */
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
-  const [preset, setPreset] = useState<ActivePreset>('foundation');
-  const [customWeights, setCustomWeights] = useState<Weights | null>(null);
   const [stale, setStale] = useState<Record<string, Suggestion>>({});
   /** Applied edits, each with its range kept on where its `after` text now sits. */
   const [applied, setApplied] = useState<Suggestion[]>([]);
   const [undoStale, setUndoStale] = useState<Set<string>>(() => new Set());
-  const [preview, setPreview] = useState<Suggestion | null>(null);
-  const [previewNote, setPreviewNote] = useState<string | undefined>(undefined);
+  const [preview, setPreview] = useState<Opened | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [openGroups, setOpenGroups] = useState<ReadonlySet<CheckId>>(() => new Set());
   /** The group opened last; its passages are underlined while no single fix is selected. */
   const [markedGroup, setMarkedGroup] = useState<CheckId | null>(null);
+  /** The wording helper's state per note (by suggestion id) and per card row (by question). */
   const [wording, setWording] = useState<Record<string, WordingState>>({});
-  const [baseline, setBaseline] = useState<Baseline | null>(null);
-  const [sections, setSections] = useState({ questions: false, checks: false, test: false });
-  const [showWeights, setShowWeights] = useState(false);
+  const [rowWording, setRowWording] = useState<Record<string, WordingState>>({});
+  const [sections, setSections] = useState({ notes: false });
+  /** The question editor under the Questions covered card. */
+  const [editorOpen, setEditorOpen] = useState(false);
   const [toast, setToast] = useState<(ToastState & { undo: UndoTarget }) | null>(null);
   const [pane, setPane] = useState<Pane>('draft');
   /**
-   * Set by a jump to a passage (Show me, Show in draft): a phone then shows the draft with a bar
-   * holding that fix's action and Back to fixes. `id` is the fix, or null for a reader question.
+   * Set by a jump to a passage (Show me, Show): a phone then shows the draft with a bar holding
+   * that note's title and action, or the card line's question, and Back.
    */
-  const [jump, setJump] = useState<{ id: string | null } | null>(null);
+  const [jump, setJump] = useState<Jump | null>(null);
   /** A passage to select once the editor is on screen; a phone shows it only after the switch. */
   const [focusTarget, setFocusTarget] = useState<{ range: Range } | null>(null);
   /** "Saved in this browser" only once storage is known to work (after mount). */
   const [saves, setSaves] = useState(false);
   const keyRef = useRef(draftKey);
   const editorRef = useRef<MarkdownEditorHandle>(null);
-  const checksRef = useRef<HTMLDivElement>(null);
-  /** The switch's Fixes button: where focus goes when the fix bar it replaced closes. */
-  const fixesButtonRef = useRef<HTMLButtonElement>(null);
+  /** The switch's Questions button: where focus goes when the bar it replaced closes. */
+  const questionsButtonRef = useRef<HTMLButtonElement>(null);
   /** Set while a preview opened from the fix bar is open; that bar is gone when it closes. */
   const previewFromBar = useRef(false);
   /** Set by a move to My post; the toast shows once My post has loaded. */
@@ -240,8 +270,7 @@ export function DraftView() {
 
   /**
    * Every change to the draft goes through here. A plain change keeps applied edits pointing at
-   * their text, and a change that replaces most of the draft (a paste over it) starts the
-   * baseline afresh; `replace` (load, reset) starts the editor's undo history afresh.
+   * their text; `replace` (load, reset) starts the editor's undo history afresh.
    */
   function changeMarkdown(next: string, { replace = false } = {}) {
     const prev = markdownRef.current;
@@ -252,20 +281,14 @@ export function DraftView() {
       return;
     }
     if (prev === next) return;
-    if (replacesMostOf(prev, next)) resetBaseline();
     const change = textChange(prev, next);
     setApplied((list) => list.map((a) => mapApplied(a, change)));
-  }
-
-  function resetBaseline() {
-    saveBaseline(slotFor(keyRef.current), null);
-    setBaseline(null);
   }
 
   /**
    * The editor's own changes. A paste that replaces most of an example (the rule that makes it
    * another draft) is the author's own post: it moves to My post and the example stays as it was,
-   * so the home tile shows My post and Reset to example never touches it.
+   * so the home shows My post and Reset to example never touches it.
    */
   function editorChange(next: string) {
     const prev = markdownRef.current;
@@ -290,12 +313,10 @@ export function DraftView() {
       fromSlot: slotFor(keyRef.current),
       markdown: previous,
       questions: loadQuestions(MY_DRAFT_SLUG),
-      baseline: loadBaseline(MY_POST_SLOT),
     };
     // Questions saved for an empty My post came from no text; the pasted post gets its own.
     if (!previous?.trim()) forgetQuestions(MY_DRAFT_SLUG);
     saveDraft(MY_DRAFT_SLUG, text);
-    saveBaseline(MY_POST_SLOT, null);
     selectDraftSlot(MY_POST_SLOT);
   }
 
@@ -305,28 +326,18 @@ export function DraftView() {
     else saveDraft(MY_DRAFT_SLUG, snapshot.markdown);
     if (snapshot.questions === null) forgetQuestions(MY_DRAFT_SLUG);
     else saveQuestions(MY_DRAFT_SLUG, snapshot.questions);
-    saveBaseline(MY_POST_SLOT, snapshot.baseline);
     selectDraftSlot(snapshot.fromSlot);
   }
 
   const questionTexts = useMemo(() => questions.map((q) => q.text), [questions]);
-  const authorTexts = useMemo(() => authorQuestionTexts(questions), [questions]);
-  const weights =
-    preset === 'custom' ? (customWeights ?? PRESET_WEIGHTS.foundation) : PRESET_WEIGHTS[preset];
-  const { result, pending, refresh } = useAnalysis(
-    markdown,
-    preset,
-    customWeights ?? PRESET_WEIGHTS.foundation,
-    questionTexts,
-    authorTexts,
-  );
+  const { result, pending, refresh } = useAnalysis(markdown, questionTexts);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs once per draft switch; changeMarkdown only sets state
   useEffect(() => {
     keyRef.current = draftKey;
-    const draft = loadDraft(draftKey) ?? startingText(draftKey);
+    const draft = draftTextFor(draftKey);
     changeMarkdown(draft, { replace: true });
-    setQuestions(loadQuestions(draftKey) ?? initialQuestions(sampleFor(draftKey), draft));
+    setQuestions(draftQuestionsFor(draftKey));
     setStatuses(withoutApplied(loadStatuses(draftKey)));
     setStale({});
     setApplied([]);
@@ -336,7 +347,8 @@ export function DraftView() {
     setMarkedGroup(null);
     setPreview(null);
     setWording({});
-    setLocalModel(null);
+    setRowWording({});
+    setEditorOpen(false);
     setToast(null);
     const moved = movedFrom.current;
     movedFrom.current = null;
@@ -349,15 +361,18 @@ export function DraftView() {
         replaced,
       );
     }
-    // A phone opens a draft with content on its fixes, and an empty one on the editor to paste into.
-    setPane(draft.trim() === '' ? 'draft' : 'fixes');
+    // A phone opens a draft with content on its questions, and an empty one on the editor.
+    setPane(draft.trim() === '' ? 'draft' : 'questions');
     setJump(null);
     setFocusTarget(null);
-    const stored = getSummary('draft');
-    const s = slotFor(draftKey);
-    setBaseline(loadBaseline(s) ?? (stored?.slot === s ? stored.baseline : null));
     setLoadedKey(draftKey);
   }, [draftKey]);
+
+  // A draft just loaded is analyzed at once, not after the typing debounce, so the rail never
+  // shows the previous draft's analysis (an empty one reads "No questions yet").
+  useEffect(() => {
+    if (loadedKey !== null) refresh();
+  }, [loadedKey, refresh]);
 
   // The untouched starting text is not saved, so a later edit to an example reaches returning visitors.
   useEffect(() => {
@@ -374,53 +389,25 @@ export function DraftView() {
     if (loadedKey === draftKey) saveQuestions(draftKey, questions);
   }, [loadedKey, draftKey, questions]);
 
-  // Anchors and scores are trusted only from an analysis of the current text.
+  // Anchors are trusted only from an analysis of the current text.
   const fresh = result?.markdown === markdown && loadedKey === draftKey;
-
-  // The first scores of a slot (or of a pasted-over draft) are its baseline.
-  useEffect(() => {
-    if (!fresh || baseline !== null || !result) return;
-    const { foundation, evidence } = result.scores;
-    if (foundation === null || evidence === null) return;
-    const next = { standard: foundation, evidence };
-    saveBaseline(slotFor(draftKey), next);
-    setBaseline(next);
-  }, [fresh, baseline, result, draftKey]);
-
-  // The questions reader-words measured when the author has none of their own, worked out as
-  // analyze() does, so the panel lists every question its cards can name.
-  const pageQuestionTexts = useMemo(
-    () =>
-      result?.markdown === undefined || authorTexts.length > 0
-        ? []
-        : pageQuestions(result.markdown).map((q) => q.text),
-    [result?.markdown, authorTexts],
-  );
-
-  const coverage = useMemo(
-    () =>
-      result?.markdown === undefined
-        ? []
-        : questionCoverage(gather(parseDraft(result.markdown)), questionTexts),
-    [result?.markdown, questionTexts],
-  );
 
   const suggestions = useMemo(() => (result?.checks ?? []).flatMap((c) => c.suggestions), [result]);
   const findings = useMemo(() => findingsOf(result), [result]);
-  /** The ranking over open fixes only, so each check's gain divides by its open fixes. */
-  const ranked = useMemo(() => {
+  /** The open writing notes, ranked: the order the Quick edit and the groups read them in. */
+  const notes = useMemo(() => {
     if (!result) return [];
     const isOpen = (s: Suggestion) => (statuses[s.id] ?? 'pending') === 'pending';
     const checks = result.checks.map((c) => ({ ...c, suggestions: c.suggestions.filter(isOpen) }));
-    return rankFixes({ ...result, checks }, weights);
-  }, [result, statuses, weights]);
+    return rankNotes({ ...result, checks });
+  }, [result, statuses]);
 
-  const item = (fix: (typeof ranked)[number]): FixItem => ({
-    fix,
-    copy: fixCopy(fix.suggestion, findings[fix.suggestion.id]),
-    stale: fix.suggestion.id in stale,
-    canSuggest: localModel !== null && offersWordingHelper(fix.suggestion),
-    wording: wording[fix.suggestion.id],
+  const item = (note: RankedNote): FixItem => ({
+    fix: note,
+    copy: fixCopy(note.suggestion, findings[note.suggestion.id]),
+    stale: note.suggestion.id in stale,
+    canSuggest: localModel !== null && offersWordingHelper(note.suggestion),
+    wording: wording[note.suggestion.id],
   });
 
   const handled: HandledItem[] = [
@@ -435,42 +422,43 @@ export function DraftView() {
     }),
   ].map((h) => ({ ...h, copy: fixCopy(h.suggestion, findings[h.suggestion.id]) }));
 
+  // One group per note check with open or handled notes. A question line's applied wording and
+  // an older build's statuses for the two question checks belong to no note.
   const groups: FixGroup[] = (() => {
-    const out: FixGroup[] = groupFixes(ranked).map((g) => ({
-      checkId: g.checkId,
-      items: [],
-      handled: [],
-      chip: chipFor(g.checkId, weights[g.checkId]),
-    }));
-    const byCheck = new Map(out.map((g) => [g.checkId, g]));
-    for (const g of groupFixes(ranked)) byCheck.get(g.checkId)?.items.push(...g.fixes.map(item));
-    for (const id of CHECK_IDS) {
-      const done = handled.filter((h) => h.suggestion.checkId === id);
-      if (done.length === 0) continue;
-      const group = byCheck.get(id) ?? {
-        checkId: id,
-        items: [],
-        handled: [],
-        chip: chipFor(id, weights[id]),
-      };
-      if (!byCheck.has(id)) {
+    const byCheck = new Map<CheckId, FixGroup>(
+      groupNotes(notes).map((g) => [
+        g.checkId,
+        { checkId: g.checkId, label: g.label, items: g.notes.map(item), handled: [] },
+      ]),
+    );
+    for (const h of handled) {
+      const id = h.suggestion.checkId;
+      if (!NOTE_CHECKS.includes(id)) continue;
+      let group = byCheck.get(id);
+      if (!group) {
+        group = { checkId: id, label: TEST_LABELS[id], items: [], handled: [] };
         byCheck.set(id, group);
-        out.push(group);
       }
-      group.handled.push(...done);
+      group.handled.push(h);
     }
-    return out;
+    return [...byCheck.values()].sort(byLabelThenCheck);
   })();
 
-  const startHere = startHereFixes(ranked).map(item);
-  // Next up on the home links here (/draft/#start-here); the list appears after the analysis.
-  useScrollToHash(START_HERE_ID, fresh && startHere.length > 0);
+  /** The one ready edit Start here keeps while the draft has one: the Quick edit. */
+  const quickNote = quickEdit(notes);
+  const quick = quickNote ? item(quickNote) : null;
+
+  // The draft's step card on the home and its summary: written after each fresh analysis of
+  // real content, from the questions it measured (the draft's own, else the page's).
+  const report = fresh && result && result.wordCount > 0 ? result.questions : null;
+  // The home's draft step card links here (/draft/#start-here); the card appears after the analysis.
+  useScrollToHash(START_HERE_ID, report !== null);
 
   // Only the selected fix (the editor's active highlight, underlined and filled), or else the
   // ranges of the group opened last (the editor's selectedRanges, underlined), are marked;
   // nothing on load.
   const nextMarks = useMemo<{ highlights: EditorHighlight[]; selected: Range[] }>(() => {
-    const active = ranked.find((f) => f.suggestion.id === activeId);
+    const active = notes.find((f) => f.suggestion.id === activeId);
     if (active) {
       return {
         highlights: [{ range: active.suggestion.range, checkId: active.checkId, active: true }],
@@ -481,9 +469,9 @@ export function DraftView() {
       return { highlights: [], selected: [] };
     return {
       highlights: [],
-      selected: ranked.filter((f) => f.checkId === markedGroup).map((f) => f.suggestion.range),
+      selected: notes.filter((f) => f.checkId === markedGroup).map((f) => f.suggestion.range),
     };
-  }, [ranked, activeId, markedGroup, openGroups]);
+  }, [notes, activeId, markedGroup, openGroups]);
   const [marks, setMarks] = useState<{ highlights: EditorHighlight[]; selected: Range[] }>({
     highlights: [],
     selected: [],
@@ -518,37 +506,45 @@ export function DraftView() {
     });
   }, [fresh, suggestions, stale, markdown]);
 
-  // The draft tile's summary: written after each fresh analysis of real content.
-  // Its score is always the Standard score, whatever mode is shown, so the home's "+N" compares
-  // Standard with Standard.
-  const score = result?.scores.foundation ?? null;
-  const openStartHere = startHere.length;
+  const covered = report?.covered ?? null;
+  const measured = report?.rows.length ?? null;
+  const fromPage = report?.from === 'page';
   const summaryKey = useRef('');
   useEffect(() => {
-    if (!fresh || score === null || baseline === null) return;
+    if (covered === null || measured === null) return;
     const s = slotFor(draftKey);
-    const keyNow = JSON.stringify([s, score, baseline, openStartHere]);
+    const keyNow = JSON.stringify([s, covered, measured, fromPage]);
     if (summaryKey.current === keyNow) return;
     summaryKey.current = keyNow;
     setSummary('draft', {
       slot: s,
-      score,
-      baseline,
-      openStartHere,
+      covered,
+      total: measured,
+      fromPage,
       example: s !== MY_POST_SLOT,
       at: new Date().toISOString(),
     });
-  }, [fresh, score, baseline, openStartHere, draftKey]);
+  }, [covered, measured, fromPage, draftKey]);
 
   /**
-   * Where a suggestion's range sits in the current text. Ranges come from the last analysis,
-   * which can trail the editor by the debounce; a change that touches the range gives null.
+   * Where a range of the last analysis sits in the current text. That analysis can trail the
+   * editor by the debounce; a change that touches the range gives null.
    */
-  function currentRange(s: Suggestion): Range | null {
-    const analyzed = result?.markdown;
-    if (analyzed === undefined || analyzed === markdown) return s.range;
-    return mapRange(s.range, textChange(analyzed, markdown), 'touches');
+  function currentRange(range: Range): Range | null {
+    return moveRange(range, result?.markdown ?? markdown, markdown);
   }
+
+  /**
+   * The opened edit on the current text: its range moved from the text it was measured on, which
+   * the latest analysis need not have read (the author may type while the local AI works). When
+   * a change since touches it, it has nothing left to apply, so the preview says Out of date.
+   * Kept stable between renders, as the preview rebuilds its comparison when it changes.
+   */
+  const previewNow = useMemo(() => {
+    if (!preview) return null;
+    const range = moveRange(preview.suggestion.range, preview.on, markdown);
+    return range ? { ...preview.suggestion, range } : { ...preview.suggestion, after: undefined };
+  }, [preview, markdown]);
 
   function setStatus(id: string, status: SuggestionStatus) {
     setStatuses((prev) => {
@@ -566,17 +562,17 @@ export function DraftView() {
     setToast({ id: toastId.current, message, undo, persist });
   }
 
+  /** Apply in the preview: `s` is the opened edit on the current text (`previewNow`). */
   function apply(s: Suggestion) {
-    const range = currentRange(s);
-    const outcome = range ? applySuggestion(markdown, { ...s, range }) : null;
-    if (!range || !outcome?.ok) {
+    const outcome = applySuggestion(markdown, s);
+    if (!outcome.ok) {
       setStale((prev) => ({ ...prev, [s.id]: s }));
       setPreview(null);
       refresh();
       return;
     }
     changeMarkdown(outcome.markdown);
-    setApplied((prev) => [...prev.filter((a) => a.id !== s.id), { ...s, range }]);
+    setApplied((prev) => [...prev.filter((a) => a.id !== s.id), s]);
     setStatus(s.id, 'applied');
     if (activeId === s.id) setActiveId(null);
     setPreview(null);
@@ -623,18 +619,24 @@ export function DraftView() {
 
   function select(s: Suggestion) {
     setActiveId(s.id);
-    jumpTo(currentRange(s) ?? s.range, s.id);
+    jumpTo(currentRange(s.range) ?? s.range, { id: s.id });
+  }
+
+  /** A card line's Show: selects its passage, with no note active. */
+  function showLine(range: Range, question: string) {
+    setActiveId(null);
+    jumpTo(currentRange(range) ?? range, { id: null, question });
   }
 
   /** Selects a passage in the draft; on a phone, switches to the draft and shows the bar. */
-  function jumpTo(range: Range, id: string | null) {
+  function jumpTo(range: Range, from: Jump) {
     setPane('draft');
     // A desktop shows the rail beside the draft, so it needs no bar (and no raised toast).
-    setJump(isDesktop() ? null : { id });
+    setJump(isDesktop() ? null : from);
     setFocusTarget({ range });
   }
 
-  /** The Draft / Fixes switch: the chosen column, from its top. */
+  /** The Draft / Questions switch: the chosen column, from its top. */
   function showPane(next: Pane) {
     setPane(next);
     setJump(null);
@@ -642,12 +644,12 @@ export function DraftView() {
   }
 
   /**
-   * Back to fixes, at the card the author jumped from, with focus on its main button; the
-   * switch's Fixes button when that card is gone (a reader question, or a fix since handled).
+   * Back to the rail, at the card the author jumped from, with focus on its main button; the
+   * switch's Questions button when there is no such card (a card line, or a note since handled).
    */
-  function backToFixes() {
+  function backToRail() {
     const id = jump?.id ?? null;
-    setPane('fixes');
+    setPane('questions');
     setJump(null);
     requestAnimationFrame(() => {
       const from = [...document.querySelectorAll<HTMLElement>('[data-fix]')].find(
@@ -657,59 +659,106 @@ export function DraftView() {
       else document.scrollingElement?.scrollTo?.({ top: 0 });
       const main = from?.querySelector<HTMLElement>('button');
       if (main) main.focus({ preventScroll: true });
-      else fixesButtonRef.current?.focus({ preventScroll: true });
+      else questionsButtonRef.current?.focus({ preventScroll: true });
     });
   }
 
-  /** The bar's Done: the bar and its button go, so focus moves to the switch's Fixes button. */
+  /** The bar's Done: the bar and its button go, so focus moves to the switch's Questions button. */
   function doneFromBar(s: Suggestion) {
     setJump(null);
     actions.onDone(s);
-    requestAnimationFrame(() => fixesButtonRef.current?.focus({ preventScroll: true }));
+    requestAnimationFrame(() => questionsButtonRef.current?.focus({ preventScroll: true }));
   }
 
-  /** The bar's Preview; on close, focus goes to the switch's Fixes button, as the bar is gone. */
+  /** The bar's Preview; on close, focus goes to the switch's Questions button, as the bar is gone. */
   function previewFromBarOf(s: Suggestion) {
     previewFromBar.current = true;
     setJump(null);
     actions.onPreview(s);
   }
 
-  function openPreview(s: Suggestion | null, note?: string) {
-    setPreview(s);
-    setPreviewNote(note);
+  /** Opens `s`, a suggestion of the current analysis, in the preview. */
+  function openPreview(s: Suggestion) {
+    if (result) setPreview({ suggestion: s, on: result.markdown });
   }
 
   /**
-   * Asks the local model (only on this click) for wording that addresses an advisory, then
-   * opens the proposal side by side. Nothing is applied here.
+   * Asks the local model (only on this click) for wording that addresses the advisory `s`, then
+   * opens the proposal (after `finish`) side by side. `setState` follows the request on the card
+   * that asked. Nothing is applied here. The proposal keeps the text `s` was measured on, so text
+   * typed while the model works moves it, or makes it out of date, rather than misplace it.
    */
-  async function suggestWording(s: Suggestion) {
-    if (localModel === null) return;
+  async function askLocalModel(
+    s: Suggestion,
+    setState: (state: WordingState | null) => void,
+    finish: (proposal: Suggestion) => Suggestion = (p) => p,
+  ) {
+    if (localModel === null || !result) return;
     const forKey = draftKey;
-    const section = sectionAround(markdown, s.range);
-    setActiveId(s.id);
-    setWording((prev) => ({ ...prev, [s.id]: { status: 'asking' } }));
+    const model = localModel;
+    const on = result.markdown;
+    const section = sectionAround(on, s.range);
+    setState({ status: 'asking' });
     try {
       const proposal = await proposeWording(
         s,
-        markdown.slice(section.start, section.end),
+        on.slice(section.start, section.end),
         new OllamaAdapter(),
-        localModel,
+        model,
       );
       if (keyRef.current !== forKey) return;
-      setWording(({ [s.id]: _, ...rest }) => rest);
-      openPreview(
-        proposal,
-        `Written by ${localModel} on this computer. Check that it keeps your facts.`,
-      );
+      setState(null);
+      setPreview({
+        suggestion: finish(proposal),
+        on,
+        note: `Written by ${model} on this computer. Check that it keeps your facts.`,
+      });
     } catch (err) {
       if (keyRef.current !== forKey) return;
-      setWording((prev) => ({
-        ...prev,
-        [s.id]: { status: 'error', message: wordingError(err, localModel) },
-      }));
+      setState({ status: 'error', message: wordingError(err, model) });
     }
+  }
+
+  function suggestWording(s: Suggestion) {
+    setActiveId(s.id);
+    void askLocalModel(s, (state) => setWording((prev) => withState(prev, s.id, state)));
+  }
+
+  /**
+   * The advisory Suggest wording rewrites for a card row: the row's question-coverage advisory,
+   * moved onto the passage a direct answer goes in (the matching section's first sentence, or an
+   * empty spot after its heading, where the helper writes a new passage from the section's own
+   * facts). It keeps an id of its own, so applying it never marks the advisory itself. Undefined
+   * when the row is answered or the analysis holds no advisory for it.
+   */
+  function answerAdvisory(row: QuestionRow): Suggestion | undefined {
+    if (!result || row.answer.covered) return undefined;
+    const advisory = suggestionFor(result, 'question-coverage', row.question);
+    if (!advisory) return undefined;
+    const range = { ...row.answerRange };
+    return {
+      ...advisory,
+      id: `${advisory.id}-answer`,
+      range,
+      before: result.markdown.slice(range.start, range.end),
+    };
+  }
+
+  /**
+   * Suggest wording on a card row. An empty spot gets the answer as a paragraph of its own, set
+   * apart in the text the spot was measured on; moveRange holds the preview and Apply to that.
+   */
+  function suggestAnswer(row: QuestionRow) {
+    const s = answerAdvisory(row);
+    if (!s || !result) return;
+    const analyzed = result.markdown;
+    setActiveId(null);
+    void askLocalModel(
+      s,
+      (state) => setRowWording((prev) => withState(prev, row.question, state)),
+      (p) =>
+        s.before === '' ? { ...p, after: paragraphAt(analyzed, s.range.start, p.after ?? '') } : p,
+    );
   }
 
   function toggleGroup(id: CheckId) {
@@ -723,20 +772,9 @@ export function DraftView() {
     setActiveId(null);
   }
 
-  function changeWeight(id: CheckId, value: number) {
-    setCustomWeights({ ...weights, [id]: value });
-    setPreset('custom');
-  }
-
-  function adjustWeights() {
-    setSections((s) => ({ ...s, checks: true }));
-    setShowWeights(true);
-    requestAnimationFrame(() => checksRef.current?.scrollIntoView?.({ block: 'nearest' }));
-  }
-
-  /** Reset to example (or Clear, for My post): the starting text, no statuses, a new baseline. */
+  /** Reset to example (or Clear, for My post): the starting text and no statuses. */
   function resetDraft() {
-    const snapshot: ResetSnapshot = { markdown, statuses, applied, undoStale, baseline };
+    const snapshot: ResetSnapshot = { markdown, statuses, applied, undoStale };
     clearDraft(draftKey);
     changeMarkdown(startingText(draftKey), { replace: true });
     setStatuses({});
@@ -744,7 +782,6 @@ export function DraftView() {
     setApplied([]);
     setUndoStale(new Set());
     setActiveId(null);
-    resetBaseline();
     if (snapshot.markdown !== startingText(draftKey) || Object.keys(statuses).length > 0) {
       showToast(sample ? 'Reset.' : 'Cleared.', { kind: 'reset', snapshot });
     }
@@ -755,19 +792,8 @@ export function DraftView() {
     setStatuses(snapshot.statuses);
     setApplied(snapshot.applied);
     setUndoStale(snapshot.undoStale);
-    saveBaseline(slotFor(draftKey), snapshot.baseline);
-    setBaseline(snapshot.baseline);
   }
 
-  const total = ranked.length + handled.length;
-  const since =
-    preset === 'custom' || !result
-      ? null
-      : sinceStart(
-          result.scores[preset],
-          preset === 'foundation' ? baseline?.standard : baseline?.evidence,
-        );
-  const answered = coverage.filter((c) => c.covered).length;
   // Empty at once when the text is (a slot switch needs no debounce to say so), else as analyzed.
   const empty = markdown.trim() === '' || (fresh && result.wordCount === 0);
   const actions = {
@@ -780,20 +806,42 @@ export function DraftView() {
     onSkip: (s: Suggestion) => handle(s, 'ignored'),
     onSuggestWording: suggestWording,
   };
-  const outdated = Object.values(stale).filter(
-    (s) => !ranked.some((f) => f.suggestion.id === s.id),
-  );
-  /** A phone shows one column at a time once there are a score and fixes to switch to. */
+  const outdated = Object.values(stale).filter((s) => !notes.some((f) => f.suggestion.id === s.id));
+  /** A phone shows one column at a time once there are questions and notes to switch to. */
   const split = !empty && result !== null;
-  const jumped = jump?.id == null ? undefined : ranked.find((f) => f.suggestion.id === jump.id);
-  /** The bar shows a fix's title, so it shows only while that fix is still in the list. */
+  /** Questions the card does not count as covered yet: the switch's badge. */
+  const notCovered = result ? result.questions.rows.length - result.questions.covered : 0;
+  const jumped = jump?.id == null ? undefined : notes.find((f) => f.suggestion.id === jump.id);
+  /** The bar shows a note's title, so it shows only while that note is still in the list. */
   const showBar = jump !== null && (jump.id === null || jumped !== undefined);
-  // The jumped fix left the list (fixed by an edit, say): the bar closes rather than show no title.
+  // The jumped note left the list (fixed by an edit, say): the bar closes rather than show no title.
   // The bar's own actions move focus themselves; an edit leaves focus in the editor.
   const jumpGone = fresh && jump?.id != null && jumped === undefined;
   useEffect(() => {
     if (jumpGone) setJump(null);
   }, [jumpGone]);
+
+  // Each card row's question is looked up on the list by its key, never by its place: the
+  // analysis may trail an edit to the list. A row whose question is not on the list (the page's
+  // own, or one just removed) reads as the page's, the input our tests did not use.
+  const listed = new Map<string, WorkspaceQuestion>();
+  for (const q of questions) {
+    const key = questionKey(q.text);
+    if (!listed.has(key)) listed.set(key, q);
+  }
+  const rows = result?.questions.rows ?? [];
+  const rowChips = rows.map((row) => {
+    const q =
+      result?.questions.from === 'yours' ? listed.get(questionKey(row.question)) : undefined;
+    const input: QuestionInput = q ? inputKindOf(q) : 'page';
+    const pair = q ? labelsFor(q) : QUESTION_LABELS.page;
+    // A row with no key words to look for has no words line, so only its answer's label shows.
+    return {
+      input,
+      labels: row.words === null ? { words: pair.answer, answer: pair.answer } : pair,
+    };
+  });
+  const canSuggestAnswer = localModel !== null && rows.some((r) => answerAdvisory(r) !== undefined);
 
   return (
     <main
@@ -802,25 +850,29 @@ export function DraftView() {
       {split && (
         <div className="sticky top-14 z-30 -mx-4 -mt-2 mb-4 bg-background/90 px-4 py-2 backdrop-blur-md sm:-mx-6 sm:px-6 lg:hidden">
           <fieldset className="grid min-w-0 grid-cols-2 gap-1 rounded-lg border bg-sunken p-1">
-            <legend className="sr-only">Draft or fixes</legend>
+            <legend className="sr-only">Draft or questions</legend>
             <PaneButton pressed={pane === 'draft'} onClick={() => showPane('draft')}>
               <PenLine aria-hidden="true" strokeWidth={1.75} />
               Draft
             </PaneButton>
             <PaneButton
-              ref={fixesButtonRef}
-              pressed={pane === 'fixes'}
-              onClick={() => showPane('fixes')}
+              ref={questionsButtonRef}
+              pressed={pane === 'questions'}
+              onClick={() => showPane('questions')}
             >
               <ListChecks aria-hidden="true" strokeWidth={1.75} />
-              Fixes
-              <span
-                aria-hidden="true"
-                className="rounded-full bg-brand-soft px-1.5 font-semibold text-brand text-xs tabular-nums"
-              >
-                {ranked.length}
-              </span>
-              <span className="sr-only">{`, ${ranked.length} open`}</span>
+              Questions
+              {notCovered > 0 && (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="rounded-full bg-brand-soft px-1.5 font-semibold text-brand text-xs tabular-nums"
+                  >
+                    {notCovered}
+                  </span>
+                  <span className="sr-only">{`, ${notCovered} not covered`}</span>
+                </>
+              )}
             </PaneButton>
           </fieldset>
         </div>
@@ -864,7 +916,7 @@ export function DraftView() {
           <div
             className={cn(
               'min-h-[60vh] overflow-hidden rounded-paper border bg-paper shadow-card',
-              split && pane === 'fixes' && 'max-lg:hidden',
+              split && pane === 'questions' && 'max-lg:hidden',
             )}
           >
             <MarkdownEditor
@@ -880,7 +932,7 @@ export function DraftView() {
         </section>
 
         <aside
-          aria-label="Score and fixes"
+          aria-label="Questions and notes"
           className={cn(
             'min-w-0 space-y-4 lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:p-1',
             split && pane === 'draft' && 'max-lg:hidden',
@@ -893,8 +945,11 @@ export function DraftView() {
               </span>
               <h2 className="font-serif text-lg">No content yet</h2>
               <p className="mt-1 text-ink-soft text-sm">
-                Paste or type your post. Your score and fixes show up here.
+                Paste or type your post. Your questions and notes show up here.
               </p>
+              {questions.length > 0 && (
+                <p className="mt-1 text-ink-soft text-sm">{waiting(questions.length)}</p>
+              )}
               {SAMPLES[0] && (
                 <Button
                   type="button"
@@ -909,29 +964,6 @@ export function DraftView() {
             </div>
           ) : (
             <>
-              <ScoreCard
-                scores={result.scores}
-                mode={preset}
-                hasCustom={customWeights !== null}
-                since={since}
-                pending={pending}
-                onModeChange={setPreset}
-                onAdjustWeights={adjustWeights}
-              />
-              {total > 0 && (
-                <div className="flex items-center gap-3 px-0.5 text-ink-soft text-xs">
-                  <span className="tabular-nums">{`${handled.length} of ${total} handled`}</span>
-                  <span
-                    aria-hidden="true"
-                    className="h-1 flex-1 overflow-hidden rounded-full bg-score-track"
-                  >
-                    <span
-                      className="block h-full rounded-full bg-done motion-safe:transition-[width]"
-                      style={{ width: `${(handled.length / total) * 100}%` }}
-                    />
-                  </span>
-                </div>
-              )}
               {outdated.map((s) => (
                 <p
                   key={`outdated-${s.id}`}
@@ -949,87 +981,107 @@ export function DraftView() {
                   </Button>
                 </p>
               ))}
-              <StartHere items={startHere} activeId={activeId} {...actions} />
-              <FixGroups
-                groups={groups}
-                open={openGroups}
-                onToggle={toggleGroup}
-                activeId={activeId}
-                onUndo={undoHandled}
-                {...actions}
-              />
-              <RailSection
-                title="Reader questions"
-                icon={Target}
-                meta={
-                  questions.length > 0 ? `${questions.length} · ${answered} answered` : undefined
-                }
-                open={sections.questions}
-                onOpenChange={(open) => setSections((s) => ({ ...s, questions: open }))}
+              <section
+                id={START_HERE_ID}
+                aria-labelledby="start-here-title"
+                className="scroll-mt-24 space-y-2"
               >
-                <ReaderQuestions
-                  key={draftKey}
-                  questions={questions}
-                  onChange={setQuestions}
-                  markdown={markdown}
-                  localModel={localModel}
-                  coverage={coverage}
-                  pageQuestions={pageQuestionTexts}
-                  onShowRange={(range) => {
-                    setActiveId(null);
-                    jumpTo(range, null);
-                  }}
+                <h2
+                  id="start-here-title"
+                  className="px-0.5 font-semibold text-ink-soft text-xs uppercase tracking-wider"
+                >
+                  Start here
+                </h2>
+                <QuestionsCard
+                  report={result.questions}
+                  rowLabels={rowChips.map((c) => c.labels)}
+                  renderChip={(label, scope, row) => (
+                    <LabelChip
+                      label={label}
+                      tooltip={labelTooltip(label, {
+                        card: scope === 'card',
+                        input: rowChips[row]?.input,
+                      })}
+                    />
+                  )}
+                  pending={pending}
+                  editorOpen={editorOpen}
+                  onToggleEditor={() => setEditorOpen((open) => !open)}
+                  editor={
+                    <ReaderQuestions
+                      key={draftKey}
+                      questions={questions}
+                      onChange={setQuestions}
+                      markdown={markdown}
+                      localModel={localModel}
+                    />
+                  }
+                  onShowRange={showLine}
+                  canSuggest={canSuggestAnswer}
+                  wording={rowWording}
+                  onSuggestWording={suggestAnswer}
+                />
+                {quick && (
+                  <QuickEdit
+                    suggestion={quick.fix.suggestion}
+                    copy={quick.copy}
+                    editable={quick.fix.editable}
+                    active={quick.fix.suggestion.id === activeId}
+                    stale={quick.stale}
+                    canSuggest={quick.canSuggest}
+                    wording={quick.wording}
+                    chip={<NoteChip checkId={quick.fix.checkId} label={quick.fix.label} />}
+                    {...actions}
+                  />
+                )}
+              </section>
+              <RailSection
+                title="Writing notes"
+                icon={NotebookText}
+                meta={String(notes.length)}
+                open={sections.notes}
+                onOpenChange={(open) => setSections((s) => ({ ...s, notes: open }))}
+              >
+                <p className="text-ink-soft">Each note carries a label from our tests.</p>
+                <FixGroups
+                  groups={groups}
+                  open={openGroups}
+                  onToggle={toggleGroup}
+                  activeId={activeId}
+                  onUndo={undoHandled}
+                  {...actions}
                 />
               </RailSection>
-              <div ref={checksRef}>
-                <RailSection
-                  title={`All ${CHECK_IDS.length} checks`}
-                  icon={List}
-                  open={sections.checks}
-                  onOpenChange={(open) => setSections((s) => ({ ...s, checks: open }))}
+              <p className="flex flex-wrap items-center gap-x-1.5 px-0.5 text-sm">
+                Did it change anything?
+                <Link
+                  href={`${VIEW_HREF.cited}#test`}
+                  prefetch={false}
+                  className="inline-flex items-center gap-1 rounded-sm font-medium text-brand underline-offset-2 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring"
                 >
-                  <AllChecks
-                    checks={result.checks}
-                    weights={weights}
-                    showWeights={showWeights}
-                    onShowWeights={setShowWeights}
-                    onWeightChange={changeWeight}
-                  />
-                </RailSection>
-              </div>
+                  Test it
+                  <ArrowRight aria-hidden="true" className="size-3.5" />
+                </Link>
+              </p>
+              <LocalAiRow connection={connection} />
             </>
-          )}
-          {!empty && result && (
-            <RailSection
-              title="Test it"
-              icon={Laptop}
-              meta="optional"
-              open={sections.test}
-              onOpenChange={(open) => setSections((s) => ({ ...s, test: open }))}
-            >
-              <TestIt
-                key={draftKey}
-                sample={sample}
-                markdown={markdown}
-                fallbackTitle={sample?.title ?? MY_DRAFT_LABEL}
-                onLocalModel={setLocalModel}
-              />
-            </RailSection>
           )}
         </aside>
       </div>
 
       <MergePreview
         markdown={markdown}
-        suggestion={preview}
-        title={preview ? fixCopy(preview, findings[preview.id]).title : undefined}
-        note={previewNote}
+        suggestion={previewNow}
+        title={
+          preview ? fixCopy(preview.suggestion, findings[preview.suggestion.id]).title : undefined
+        }
+        note={preview?.note}
         onApply={apply}
-        onClose={() => openPreview(null)}
+        onClose={() => setPreview(null)}
         returnFocus={() => {
           const fromBar = previewFromBar.current;
           previewFromBar.current = false;
-          return fromBar ? fixesButtonRef.current : null;
+          return fromBar ? questionsButtonRef.current : null;
         }}
       />
       {showBar && (
@@ -1042,7 +1094,9 @@ export function DraftView() {
           )}
         >
           <p className="min-w-0 flex-1 truncate font-semibold text-sm">
-            {jumped && fixCopy(jumped.suggestion, findings[jumped.suggestion.id]).title}
+            {jumped
+              ? fixCopy(jumped.suggestion, findings[jumped.suggestion.id]).title
+              : jump?.question}
           </p>
           {jumped?.editable && (
             <Button type="button" size="sm" onClick={() => previewFromBarOf(jumped.suggestion)}>
@@ -1054,8 +1108,14 @@ export function DraftView() {
               Done
             </Button>
           )}
-          <Button type="button" size="sm" variant="outline" onClick={backToFixes}>
-            Back to fixes
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            aria-label="Back to questions and notes"
+            onClick={backToRail}
+          >
+            Back
           </Button>
         </section>
       )}
@@ -1069,7 +1129,7 @@ export function DraftView() {
   );
 }
 
-/** One side of the phone's Draft / Fixes switch. */
+/** One side of the phone's Draft / Questions switch. */
 function PaneButton({
   ref,
   pressed,
@@ -1096,6 +1156,48 @@ function PaneButton({
     >
       {children}
     </button>
+  );
+}
+
+/**
+ * The local AI row: Connect local AI (only on this click, and only to the AI on this computer),
+ * then the model it found, or what to do when it is not running or lacks the model. One
+ * connection unlocks Suggest wording and the question editor's local AI.
+ */
+function LocalAiRow({ connection: { status, model } }: { connection: LocalModel }) {
+  const again = status === 'unreachable' || status === 'model-missing';
+  return (
+    <section aria-label="Local AI" className="space-y-2 px-0.5 text-sm">
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-ink-soft">
+        <span>Local AI (optional)</span>
+        {status === 'ready' ? (
+          <span className="text-foreground">Connected to {model}.</span>
+        ) : (
+          <Button
+            type="button"
+            size="xs"
+            variant="outline"
+            title={CONNECT_NOTE}
+            disabled={status === 'checking'}
+            onClick={() => void connectLocalModel()}
+          >
+            {again ? <RefreshCw aria-hidden="true" /> : <Laptop aria-hidden="true" />}
+            {status === 'checking' ? 'Connecting...' : again ? 'Try again' : 'Connect local AI'}
+          </Button>
+        )}
+      </p>
+      {status === 'unreachable' && (
+        <div role="status" className="space-y-2">
+          <UnreachableNote />
+          <OllamaInstructions model={model} />
+        </div>
+      )}
+      {status === 'model-missing' && (
+        <div role="status">
+          <ModelMissingNote model={model} />
+        </div>
+      )}
+    </section>
   );
 }
 

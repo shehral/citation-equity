@@ -20,7 +20,8 @@ function loadedPathname(): string | null {
 
 /**
  * True the first time the home mounts in this document, when the document was loaded at the
- * home: the visit started here. Each later call returns false.
+ * home: the visit started here. A visit sent here by an old URL (/questions/, the old Your
+ * questions view) was loaded there, so it stays on the home. Each later call returns false.
  */
 export function takeLanding(): boolean {
   if (homeMounted) return false;

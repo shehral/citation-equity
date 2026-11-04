@@ -1,9 +1,19 @@
 import { expect, type Page, test } from '@playwright/test';
-import { basePath, freshVisit, go, RETIRED_GRADE, ROUTES } from './support';
+import {
+  basePath,
+  coveredHeading,
+  freshVisit,
+  go,
+  pageText,
+  RETIRED_GRADE,
+  ROUTES,
+  writingNotes,
+} from './support';
 
 // Product truths checked on every route of the built site, in both projects:
 // nothing leaves the origin on load, every same-site file loads from under the base path (the
-// Pages build serves the site under /citation-equity/), and no page uses the retired grade word.
+// Pages build serves the site under /citation-equity/), no page uses the retired grade word, and
+// no page shows a score, with or without the example.
 
 interface Traffic {
   outside: string[];
@@ -33,12 +43,19 @@ function watch(page: Page, origin: string): Traffic {
   return traffic;
 }
 
+/** The body's text with its scripts' payloads, lowercased: no copy can hide from it. */
 async function bodyText(page: Page) {
   return ((await page.locator('body').textContent()) ?? '').toLowerCase();
 }
 
+/** What no route may show: the score this redesign removed, by its name or its "out of 100". */
+function expectNoScore(text: string, where: string) {
+  expect(text, where).not.toContain('AI-ready');
+  expect(text, where).not.toContain('/ 100');
+}
+
 for (const route of ROUTES) {
-  test(`${route}: nothing leaves the origin on load, every file loads from the base path, no retired grade word`, async ({
+  test(`${route}: nothing leaves the origin on load, every file loads from the base path, no retired grade word or score`, async ({
     page,
     baseURL,
   }) => {
@@ -48,6 +65,7 @@ for (const route of ROUTES) {
     expect(traffic.offBase).toEqual([]);
     expect(traffic.failed).toEqual([]);
     expect(await bodyText(page)).not.toContain(RETIRED_GRADE);
+    expectNoScore(await pageText(page), route);
   });
 }
 
@@ -75,33 +93,35 @@ test('the self-hosted fonts load from the base path', async ({ page, baseURL }) 
 const EVIDENCE_TALK =
   /\bE[123]\b|95%|\bCI\b|Holm|\bp = |(^|[\s(])n \d|\b[Ss]trong evidence|\b[Mm]oderate evidence|\b[Mm]ixed evidence|\bUntested\b|\b[Oo]ur (own )?tests? (found|measured)\b|\bGEO\b/;
 
-test('with the example loaded, no view uses the retired grade word or leaves the origin', async ({
+test('with the example loaded, no view shows a score or the retired grade word, or leaves the origin', async ({
   page,
   baseURL,
 }) => {
   await freshVisit(page);
   await page.getByRole('button', { name: 'Try it with an example' }).click();
-  await expect(page.getByRole('region', { name: 'Next up' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Blocker' })).toBeVisible();
   const traffic = watch(page, new URL(baseURL ?? '').origin);
   expect(await bodyText(page)).not.toContain(RETIRED_GRADE);
+  expectNoScore(await pageText(page), '/ (example)');
   for (const route of ['/draft/', '/site/', '/cited/', '/questions/', '/research/']) {
     await go(page, route, { waitUntil: 'networkidle' });
     if (route === '/draft/') {
-      // Open every collapsed section of the rail, so their text is checked too.
-      for (const name of [/^Reader questions/, /^All 11 checks/, /^Test it/]) {
-        await page.getByRole('button', { name }).click();
+      // Open the question editor, Writing notes and every note group, so their text is checked
+      // too (the rail renders a collapsed section's body only once it is opened).
+      await expect(coveredHeading(page)).toBeVisible();
+      await page.getByRole('button', { name: 'Edit questions' }).click();
+      const notes = await writingNotes(page);
+      const groups = await notes.getByRole('button', { name: /, (\d+ notes?|done)$/ }).all();
+      expect(groups.length).toBeGreaterThan(0);
+      for (const group of groups) {
+        await group.click();
+        await expect(group).toHaveAttribute('aria-expanded', 'true');
       }
     }
     expect(await bodyText(page), route).not.toContain(RETIRED_GRADE);
-    if (route !== '/research/') {
-      // The page's own text, hidden parts included, without its scripts' payloads.
-      const text = await page.evaluate(() => {
-        const body = document.body.cloneNode(true) as HTMLElement;
-        for (const el of body.querySelectorAll('script, style')) el.remove();
-        return body.textContent ?? '';
-      });
-      expect(text.match(EVIDENCE_TALK)?.[0], route).toBeUndefined();
-    }
+    const text = await pageText(page);
+    expectNoScore(text, route);
+    if (route !== '/research/') expect(text.match(EVIDENCE_TALK)?.[0], route).toBeUndefined();
   }
   expect(traffic.outside).toEqual([]);
   expect(traffic.failed).toEqual([]);

@@ -75,9 +75,9 @@ describe('ce questions', () => {
       await writeFile(file, stdout);
       const analyzed = await ce(['analyze', fixture('basic.md'), '--questions', file]);
       expect(analyzed.code).toBe(0);
-      expect(analyzed.stdout).toContain(
-        'Target questions (from q.txt):\n- Why is my espresso bitter?\n- What is espresso grind size?\n',
-      );
+      expect(analyzed.stdout).toMatch(/^Questions covered: \d+ of 2 \(from q\.txt\)\n/);
+      expect(analyzed.stdout).toContain('\n- Why is my espresso bitter?\n');
+      expect(analyzed.stdout).toContain('\n- What is espresso grind size?\n');
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

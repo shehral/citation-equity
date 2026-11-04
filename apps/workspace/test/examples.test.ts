@@ -16,7 +16,7 @@ import {
   EXAMPLE_SLUG,
   runExample,
 } from '@/lib/examples';
-import { authorQuestionTexts, initialQuestions } from '@/lib/questions';
+import { initialQuestions } from '@/lib/questions';
 import { getSample } from '@/lib/samples';
 import { clearAll, getActiveSlot, getSummary, setSummary } from '@/lib/store';
 
@@ -84,56 +84,43 @@ describe('runExample', () => {
   it('opens the espresso example and stores the three summaries, labelled Example', () => {
     runExample(AT);
     const sample = getSample(EXAMPLE_SLUG);
-    const initial = initialQuestions(sample, sample.before);
-    // The pack's questions are imported, so they are the author's own for reader-words.
+    // The pack's four questions are the reader's own, measured on the starting text.
     const result = analyze(sample.before, {
-      questions: initial.map((q) => q.text),
-      authorQuestions: authorQuestionTexts(initial),
+      questions: initialQuestions(sample).map((q) => q.text),
     });
-    // Start here shows at most one fix per check.
-    const checksWithFixes = result.checks.filter((c) => c.suggestions.length > 0).length;
+    expect(result.questions).toMatchObject({ from: 'yours', covered: 0 });
+    expect(result.questions.rows).toHaveLength(4);
 
     expect(getActiveSlot()).toBe(EXAMPLE_SLUG);
     expect(getSummary('draft')).toEqual({
       slot: EXAMPLE_SLUG,
-      score: result.scores.foundation,
-      baseline: { standard: result.scores.foundation, evidence: result.scores.evidence },
-      openStartHere: Math.min(3, checksWithFixes),
+      covered: 0,
+      total: 4,
+      fromPage: false,
       example: true,
       at: AT.toISOString(),
     });
+    // Its robots.txt blocks PerplexityBot; the missing canonical stays a page note.
     expect(getSummary('site')).toEqual({
-      ...checkPastedSite({ html: EXAMPLE_PAGE_HTML, robotsTxt: EXAMPLE_ROBOTS_TXT }).summary,
+      blockers: ['crawler-access'],
+      checks: [],
+      needsLiveSite: 1,
       example: true,
       at: AT.toISOString(),
     });
     expect(getSummary('cited')).toMatchObject({ answers: 3, citingYou: 1, example: true });
   });
 
-  it("keeps the baseline of the same slot's earlier check, so +N survives a second run", () => {
-    setSummary('draft', {
-      slot: EXAMPLE_SLUG,
-      score: 30,
-      baseline: { standard: 20, evidence: 21 },
-      openStartHere: 3,
-      example: true,
-      at: AT.toISOString(),
-    });
-    runExample(AT);
-    expect(getSummary('draft')?.baseline).toEqual({ standard: 20, evidence: 21 });
-  });
-
-  it("replaces another slot's baseline with the example's own score", () => {
+  it("replaces another slot's summary with the example's own", () => {
     setSummary('draft', {
       slot: 'my-post',
-      score: 80,
-      baseline: { standard: 10, evidence: 10 },
-      openStartHere: 0,
+      covered: 3,
+      total: 3,
+      fromPage: true,
       example: false,
       at: AT.toISOString(),
     });
     runExample(AT);
-    const draft = getSummary('draft');
-    expect(draft?.baseline.standard).toBe(draft?.score);
+    expect(getSummary('draft')).toMatchObject({ slot: EXAMPLE_SLUG, covered: 0, total: 4 });
   });
 });

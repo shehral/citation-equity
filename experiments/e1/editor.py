@@ -36,6 +36,15 @@ E3 (experiments/PLAN_E3.md) adds two options; without them the editor is E1's, b
 regenerates, each with the validator's messages). `--retry-from <E1 versions.jsonl>` gives E1's
 failed pairs their next attempt (run_retry) and writes only the edits made now.
 
+E5 (experiments/PLAN_E5.md) adds, again only when named: `--arms 12K` (arm 12 with the keyword
+question q' from `--edit-questions FILE`, {query_id, edit_question} per line: E1's arm 12 prompt,
+missing terms and validator with q' as the question; its placebo P12K is E1's P12 on the spans 12K
+changed, prompt and validator with the true query; metrics with the true query) and `--q-l-from
+FILE --q-l-out FILE`, which writes the tool's local-model question q_L for every keyword first
+(a twin of keywordQuestionsPrompt([k], 1) in packages/bench/src/questions-llm.ts, sent at the
+tool's default temperature with seed 1, parsed as the tool does). E5 runs refuse an engine bundle
+other than E1's (sha256 pinned below).
+
 Run on Explorer (edit.sbatch) with --backend vllm, or locally with --backend fake (a fake editor
 that returns fixed replacements) for the smoke set. The engine runs as a subprocess
 (common.run_engine; set E1_ENGINE to override the command).
@@ -77,6 +86,10 @@ OPENER_FINDING = "points back to earlier text"
 POINTER_OPENER = re.compile(r"(?:this|that|these|those|it|they|such|the above|as mentioned)(?![^\W_])", re.I)
 LEADING_MARKS = re.compile(r"^[\s\"'“‘(*_\[]+")
 CUT_OFF = "The answer was cut off at the token limit. Return only the JSON object, with short replacements."
+# E5 (experiments/PLAN_E5.md): the labels that run on an E1 arm's prompt, spans and validator.
+E5_BASE = {"12K": "12", "P12K": "P12"}
+E5_LLM_ARMS = ["12K"]  # run only when named in --arms (with --edit-questions)
+E5_ENGINE_SHA256 = "1b8e30dbea4e01134302d302fe457e03e2e16baff658c891a9fb3e89fa5a4c47"  # E1's bundle
 
 # --- Spans ------------------------------------------------------------------------------------
 
@@ -100,6 +113,7 @@ def _span_dicts(text: str, ranges, title: str | None = None) -> list[dict]:
 
 def spans_for_arm(arm: str, page: dict, eng: dict) -> list[dict]:
     """The spans an LLM arm edits: the issue ranges its engine check reports on this text."""
+    arm = E5_BASE.get(arm, arm)
     text = page["text"]
     if arm == "12":
         title = page.get("title") or ""
@@ -345,6 +359,7 @@ def retry_hints(task: dict, edits: list[dict], edited, eng) -> list[str]:
 
 
 def prompt_name(arm: str) -> str:
+    arm = E5_BASE.get(arm, arm)
     if arm == "P_ALL":
         return "p_all"
     return f"p{arm[1:]}" if arm.startswith("P") else f"arm{arm}"
@@ -419,10 +434,12 @@ class FakeBackend:
     Arm 2 appends "?" to each heading; arm 7 answers NONE; every other arm returns its spans
     unchanged (so its validators fail and the regenerate path runs)."""
 
-    def generate(self, jobs: list[dict]) -> list[tuple[str, str]]:
+    def generate(self, jobs: list[dict], **sampling) -> list[tuple[str, str]]:
         out = []
         for j in jobs:
-            if j["arm"] == "7":
+            if j["arm"] == "q_L":  # E5: one question line from the keyword
+                out.append((f"1. What is {j['keyword']}?", "stop"))
+            elif j["arm"] == "7":
                 out.append(("NONE", "stop"))
             elif j["arm"] == "2":
                 out.append((json.dumps({s["id"]: s["text"].rstrip(" ?.:") + "?" for s in j["spans"]}), "stop"))
@@ -443,12 +460,13 @@ class VllmBackend:
         self.max_tokens = max_tokens
         self.kwargs = {"chat_template_kwargs": {"enable_thinking": False}} if no_thinking else {}
 
-    def generate(self, jobs: list[dict]) -> list[tuple[str, str]]:
+    def generate(self, jobs: list[dict], temperature: float = 0.0, seed: int = 1) -> list[tuple[str, str]]:
+        """E1's settings by default; E5's q_L passes the tool's temperature."""
         from vllm import SamplingParams
 
         if not jobs:
             return []
-        params = SamplingParams(temperature=0.0, max_tokens=self.max_tokens, seed=1)
+        params = SamplingParams(temperature=temperature, max_tokens=self.max_tokens, seed=seed)
         outs = self.llm.chat([[{"role": "user", "content": j["prompt"]}] for j in jobs], params, **self.kwargs)
         return [(o.outputs[0].text, o.outputs[0].finish_reason) for o in outs]
 
@@ -502,7 +520,8 @@ def edit_round(tasks: list[dict], backend, engine, log: list, max_attempts: int 
         for t, edits, edited in candidates:
             attempt = t["attempt"]
             eng = engs[f"{t['key']}#{attempt}"]
-            res = validate.validate(arm=t["arm"], original=t["before"], edited=edited, edits=edits, spans=t["spans"],
+            res = validate.validate(arm=t.get("validate_arm", t["arm"]), original=t["before"], edited=edited,
+                                    edits=edits, spans=t["spans"],
                                     eng_orig=t["eng_before"], eng_edit=eng, query=t["query"], target=t["target"],
                                     donor=t.get("donor"), step=t.get("step", False))
             if res["valid"]:
@@ -555,8 +574,9 @@ class Pages:
     """The admitted queries of one editor run (target, donor), the engine on each original, the
     applicability table, and the row and task builders that run, run_all and run_retry share."""
 
-    def __init__(self, pages: list[dict], applicability: list[dict], engine):
+    def __init__(self, pages: list[dict], applicability: list[dict], engine, edit_questions: dict | None = None):
         self.app = {(r["query_id"], str(r["arm"])): r["applicable"] for r in applicability}
+        self.edit_q = edit_questions or {}  # E5: {query_id: q'} for 12K
         queries: dict[str, dict] = {}
         for p in pages:
             q = queries.setdefault(p["query_id"], {"donor": None})
@@ -588,25 +608,34 @@ class Pages:
 
     def llm_task(self, qid, arm, before, eng_before, spans, step=False):
         q, t = self.queries[qid], self.queries[qid]["target"]
-        name = prompt_name(arm)
-        missing = da.missing_terms(t["query"], before[0], before[1], eng_before) if arm == "12" else []
+        name, base = prompt_name(arm), E5_BASE.get(arm, arm)
+        # E5's 12K: the prompt, missing terms, engine question and validator take q'; P12K takes q.
+        query = self.edit_q[qid] if arm == "12K" else t["query"]
+        missing = da.missing_terms(query, before[0], before[1], eng_before) if base == "12" else []
         donor = q["donor"] if arm in DONOR_ARMS else None  # placebos never see the donor
-        return {"key": f"{qid}|{arm}" + ("|step" if step else ""), "qid": qid, "arm": arm, "spans": spans,
-                "prompt": render(name, t["query"], before[0], before[1], spans, donor, missing),
-                "before": before, "eng_before": eng_before, "query": t["query"], "target": self.original(qid),
+        task = {"key": f"{qid}|{arm}" + ("|step" if step else ""), "qid": qid, "arm": arm, "spans": spans,
+                "prompt": render(name, query, before[0], before[1], spans, donor, missing),
+                "before": before, "eng_before": eng_before, "query": query, "target": self.original(qid),
                 "donor": donor, "step": step}
+        if base != arm:
+            task["validate_arm"] = base
+        return task
 
     def ok(self, qid, arm):
+        if arm == "12K" and qid not in self.edit_q:
+            return False
         return self.app.get((qid, arm), False) and (arm not in DONOR_ARMS or self.queries[qid]["donor"] is not None)
 
 
 def run(pages: list[dict], applicability: list[dict], backend, arms=None, engine=None, placebos=True,
-        do_all=True, log: list | None = None, max_attempts: int = MAX_ATTEMPTS) -> list[dict]:
-    """All versions for the given pages (any mix of sets); returns versions.jsonl rows."""
+        do_all=True, log: list | None = None, max_attempts: int = MAX_ATTEMPTS,
+        edit_questions: dict | None = None) -> list[dict]:
+    """All versions for the given pages (any mix of sets); returns versions.jsonl rows.
+    `edit_questions` ({query_id: q'}) is E5's, for arm 12K."""
     engine = engine or common.run_engine
     log = log if log is not None else []
     arms = list(LLM_ARMS + DETERMINISTIC_ARMS) if arms is None else [str(a) for a in arms]
-    ctx = Pages(pages, applicability, engine)
+    ctx = Pages(pages, applicability, engine, edit_questions)
     queries, eng0, app = ctx.queries, ctx.eng0, ctx.app
     original, row, result_row, llm_task, ok = ctx.original, ctx.row, ctx.result_row, ctx.llm_task, ctx.ok
 
@@ -633,7 +662,7 @@ def run(pages: list[dict], applicability: list[dict], backend, arms=None, engine
 
     # LLM arms.
     tasks, arm_spans = [], {}
-    for arm in [a for a in LLM_ARMS if a in arms]:
+    for arm in [a for a in LLM_ARMS + E5_LLM_ARMS if a in arms]:
         for qid in queries:
             if not ok(qid, arm):
                 continue
@@ -652,7 +681,7 @@ def run(pages: list[dict], applicability: list[dict], backend, arms=None, engine
         ptasks = []
         for t in tasks:
             res = llm_results[t["key"]]
-            if t["arm"] not in PLACEBO_ARMS or res["status"] != "valid":
+            if E5_BASE.get(t["arm"], t["arm"]) not in PLACEBO_ARMS or res["status"] != "valid":
                 continue
             qid = t["qid"]
             spans = placebo_spans(t["arm"], original(qid)[1], eng0[qid], arm_spans[(qid, t["arm"])], res["edits"])
@@ -942,6 +971,84 @@ def run_retry(pages: list[dict], applicability: list[dict], backend, prior: list
     return rows, summary
 
 
+# --- E5: the tool's local-model question q_L (experiments/PLAN_E5.md, "The edit texts") ----------
+
+# packages/bench/src/types.ts DEFAULT_SETTINGS.temperature and questions-llm.ts's default seed; the
+# twins below are checked against the TypeScript (experiments/e5/tests/tool_twin_fixtures.json).
+TOOL_TEMPERATURE = 0.5
+TOOL_SEED = 1
+_JS_WS = "[" + "".join(re.escape(c) for c in e1_common.JS_WHITESPACE) + "]"
+_LIST_MARK = re.compile(rf"^(?:[-*•]|[0-9]+[.)]){_JS_WS}+")
+_NOT_EOL = r"[^\n\r\u2028\u2029]"  # JavaScript's "." (no s flag)
+_BOLD_LINE = re.compile(rf"^\*\*({_NOT_EOL}*)\*\*\Z")
+_QUOTED_LINE = re.compile(rf'^["“]({_NOT_EOL}*)["”]\Z')
+
+
+def keyword_questions_prompt(keywords: list[str], max_questions: int) -> str:
+    """keywordQuestionsPrompt (packages/bench/src/questions-llm.ts), line for line."""
+    return "\n".join([
+        f"These are search keywords for one website. List up to {max_questions} questions its readers might ask "
+        "an AI assistant that these keywords point to.",
+        "Write one per line, as plain questions that end with a question mark, and write nothing else.",
+        "",
+        "Keywords:",
+        *[f"- {e1_common_trim(k)}" for k in keywords],
+    ])
+
+
+def e1_common_trim(s: str) -> str:
+    return s.strip(e1_common.JS_WHITESPACE)
+
+
+def clean_line(line: str) -> str:
+    """The tool's cleanLine: list markers, bold and quotes removed."""
+    text = e1_common_trim(line)
+    text = _LIST_MARK.sub("", text, count=1)
+    text = _BOLD_LINE.sub(lambda m: m.group(1), text, count=1)
+    text = _QUOTED_LINE.sub(lambda m: m.group(1), text, count=1)
+    return e1_common_trim(text)
+
+
+def first_question(answer: str) -> str | None:
+    """keywordQuestions with max 1: the first cleaned line that ends in "?"."""
+    for line in answer.split("\n"):
+        text = clean_line(line)
+        if text.endswith("?"):
+            return text
+    return None
+
+
+NO_QUESTION = "no line of the answer ends in '?'"
+
+
+def write_q_l(texts: list[dict], backend, log: list) -> list[dict]:
+    """q_L for every keyword row ({query_id, set, k}): the tool's prompt with [k] and max 1, the
+    tool's temperature, seed 1 (thinking off by the backend), and the tool's parse."""
+    jobs = [{"key": f"{t['query_id']}|q_L", "arm": "q_L", "spans": [], "keyword": t["k"],
+             "prompt": keyword_questions_prompt([t["k"]], 1)} for t in texts]
+    outs = backend.generate(jobs, temperature=TOOL_TEMPERATURE, seed=TOOL_SEED) if jobs else []
+    rows = []
+    for t, j, (answer, finish) in zip(texts, jobs, outs):
+        log.append({"key": j["key"], "attempt": 1, "prompt": j["prompt"], "answer": answer, "finish_reason": finish})
+        q = first_question(answer)
+        rows.append({"query_id": t["query_id"], "set": t["set"], "k": t["k"], "q_L": q,
+                     "status": "ok" if q else NO_QUESTION, "answer": answer, "finish_reason": finish,
+                     "temperature": TOOL_TEMPERATURE, "seed": TOOL_SEED})
+    return rows
+
+
+def check_engine_pin() -> None:
+    """E5 runs only on E1's engine bundle, byte for byte (experiments/e5/README.md)."""
+    import hashlib
+
+    js = [c for c in common.engine_command() if c.endswith(".js")]
+    path = Path(js[0]) if len(js) == 1 else None
+    digest = hashlib.sha256(path.read_bytes()).hexdigest() if path and path.exists() else None
+    if digest != E5_ENGINE_SHA256:
+        sys.exit(f"editor: an E5 run needs E1's engine bundle (sha256 {E5_ENGINE_SHA256}); "
+                 f"{path or common.engine_command()} has {digest}")
+
+
 SETS = ["main", "replication", "smoke", "timing"]
 E3_SETS = e1_common.E3_SETS  # E3's new five-page and four-page queries (experiments/e3/README.md)
 
@@ -970,6 +1077,11 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--thinking", action="store_true", help="leave the chat template's thinking mode on")
     ap.add_argument("--max-attempts", type=int, default=MAX_ATTEMPTS,
                     help=f"attempts per LLM edit: a first try plus regenerates (default {MAX_ATTEMPTS}, E1's; E3: 3)")
+    ap.add_argument("--edit-questions", metavar="FILE",
+                    help="E5: JSONL {query_id, edit_question} (q'); needed for --arms 12K")
+    ap.add_argument("--q-l-from", metavar="FILE",
+                    help="E5: edit_texts.jsonl ({query_id, set, k}); write q_L for every row to --q-l-out first")
+    ap.add_argument("--q-l-out", metavar="FILE", help="E5: where q_L goes (with --q-l-from)")
     ap.add_argument("--retry-from", metavar="VERSIONS",
                     help="E3: E1's versions.jsonl; give E1's failed pairs their next attempt (up to --max-attempts) "
                          "and write only the edits made now to --out")
@@ -981,6 +1093,21 @@ def main(argv: list[str] | None = None) -> None:
     args = ap.parse_args(argv)
     if args.max_attempts < 1:
         ap.error("--max-attempts must be 1 or more")
+    named = args.arms.split(",") if args.arms else []
+    e5_run = bool(args.edit_questions or args.q_l_from or args.q_l_out or set(named) & set(E5_BASE))
+    if e5_run:
+        if args.retry_from:
+            ap.error("E5's options do not combine with --retry-from")
+        if bool(args.q_l_from) != bool(args.q_l_out):
+            ap.error("--q-l-from and --q-l-out go together")
+        if "12K" in named and not args.edit_questions:
+            ap.error("--arms 12K needs --edit-questions")
+        if not args.arms and not args.q_l_out:
+            ap.error("an E5 run names its arms (E5: --arms 12,12K)")
+        for given, e1_default in ((args.out, "versions.jsonl"), (args.log, "editor_log.jsonl")):
+            if Path(given).resolve().parent.name == "e1" or Path(given).resolve() == (common.DATA / e1_default).resolve():
+                ap.error(f"an E5 run never writes E1's {e1_default}; give --out and --log in E5's data folder")
+        check_engine_pin()
     if args.retry_from:
         if Path(args.retry_from).resolve() == Path(args.out).resolve():
             ap.error("--out is the --retry-from file; the retried edits go to their own versions.jsonl")
@@ -993,12 +1120,25 @@ def main(argv: list[str] | None = None) -> None:
     t0, log = time.time(), []
     arms = args.arms.split(",") if args.arms else None
     retried = None
+    extra: dict = {}
+    if args.q_l_out:
+        q_l = write_q_l(common.read_jsonl(args.q_l_from), backend, log)
+        common.write_jsonl(args.q_l_out, q_l)
+        extra["q_L"] = {"rows": len(q_l), "ok": sum(r["status"] == "ok" for r in q_l), "out": args.q_l_out}
+        print(json.dumps({"q_L": extra["q_L"]}))
+        if not args.arms:  # q_L only
+            common.write_jsonl(args.log, log)
+            print(json.dumps({"backend": args.backend, "seconds": round(time.time() - t0, 1), "prompts": len(log),
+                              **extra}, indent=1))
+            return
+    edit_questions = ({r["query_id"]: r["edit_question"] for r in common.read_jsonl(args.edit_questions)}
+                      if args.edit_questions else None)
     if args.retry_from:
         rows, retried = run_retry(pages, applicability, backend, common.read_jsonl(args.retry_from), arms=arms,
                                   log=log, max_attempts=args.max_attempts)
     else:
         rows = run(pages, applicability, backend, arms=arms, placebos=not args.no_placebos, do_all=not args.no_all,
-                   log=log, max_attempts=args.max_attempts)
+                   log=log, max_attempts=args.max_attempts, edit_questions=edit_questions)
     common.write_jsonl(args.out, rows)
     common.write_jsonl(args.log, log)
     summary: dict[str, dict] = {}
@@ -1010,7 +1150,8 @@ def main(argv: list[str] | None = None) -> None:
         s["attempts_2"] += r["attempts"] == 2
         for n in range(3, args.max_attempts + 1):  # E3 only: E1's summary is unchanged
             s[f"attempts_{n}"] = s.get(f"attempts_{n}", 0) + (r["attempts"] == n)
-    extra = {} if retried is None else {"retry_from": args.retry_from, "retried": retried}
+    if retried is not None:
+        extra |= {"retry_from": args.retry_from, "retried": retried}
     if args.max_attempts != MAX_ATTEMPTS:
         extra["max_attempts"] = args.max_attempts
     print(json.dumps({"backend": args.backend, "model": args.model if args.backend == "vllm" else None,

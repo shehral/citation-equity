@@ -35,6 +35,13 @@ PLACEBOS = ["P2", "P3", "P5", "P6", "P7", "P8", "P10", "P12", "P_ALL"]
 # E2a's two deterministic versions of arm 9 (experiments/PLAN_E2.md): words without a heading, and a
 # heading and sentence without the query's words. They belong to arm 9 for applicability and tier.
 E2_ARMS = ["9W", "9P"]
+# E5's versions (experiments/PLAN_E5.md): arm 9 with an edit text other than the query (9K the
+# keyword question, 9L the local model's question, 9A all key words, 9G the page's own question)
+# and arm 12 with the keyword question (12K) and its placebo (P12K). Each has its own rows in E5's
+# applicability table, so each is its own parent arm (P12K follows 12K). Their tiers are E5's run
+# plan; 12 and P12 move to tier 3 on E5's new queries in E5's prompt builder, not here.
+E5_ARMS = ["9K", "9L", "9A", "9G", "12K", "P12K"]
+_E5_TIER = {"9K": 1, "9L": 2, "9A": 3, "9G": 3, "12K": 2, "P12K": 2}
 
 FAMILY_A = [str(a) for a in range(2, 11)]
 FAMILY_B = ["11", "12", "14"]
@@ -61,9 +68,13 @@ CAVEAT = "Content check on a local model over a fixed page set. It does not pred
 
 def parent_arm(arm: str) -> str:
     """The arm a version belongs to for applicability: P5 -> 5, P_ALL -> ALL, 9W and 9P -> 9,
-    others unchanged."""
+    E5's P12K -> 12K, others (E5's 9K, 9L, 9A, 9G, 12K included) unchanged."""
     if arm in E2_ARMS:
         return "9"
+    if arm == "P12K":
+        return "12K"
+    if arm in E5_ARMS:
+        return arm
     if arm == "P_ALL":
         return "ALL"
     if arm.startswith("P") and arm[1:].isdigit():
@@ -72,7 +83,11 @@ def parent_arm(arm: str) -> str:
 
 
 def tier(arm: str) -> int:
-    return 1 if arm == "original" else _ARM_TIER[parent_arm(arm)]
+    if arm == "original":
+        return 1
+    if arm in _E5_TIER:
+        return _E5_TIER[arm]
+    return _ARM_TIER[parent_arm(arm)]
 
 
 def read_jsonl(path: Path) -> list[dict]:

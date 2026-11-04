@@ -31,8 +31,8 @@ function Pips({ grade }: { grade: EvidenceGrade }) {
 
 /**
  * The one evidence grade label: four pips and the grade word, as quiet text. Only /research shows
- * grades; the working screens show at most a "Helps" or "Not scored" chip (CheckChip). No hooks,
- * so server pages render it as is.
+ * grades; the working screens show at most a label chip (LabelChip). No hooks, so server pages
+ * render it as is.
  */
 export function GradeLabel({ grade, className }: { grade: EvidenceGrade; className?: string }) {
   return (

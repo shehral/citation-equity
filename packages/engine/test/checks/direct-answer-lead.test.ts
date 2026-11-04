@@ -8,9 +8,9 @@ const run = (md: string) => check(gather(parseDraft(md)));
 const slice = (md: string, r: { start: number; end: number }) => md.slice(r.start, r.end);
 
 describe('direct-answer-lead', () => {
-  it('still suggests, and says every suggestion is not scored and why', () => {
+  it('still suggests, and says what our own test found on every suggestion', () => {
     const note =
-      'Not scored in Standard or By evidence: our own test (E3) found no effect larger than 0.03 (d +0.012, 90% CI [+0.002, +0.022], n 66, Holm p 0.179).';
+      'Our own test (E3) found no effect larger than 0.03 (d +0.012, 90% CI [+0.002, +0.022], n 66, Holm p 0.179).';
     const r = run(fail);
     expect(r.suggestions.length).toBeGreaterThan(0);
     for (const s of r.suggestions) expect(s.rationale).toContain(note);

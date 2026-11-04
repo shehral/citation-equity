@@ -1,6 +1,12 @@
 'use client';
 
-import type { CheckId } from '@citation-equity/engine';
+import {
+  type CheckId,
+  EVIDENCE,
+  type RankedNote,
+  type Suggestion,
+  type TestLabel,
+} from '@citation-equity/engine';
 import {
   ArrowUpToLine,
   ChevronRight,
@@ -18,15 +24,14 @@ import {
   WholeWord,
 } from 'lucide-react';
 import Link from 'next/link';
-import { CheckChip } from '@/components/check-chip';
+import { LabelChip } from '@/components/check-chip';
 import { Button } from '@/components/ui/button';
-import { excerpt } from '@/lib/fix-copy';
-import { CHECK_NAMES, type CheckChip as Chip } from '@/lib/glossary';
+import { excerpt, type FixCopy } from '@/lib/fix-copy';
+import { CHECK_NAMES, labelTooltip } from '@/lib/glossary';
+import type { SuggestionStatus } from '@/lib/storage';
 import { cn } from '@/lib/utils';
 import { RESEARCH_HREF } from '@/lib/views';
-import type { FixActions } from './fix-card';
-import { FixCard } from './fix-card';
-import type { FixItem, HandledItem } from './start-here';
+import { type FixActions, FixCard, type WordingState } from './fix-card';
 
 /** One icon per check, so groups are recognizable without reading. */
 export const CHECK_ICONS: Record<CheckId, LucideIcon> = {
@@ -43,13 +48,48 @@ export const CHECK_ICONS: Record<CheckId, LucideIcon> = {
   'reader-words': WholeWord,
 };
 
+/** An open note as the rail shows it. */
+export interface FixItem {
+  fix: RankedNote;
+  copy: FixCopy;
+  stale: boolean;
+  canSuggest: boolean;
+  wording?: WordingState;
+}
+
+/** A note the author handled: applied (this session only), done or skipped, with its Undo. */
+export interface HandledItem {
+  suggestion: Suggestion;
+  copy: FixCopy;
+  status: Exclude<SuggestionStatus, 'pending'>;
+  /** Undo of an applied edit failed because its text was edited since. */
+  undoStale: boolean;
+}
+
 export interface FixGroup {
   checkId: CheckId;
-  /** Open fixes, in document order. */
+  /** What our own tests found for the check, shown as the group's chip. */
+  label: TestLabel;
+  /** Open notes, in document order. */
   items: FixItem[];
   handled: HandledItem[];
-  /** The group's one chip ("Helps" or "Not scored"), or null. */
-  chip: Chip | null;
+}
+
+/**
+ * A writing note's label chip: the check's label, with the tooltip that says why when the
+ * result is unclear. The Quick edit and the note's group show the same chip.
+ */
+export function NoteChip({ checkId, label }: { checkId: CheckId; label: TestLabel }) {
+  return (
+    <LabelChip label={label} tooltip={labelTooltip(label, { e1: EVIDENCE[checkId].e1.label })} />
+  );
+}
+
+/** A group toggle's accessible name: the check, then how many open notes it holds. */
+function toggleName(g: FixGroup): string {
+  const n = g.items.length;
+  if (n === 0) return `${CHECK_NAMES[g.checkId]}, done`;
+  return `${CHECK_NAMES[g.checkId]}, ${n} ${n === 1 ? 'note' : 'notes'}`;
 }
 
 const STATUS_WORD: Record<HandledItem['status'], string> = {
@@ -67,9 +107,9 @@ interface FixGroupsProps extends FixActions {
 }
 
 /**
- * All fixes, grouped by check: each group collapsed, its count in the title and at most one chip
- * ("Helps" or "Not scored"). An open group ends on a Learn more link to the check's section of
- * /research. Groups carry no action of their own; every change is one click on one fix.
+ * The writing notes, grouped by check in the order given: each group collapsed, its count in the
+ * title and its label chip. An open group ends on a Learn more link to the check's section of
+ * /research. Groups carry no action of their own; every change is one click on one note.
  */
 export function FixGroups({
   groups,
@@ -81,102 +121,92 @@ export function FixGroups({
 }: FixGroupsProps) {
   if (groups.length === 0) return null;
   return (
-    <section aria-labelledby="all-fixes-title" className="space-y-2">
-      <h2
-        id="all-fixes-title"
-        className="px-0.5 font-semibold text-ink-soft text-xs uppercase tracking-wider"
-      >
-        All fixes
-      </h2>
-      <ul className="space-y-2">
-        {groups.map((g) => {
-          const Icon = CHECK_ICONS[g.checkId];
-          const isOpen = open.has(g.checkId);
-          const bodyId = `group-${g.checkId}`;
-          return (
-            <li
-              key={g.checkId}
-              className={cn(
-                'overflow-hidden rounded-lg border bg-surface',
-                isOpen && 'shadow-card',
-              )}
-            >
-              <div className={cn('flex items-center gap-1 pr-2', isOpen && 'bg-sunken')}>
-                <button
-                  type="button"
-                  aria-expanded={isOpen}
-                  aria-controls={bodyId}
-                  onClick={() => onToggle(g.checkId)}
+    <ul className="space-y-2">
+      {groups.map((g) => {
+        const Icon = CHECK_ICONS[g.checkId];
+        const isOpen = open.has(g.checkId);
+        const bodyId = `group-${g.checkId}`;
+        return (
+          <li
+            key={g.checkId}
+            className={cn('overflow-hidden rounded-lg border bg-surface', isOpen && 'shadow-card')}
+          >
+            <div className={cn('flex items-center gap-1 pr-2', isOpen && 'bg-sunken')}>
+              <button
+                type="button"
+                aria-expanded={isOpen}
+                aria-controls={bodyId}
+                aria-label={toggleName(g)}
+                onClick={() => onToggle(g.checkId)}
+                className={cn(
+                  'flex min-w-0 flex-1 items-center gap-2.5 rounded-lg py-2.5 pl-3.5 text-left text-sm',
+                  'outline-none focus-visible:ring-[3px] focus-visible:ring-ring',
+                )}
+              >
+                <ChevronRight
+                  aria-hidden="true"
                   className={cn(
-                    'flex min-w-0 flex-1 items-center gap-2.5 rounded-lg py-2.5 pl-3.5 text-left text-sm',
-                    'outline-none focus-visible:ring-[3px] focus-visible:ring-ring',
+                    'size-4 shrink-0 text-ink-faint motion-safe:transition-transform',
+                    isOpen && 'rotate-90',
                   )}
-                >
-                  <ChevronRight
-                    aria-hidden="true"
-                    className={cn(
-                      'size-4 shrink-0 text-ink-faint motion-safe:transition-transform',
-                      isOpen && 'rotate-90',
-                    )}
-                  />
-                  <Icon
-                    aria-hidden="true"
-                    className="size-4 shrink-0 text-ink-soft"
-                    strokeWidth={1.75}
-                  />
-                  <span className="min-w-0 flex-1 font-medium">{CHECK_NAMES[g.checkId]}</span>{' '}
-                  <span className="rounded-full bg-sunken px-2 py-0.5 text-ink-soft text-xs tabular-nums">
-                    {g.items.length > 0 ? g.items.length : 'Done'}
-                  </span>
-                </button>
-                <CheckChip chip={g.chip} />
+                />
+                <Icon
+                  aria-hidden="true"
+                  className="size-4 shrink-0 text-ink-soft"
+                  strokeWidth={1.75}
+                />
+                <span className="min-w-0 flex-1 font-medium">{CHECK_NAMES[g.checkId]}</span>{' '}
+                <span className="rounded-full bg-sunken px-2 py-0.5 text-ink-soft text-xs tabular-nums">
+                  {g.items.length > 0 ? g.items.length : 'Done'}
+                </span>
+              </button>
+              <NoteChip checkId={g.checkId} label={g.label} />
+            </div>
+            {isOpen && (
+              <div id={bodyId} className="space-y-2 p-2">
+                {g.items.length > 0 && (
+                  <ol className="space-y-2">
+                    {g.items.map((item, i) => (
+                      <li key={item.fix.suggestion.id}>
+                        <FixCard
+                          suggestion={item.fix.suggestion}
+                          copy={item.copy}
+                          editable={item.fix.editable}
+                          idPrefix="group"
+                          number={i + 1}
+                          active={item.fix.suggestion.id === activeId}
+                          stale={item.stale}
+                          canSuggest={item.canSuggest}
+                          wording={item.wording}
+                          {...actions}
+                        />
+                      </li>
+                    ))}
+                  </ol>
+                )}
+                {g.handled.length > 0 && (
+                  <ul className="divide-y rounded-lg border">
+                    {g.handled.map((h) => (
+                      <HandledRow key={h.suggestion.id} item={h} onUndo={onUndo} />
+                    ))}
+                  </ul>
+                )}
+                <p className="px-1 pb-1 text-sm">
+                  <Link
+                    href={`${RESEARCH_HREF}#check-${g.checkId}`}
+                    prefetch={false}
+                    className="rounded-sm font-medium text-brand underline-offset-2 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring"
+                  >
+                    Learn more
+                    <span className="sr-only">: {CHECK_NAMES[g.checkId]}</span>
+                  </Link>
+                </p>
               </div>
-              {isOpen && (
-                <div id={bodyId} className="space-y-2 p-2">
-                  {g.items.length > 0 && (
-                    <ol className="space-y-2">
-                      {g.items.map((item, i) => (
-                        <li key={item.fix.suggestion.id}>
-                          <FixCard
-                            suggestion={item.fix.suggestion}
-                            copy={item.copy}
-                            editable={item.fix.editable}
-                            idPrefix="group"
-                            number={i + 1}
-                            active={item.fix.suggestion.id === activeId}
-                            stale={item.stale}
-                            canSuggest={item.canSuggest}
-                            wording={item.wording}
-                            {...actions}
-                          />
-                        </li>
-                      ))}
-                    </ol>
-                  )}
-                  {g.handled.length > 0 && (
-                    <ul className="divide-y rounded-lg border">
-                      {g.handled.map((h) => (
-                        <HandledRow key={h.suggestion.id} item={h} onUndo={onUndo} />
-                      ))}
-                    </ul>
-                  )}
-                  <p className="px-1 pb-1 text-sm">
-                    <Link
-                      href={`${RESEARCH_HREF}#check-${g.checkId}`}
-                      prefetch={false}
-                      className="rounded-sm font-medium text-brand underline-offset-2 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring"
-                    >
-                      Learn more
-                      <span className="sr-only">: {CHECK_NAMES[g.checkId]}</span>
-                    </Link>
-                  </p>
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

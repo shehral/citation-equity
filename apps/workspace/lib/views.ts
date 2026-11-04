@@ -7,10 +7,9 @@ export const VIEW_HREF: Record<ViewId, string> = {
   draft: '/draft/',
   site: '/site/',
   cited: '/cited/',
-  questions: '/questions/',
 };
 
-/** Where the home's Next up deep-links: the draft view's Start here list, the site view's first failing row. */
+/** Where the home deep-links: the draft view's Start here region, the site view's first issue. */
 export const START_HERE_ID = 'start-here';
 export const FIRST_ISSUE_ID = 'first-issue';
 

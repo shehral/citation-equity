@@ -53,12 +53,8 @@ export const FINDINGS: Record<string, string> = {
   [PARAGRAPH_ADVISORY.id]: 'It has 4 words, too short to carry its point alone.',
 };
 
-/** An AnalysisResult shaped like the engine's, with chosen suggestions and scores. */
-export function makeResult(
-  markdown: string,
-  suggestions: Suggestion[],
-  scores: AnalysisResult['scores'] = { foundation: 62, evidence: 48, custom: null },
-): AnalysisResult {
+/** An AnalysisResult shaped like the engine's, with chosen suggestions. */
+export function makeResult(markdown: string, suggestions: Suggestion[]): AnalysisResult {
   const checks: CheckResult[] = CHECK_IDS.map((checkId) => ({
     checkId,
     applicable: true,
@@ -69,5 +65,12 @@ export function makeResult(
     suggestions: suggestions.filter((s) => s.checkId === checkId),
     metrics: {},
   }));
-  return { schemaVersion: 1, engineVersion: '0.0.0', markdown, wordCount: 8, checks, scores };
+  return {
+    schemaVersion: 2,
+    engineVersion: '0.0.0',
+    markdown,
+    wordCount: 8,
+    checks,
+    questions: { from: 'page', rows: [], covered: 0 },
+  };
 }

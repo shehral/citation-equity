@@ -10,6 +10,9 @@
 # DATA=<folder> (default $CE_ROOT/data/e1), MODEL=<editor> (default Gemma-4-31B-it; any other editor, such as
 # E2b's Qwen/Qwen3.8-27B, must write to its own DATA folder). E3 (experiments/e3/README.md) passes
 # --max-attempts 3 and, for E1's failed pairs, --retry-from in EXTRA, always with its own DATA folder.
+# E5 (experiments/e5/README.md) runs with DATA=$CE_ROOT/data/e5 and its options in EXTRA (--q-l-from,
+# --q-l-out, --edit-questions, --arms 12,12K); it reads edit_applicability.jsonl and writes
+# edit_versions.jsonl and edit_log.jsonl (APPL, VERSIONS, EDIT_LOG override), never versions.jsonl.
 # Check the settings first with CE_DRY_RUN=1 bash edit.sbatch
 #SBATCH --job-name=ce-e1-edit
 #SBATCH --partition=gpu
@@ -59,6 +62,30 @@ case " ${EXTRA:-} " in
       exit 2
     fi ;;
 esac
+# E5's options and E5's folder: never E1's folder, and never E5's own deterministic versions.jsonl.
+E5_RUN=
+case " ${EXTRA:-} " in
+  *" --edit-questions"*|*" --q-l-from"*|*" --q-l-out"*|*12K*) E5_RUN=1 ;;
+esac
+case "${DATA%/}" in
+  "$PROJ/data/e5"|"$PROJ/data/e5/"*) E5_RUN=1 ;;
+esac
+APPL=$DATA/applicability.jsonl
+VERSIONS=$DATA/versions.jsonl
+EDIT_LOG=$DATA/editor_log.jsonl
+if [ -n "$E5_RUN" ]; then
+  if [ "${DATA%/}" = "$PROJ/data/e1" ]; then
+    echo "FATAL: EXTRA has E5's options, which would overwrite E1's $DATA/versions.jsonl; set DATA=\$CE_ROOT/data/e5"
+    exit 2
+  fi
+  APPL=${APPL_E5:-$DATA/edit_applicability.jsonl}
+  VERSIONS=${VERSIONS_E5:-$DATA/edit_versions.jsonl}
+  EDIT_LOG=${EDIT_LOG_E5:-$DATA/edit_log.jsonl}
+  if [ "$VERSIONS" = "$DATA/versions.jsonl" ] || [ "$VERSIONS" = "${DATA%/}/versions.jsonl" ]; then
+    echo "FATAL: an E5 edit job writes edit_versions.jsonl; $DATA/versions.jsonl holds E5's deterministic versions"
+    exit 2
+  fi
+fi
 NODE=${CE_NODE:-node}
 MODULES=${CE_MODULES-miniconda3/24.11.1}
 if [ -n "${CE_DRY_RUN:-}" ]; then
@@ -73,6 +100,7 @@ if [ -n "${CE_DRY_RUN:-}" ]; then
   echo "  E1=$E1"
   echo "  DATA=$DATA"
   echo "  MODEL=$MODEL tp=${TP:-1} sets=${SETS:-all but timing} extra=${EXTRA:-}"
+  [ -n "$E5_RUN" ] && echo "  E5: APPL=$APPL VERSIONS=$VERSIONS EDIT_LOG=$EDIT_LOG"
   echo "  logs=${SBATCH_OUTPUT:-%x-%j.out in the submit folder}"
   exit 0
 fi
@@ -100,7 +128,12 @@ NODE_MAJOR=$("$NODE" -p 'process.versions.node.split(".")[0]' 2>/dev/null) ||
 echo "node $("$NODE" --version) at $NODE"
 export E1_ENGINE="$NODE $E1/out/bundle/engine_cli.js"
 [ -f "$E1/out/bundle/engine_cli.js" ] || { echo "FATAL: $E1/out/bundle/engine_cli.js missing; build and copy it"; exit 2; }
-for f in pages.jsonl applicability.jsonl; do [ -f "$DATA/$f" ] || { echo "FATAL: $DATA/$f missing"; exit 2; }; done
+for f in "$DATA/pages.jsonl" "$APPL"; do [ -f "$f" ] || { echo "FATAL: $f missing"; exit 2; }; done
+if [ -n "$E5_RUN" ]; then  # E5 runs only on E1's engine bundle, byte for byte
+  PIN=1b8e30dbea4e01134302d302fe457e03e2e16baff658c891a9fb3e89fa5a4c47
+  GOT=$(sha256sum "$E1/out/bundle/engine_cli.js" | cut -d' ' -f1)
+  [ "$GOT" = "$PIN" ] || { echo "FATAL: $E1/out/bundle/engine_cli.js has sha256 $GOT, not E1's $PIN; copy E1's bundle (never rebuild it)"; exit 2; }
+fi
 
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader || true
 $PYTHON -c "import torch; assert torch.cuda.is_available(); x=torch.ones(1,device='cuda'); assert (x+1).item()==2; print('torch', torch.__version__, torch.cuda.get_device_name(0), torch.cuda.get_device_capability(0))"
@@ -113,6 +146,6 @@ WATCH=$!
 trap 'kill $WATCH 2>/dev/null' EXIT
 
 $PYTHON -I $E1/editor.py --backend vllm --model "$MODEL" --tp ${TP:-1} \
-  --pages $DATA/pages.jsonl --applicability $DATA/applicability.jsonl \
-  --out $DATA/versions.jsonl --log $DATA/editor_log.jsonl $SETS $EXTRA
+  --pages $DATA/pages.jsonl --applicability $APPL \
+  --out $VERSIONS --log $EDIT_LOG $SETS $EXTRA
 echo "=== ce-e1-edit done: $(date) ==="

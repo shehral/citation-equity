@@ -1,7 +1,8 @@
 import type { CheckResult, Weights } from './types';
 
 /**
- * Weighted mean of the applicable checks' scores on a 0 to 100 integer scale:
+ * Research API: a weighted checklist mean for researchers; the app and the CLI never show it.
+ * The weighted mean of the applicable checks' scores on a 0 to 100 integer scale:
  * `round(100 * Σ w·s / Σ w)`. Null when no check applies or the weights of the
  * applicable checks sum to 0.
  */

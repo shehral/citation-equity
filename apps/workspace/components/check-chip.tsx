@@ -1,23 +1,41 @@
-import { CHIP_TEXT, type CheckChip as Chip } from '@/lib/glossary';
+import { TEST_LABEL_TEXT, type TestLabel } from '@citation-equity/engine';
 import { cn } from '@/lib/utils';
 
+/** Each label's tone: done for a gain, stale for a smaller gain or a loss, quiet for the rest. */
+const LABEL_TONE: Record<TestLabel, string> = {
+  helped: 'bg-done-soft text-done',
+  'may-help-less': 'bg-stale-soft text-stale',
+  hurt: 'bg-stale-soft text-stale',
+  'no-effect': 'border bg-surface text-ink-soft',
+  unclear: 'border bg-surface text-ink-soft',
+  'not-tested': 'border bg-surface text-ink-soft',
+};
+
 /**
- * The one small chip a check may carry on the working screens: "Helps" or "Not scored", with a
- * one-sentence tooltip. The reasons and the numbers behind it are on /research.
+ * What our own tests found for a check or a question line, as the engine words it, with an
+ * optional one-sentence tooltip (`labelTooltip`). `data-label-chip` marks it: a label phrase may
+ * stand on a working screen only inside this chip.
  */
-export function CheckChip({ chip, className }: { chip: Chip | null; className?: string }) {
-  if (chip === null) return null;
-  const { label, title } = CHIP_TEXT[chip];
+export function LabelChip({
+  label,
+  tooltip,
+  className,
+}: {
+  label: TestLabel;
+  tooltip?: string;
+  className?: string;
+}) {
   return (
     <span
-      title={title}
+      data-label-chip={label}
+      title={tooltip}
       className={cn(
         'inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs',
-        chip === 'helps' ? 'bg-done-soft text-done' : 'border bg-surface text-ink-soft',
+        LABEL_TONE[label],
         className,
       )}
     >
-      {label}
+      {TEST_LABEL_TEXT[label]}
     </span>
   );
 }

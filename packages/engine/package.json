@@ -1,7 +1,7 @@
 {
   "name": "@citation-equity/engine",
   "version": "0.0.0",
-  "description": "GEO Score engine: parses a Markdown draft, runs evidence-labelled checks, and scores them.",
+  "description": "Citation Equity engine: parses a draft, reports which reader questions it covers, and runs labelled writing checks.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,

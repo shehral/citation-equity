@@ -45,9 +45,9 @@ describe('lists', () => {
     expect(r.findings).toHaveLength(1);
   });
 
-  it('still suggests, and says every suggestion is not scored and why', () => {
+  it('still suggests, and says what our own test found on every suggestion', () => {
     const note =
-      'Not scored in Standard or By evidence: our own test (E1) found no effect larger than 0.03 (d -0.007, 90% CI [-0.027, +0.013], n 33).';
+      'Our own test (E1) found no effect larger than 0.03 (d -0.007, 90% CI [-0.027, +0.013], n 33).';
     const enumerating = run(
       withParagraph('Bitter shots usually come from a fine grind, a high dose, or hot water.'),
     );

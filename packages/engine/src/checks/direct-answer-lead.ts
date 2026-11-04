@@ -9,7 +9,7 @@
 // paragraph is judged even when a list, table or quote comes before it (a
 // section with no prose paragraph at all fails), and a per-section advisory.
 
-import { unscoredNote } from '../e1';
+import { noEffectNote } from '../e1';
 import { EVIDENCE } from '../evidence';
 import type { Paragraph } from '../gather';
 import { countWords } from '../text';
@@ -50,8 +50,8 @@ const HEDGE = new RegExp(String.raw`^(?:${HEDGES.join('|')})(?![\p{L}\p{N}])`, '
 const LEADING_PUNCTUATION = /^[\s"'“‘(]+/u;
 
 const TITLE = 'Lead this section with a direct answer';
-/** Direct answer first is an unscored note (E3 found no effect larger than δ); its suggestions say so. */
-const RATIONALE = `Readers and answer engines often take the first sentence under a heading as its answer. One plain sentence of 8 to 40 words that answers the heading, before any detail, gives them that. ${unscoredNote(EVIDENCE['direct-answer-lead'].e1)}`;
+/** Our own test (E3) found no effect larger than δ for a direct answer first; its suggestions say so. */
+const RATIONALE = `Readers and answer engines often take the first sentence under a heading as its answer. One plain sentence of 8 to 40 words that answers the heading, before any detail, gives them that. ${noEffectNote(EVIDENCE['direct-answer-lead'].e1)}`;
 
 export const check: CheckFn = (a) => {
   const out = issueCollector('direct-answer-lead', a.markdown);

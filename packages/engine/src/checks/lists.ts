@@ -9,14 +9,14 @@
 // opener such as "For example," is not an item), and an advisory anchored on
 // that paragraph.
 
-import { unscoredNote } from '../e1';
+import { noEffectNote } from '../e1';
 import { EVIDENCE } from '../evidence';
 import { countWords, type Sentence } from '../text';
 import { isProse, issueCollector } from './structure-issues';
 import { type CheckFn, notApplicable } from './types';
 
-/** Lists is an unscored note (E1 found no effect larger than δ); its suggestions say so. */
-const NOTE = unscoredNote(EVIDENCE.lists.e1);
+/** Our own test (E1) found no effect larger than δ for lists; its suggestions say so. */
+const NOTE = noEffectNote(EVIDENCE.lists.e1);
 
 const MIN_WORDS = 300;
 const MIN_ITEMS = 3;

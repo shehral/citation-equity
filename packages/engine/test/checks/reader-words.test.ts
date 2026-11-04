@@ -4,7 +4,15 @@ import espressoBefore from '../../../../samples/espresso-bitterness/before.md?ra
 import espressoPack from '../../../../samples/espresso-bitterness/pack.json';
 import ragBefore from '../../../../samples/rag-explained/before.md?raw';
 import { check, readerWords } from '../../src/checks/reader-words';
-import { analyze, EVIDENCE, gather, pageQuestions, parseDraft } from '../../src/index';
+import {
+  analyze,
+  EVIDENCE,
+  gather,
+  MAX_NAMED,
+  namedWords,
+  pageQuestions,
+  parseDraft,
+} from '../../src/index';
 
 /** The check on `md`, measuring `questions` as the author's own (typed or imported) questions. */
 const run = (md: string, questions?: string[]) =>
@@ -58,12 +66,10 @@ describe('reader-words', () => {
     const page = pageQuestions(md);
     expect(page.map((q) => q.origin)).toEqual(['topic', 'topic']);
     expect(page.map((q) => q.text)).toEqual(['What is cold brew?', 'How does cold brew work?']);
-    // The section questions are still reader questions for question-coverage, not for this check.
-    const sections = ['How long should cold brew steep?'];
-    const r = analyze(md, { questions: [...sections, ...page.map((q) => q.text)] });
-    expect(readerCheck(r)?.metrics.questions).toBe(2);
-    for (const s of readerCheck(r)?.suggestions ?? []) expect(s.title).not.toContain('steep');
-    expect(readerCheck(analyze(md))?.metrics.questions).toBe(2);
+    // The section's question ("How long should cold brew steep?") is not one of the page's own.
+    const rw = readerCheck(analyze(md));
+    expect(rw?.metrics.questions).toBe(2);
+    for (const s of rw?.suggestions ?? []) expect(s.title).not.toContain('steep');
   });
 
   it("uses the page's title when it reads as a question", () => {
@@ -76,19 +82,17 @@ describe('reader-words', () => {
     expect(readerCheck(analyze(md))?.score).toBe(1);
   });
 
-  it('measures exactly the questions the author typed or imported, when there are any', () => {
+  it('measures exactly the given questions when there are any, the set question-coverage reads', () => {
     const typed = ['What water temperature is best?'];
-    const generated = pageQuestions(DRAFT).map((q) => q.text);
-    expect(generated.length).toBeGreaterThan(0);
-    const r = analyze(DRAFT, { questions: [...typed, ...generated], authorQuestions: typed });
+    expect(pageQuestions(DRAFT).length).toBeGreaterThan(0);
+    const r = analyze(DRAFT, { questions: typed });
     const rw = readerCheck(r);
     expect(rw?.metrics.questions).toBe(1);
     expect(rw?.suggestions.map((s) => s.title)).toEqual([
       'Use the words of "What water temperature is best?" up top',
     ]);
-    // question-coverage still reads every question.
     const coverage = r.checks.find((c) => c.checkId === 'question-coverage');
-    expect(coverage?.metrics.questions).toBe(1 + generated.length);
+    expect(coverage?.metrics.questions).toBe(1);
   });
 
   it('never scores lower when a question heading is added to the draft', () => {
@@ -97,9 +101,9 @@ describe('reader-words', () => {
     const typed = ['How do I fix bitter espresso?'];
     for (const md of [DRAFT, espressoBefore, ragBefore, NO_PAGE_QUESTION]) {
       const added = `${md.trimEnd()}\n${section}`;
-      for (const authorQuestions of [undefined, typed]) {
+      for (const questions of [undefined, typed]) {
         const score = (text: string) => {
-          const rw = readerCheck(analyze(text, { authorQuestions }));
+          const rw = readerCheck(analyze(text, { questions }));
           return rw?.applicable ? rw.score : null;
         };
         const before = score(md);
@@ -128,12 +132,12 @@ describe('reader-words', () => {
       [espressoBefore, insert(espressoBefore, '## ', question)],
       [ragBefore, insert(ragBefore, '## ', question)],
     ];
-    expect(readerCheck(analyze(coffee, { authorQuestions: typed }))?.score).toBe(1);
+    expect(readerCheck(analyze(coffee, { questions: typed }))?.score).toBe(1);
     for (const [md, added] of cases) {
       expect(added).not.toBe(md);
-      for (const authorQuestions of [undefined, typed]) {
+      for (const questions of [undefined, typed]) {
         const score = (text: string) => {
-          const rw = readerCheck(analyze(text, { authorQuestions }));
+          const rw = readerCheck(analyze(text, { questions }));
           return rw?.applicable ? rw.score : null;
         };
         const before = score(md);
@@ -193,9 +197,9 @@ describe('reader-words', () => {
 
   it('does not score the espresso sample lower after its edits, with or without the pack questions', () => {
     const pack = espressoPack.queries.map((q) => q.query);
-    for (const authorQuestions of [undefined, pack]) {
-      const before = readerCheck(analyze(espressoBefore, { authorQuestions }));
-      const after = readerCheck(analyze(espressoAfter, { authorQuestions }));
+    for (const questions of [undefined, pack]) {
+      const before = readerCheck(analyze(espressoBefore, { questions }));
+      const after = readerCheck(analyze(espressoAfter, { questions }));
       expect(before?.applicable).toBe(true);
       expect(after?.score ?? -1).toBeGreaterThanOrEqual(before?.score ?? 2);
     }
@@ -280,5 +284,21 @@ describe('reader-words', () => {
   it('matches word forms, so "steeps" up top counts for "steep"', () => {
     const md = '# How long cold brew steeps\n\nIt depends on the grind.\n';
     expect(run(md, ['How long should cold brew steep?']).score).toBe(1);
+  });
+});
+
+describe('namedWords', () => {
+  it('names at most MAX_NAMED words, then how many more', () => {
+    expect(MAX_NAMED).toBe(3);
+    expect(namedWords(['grinders', 'tampers', 'scales', 'kettles', 'cups'])).toBe(
+      '"grinders", "tampers", "scales" and 2 more',
+    );
+    expect(namedWords(['water', 'temperature', 'best'])).toBe('"water", "temperature", "best"');
+    expect(namedWords(['fix'])).toBe('"fix"');
+    expect(namedWords([])).toBe('');
+  });
+
+  it('quotes each named word the way the caller asks', () => {
+    expect(namedWords(['a', 'b', 'c', 'd'], (w) => `<${w}>`)).toBe('<a>, <b>, <c> and 1 more');
   });
 });

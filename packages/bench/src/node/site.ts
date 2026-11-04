@@ -31,7 +31,7 @@ export interface SiteReport {
 const TIMEOUT_MS = 20_000;
 
 /**
- * Site readiness for one URL, reported apart from any GEO Score. Reads the origin's robots.txt
+ * Site readiness for one URL, reported on its own. Reads the origin's robots.txt
  * (the same reader `ce pack from-urls` uses) and checks each of AI_CRAWLERS against the URL, then
  * fetches the page's raw HTML once, runs no JavaScript, and measures what Defuddle can extract.
  * The page-level items come from the engine's `analyzeReadiness` on that HTML and the page's

@@ -1,0 +1,1065 @@
+{
+ "experiment": "E5",
+ "snapshot_started_at": "2026-11-04T01:31:55+00:00",
+ "secondary": false,
+ "readings": {
+  "gate_passed": true,
+  "gate_label": "helps, possibly through length or query-term overlap",
+  "retention": {
+   "9K": "loses the gain",
+   "9L": "loses the gain"
+  },
+  "missing_words_measured": false,
+  "missing_words_rests_on_e1_note": false,
+  "readers_words_label": "helps, possibly through length or query-term overlap",
+  "readers_words_tool_action": "measured label on the suggestion (effect, CI, models), with E1's note on length or query-term overlap",
+  "meaning": {
+   "9K": {
+    "case": "loses the gain",
+    "tool": "The label covers only full reader questions; keywords and questions made from them are \"a guess; untested\".",
+    "paper": "Main limit: \"the gain needs most of the reader's words, which publishers rarely see\"."
+   },
+   "9L": {
+    "case": "loses the gain",
+    "tool": "The label covers only full reader questions; keywords and questions made from them are \"a guess; untested\".",
+    "paper": "Main limit: \"the gain needs most of the reader's words, which publishers rarely see\"."
+   }
+  }
+ },
+ "drift": {
+  "mean": -0.001171875,
+  "ci95": [
+   -0.0043212890625,
+   0.0019287109375
+  ],
+  "n_queries": 320
+ },
+ "contrasts": [
+  {
+   "contrast": "9 vs original",
+   "arm": "9",
+   "ref": "original",
+   "set": "main",
+   "step": "gate",
+   "scope": "new queries",
+   "n": 115,
+   "d": 0.0390333850931677,
+   "ci95": [
+    0.02309782608695652,
+    0.05564829192546584
+   ],
+   "ci90": [
+    0.025716226708074535,
+    0.05266110248447202
+   ],
+   "p": 9.99990000099999e-06,
+   "p_holm": 9.99990000099999e-06,
+   "label": "helps, possibly through length or query-term overlap",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.023651246838677767
+  },
+  {
+   "contrast": "9K vs original",
+   "arm": "9K",
+   "ref": "original",
+   "set": "main",
+   "step": "family",
+   "scope": "pooled",
+   "n": 168,
+   "d": 0.015824298469387755,
+   "ci95": [
+    0.00623139880952381,
+    0.025762980973639448
+   ],
+   "ci90": [
+    0.007746067176870748,
+    0.02418154761904762
+   ],
+   "p": 0.0017999820001799983,
+   "p_holm": 0.005839941600583994,
+   "label": "helps, possibly through length or query-term overlap",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.01720093203194674
+  },
+  {
+   "contrast": "9K vs 9P",
+   "arm": "9K",
+   "ref": "9P",
+   "set": "main",
+   "step": "family",
+   "scope": "pooled",
+   "n": 166,
+   "d": 0.01782128514056225,
+   "ci95": [
+    0.007140055758749283,
+    0.028507108792312105
+   ],
+   "ci90": [
+    0.008910194348823867,
+    0.02687087636259323
+   ],
+   "p": 0.0014599854001459986,
+   "p_holm": 0.005839941600583994,
+   "label": "helps, possibly through length or query-term overlap",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.018760877760590416
+  },
+  {
+   "contrast": "9L vs original",
+   "arm": "9L",
+   "ref": "original",
+   "set": "main",
+   "step": "family",
+   "scope": "pooled",
+   "n": 169,
+   "d": 0.007964391377852915,
+   "ci95": [
+    -0.002113271344040575,
+    0.01805526204564666
+   ],
+   "ci90": [
+    -0.0004490701606086222,
+    0.01647030853761623
+   ],
+   "p": 0.12613873861261388,
+   "p_holm": 0.14155858441415586,
+   "label": "no effect larger than δ",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.017645111696051652
+  },
+  {
+   "contrast": "9L vs 9P",
+   "arm": "9L",
+   "ref": "9P",
+   "set": "main",
+   "step": "family",
+   "scope": "pooled",
+   "n": 167,
+   "d": 0.009948852295409179,
+   "ci95": [
+    -0.0007485029940119761,
+    0.02033433133732535
+   ],
+   "ci90": [
+    0.0009668163672654689,
+    0.0187125748502994
+   ],
+   "p": 0.07077929220707793,
+   "p_holm": 0.14155858441415586,
+   "label": "no effect larger than δ",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.01866207947259408
+  },
+  {
+   "contrast": "9K vs 9",
+   "arm": "9K",
+   "ref": "9",
+   "set": "main",
+   "step": "retention",
+   "scope": "pooled",
+   "n": 168,
+   "d": -0.01926551870748299,
+   "ci95": [
+    -0.030839112988945577,
+    -0.007719494047619048
+   ],
+   "ci90": [
+    -0.029017857142857144,
+    -0.009592899659863945
+   ],
+   "p": 0.0013199868001319986,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.01698701311813999
+  },
+  {
+   "contrast": "9L vs 9",
+   "arm": "9L",
+   "ref": "9",
+   "set": "main",
+   "step": "retention",
+   "scope": "pooled",
+   "n": 169,
+   "d": -0.02691779374471682,
+   "ci95": [
+    -0.03921505177514792,
+    -0.015281263207945905
+   ],
+   "ci90": [
+    -0.037286031276415894,
+    -0.017104289940828403
+   ],
+   "p": 1.999980000199998e-05,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.017583687017088238
+  },
+  {
+   "contrast": "12K vs P12K",
+   "arm": "12K",
+   "ref": "P12K",
+   "set": "main",
+   "step": "arm12",
+   "scope": "pooled",
+   "n": 69,
+   "d": 0.0036231884057971015,
+   "ci95": [
+    -0.01177536231884058,
+    0.019253849637681075
+   ],
+   "ci90": [
+    -0.009284420289855072,
+    0.016757246376811596
+   ],
+   "p": 0.6771432285677144,
+   "p_holm": 0.6771432285677144,
+   "label": "no effect larger than δ",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.023128306768003613
+  },
+  {
+   "contrast": "12K vs original",
+   "arm": "12K",
+   "ref": "original",
+   "set": "main",
+   "step": "arm12 rule",
+   "scope": "pooled",
+   "n": 109,
+   "d": 0.011775065530799475,
+   "ci95": [
+    -0.0020068807339449542,
+    0.02582374262778505
+   ],
+   "ci90": [
+    0.0003071756225425949,
+    0.023307462319790254
+   ],
+   "p": 0.1025989740102599,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.020446399882287674
+  },
+  {
+   "contrast": "9 vs original",
+   "arm": "9",
+   "ref": "original",
+   "set": "main",
+   "step": "step5",
+   "scope": "all main queries",
+   "n": 169,
+   "d": 0.034882185122569735,
+   "ci95": [
+    0.022677382713440407,
+    0.04770776098901098
+   ],
+   "ci90": [
+    0.024712066779374472,
+    0.04542212595097211
+   ],
+   "p": 9.99990000099999e-06,
+   "p_holm": 9.99990000099999e-06,
+   "label": "helps, possibly through length or query-term overlap",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.018095548951184058
+  },
+  {
+   "contrast": "9K vs original",
+   "arm": "9K",
+   "ref": "original",
+   "set": "replication",
+   "step": "family",
+   "scope": "pooled",
+   "n": 53,
+   "d": 0.009433962264150943,
+   "ci95": [
+    -0.010030955188679238,
+    0.03125
+   ],
+   "ci90": [
+    -0.007370283018867925,
+    0.02741745283018868
+   ],
+   "p": 0.4212357876421236,
+   "p_holm": 0.45393546064539353,
+   "label": "no effect larger than δ",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.036520487110528466
+  },
+  {
+   "contrast": "9K vs 9P",
+   "arm": "9K",
+   "ref": "9P",
+   "set": "replication",
+   "step": "family",
+   "scope": "pooled",
+   "n": 53,
+   "d": 0.024764150943396228,
+   "ci95": [
+    0.006191037735849057,
+    0.0433372641509434
+   ],
+   "ci90": [
+    0.009139150943396226,
+    0.04038915094339623
+   ],
+   "p": 0.013089869101308988,
+   "p_holm": 0.039269607303926965,
+   "label": "helps",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.03283516837431186
+  },
+  {
+   "contrast": "9L vs original",
+   "arm": "9L",
+   "ref": "original",
+   "set": "replication",
+   "step": "family",
+   "scope": "pooled",
+   "n": 53,
+   "d": 0.01267688679245283,
+   "ci95": [
+    -0.006485849056603774,
+    0.0330188679245283
+   ],
+   "ci90": [
+    -0.003537735849056604,
+    0.02918632075471698
+   ],
+   "p": 0.22696773032269676,
+   "p_holm": 0.45393546064539353,
+   "label": "no effect larger than δ",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.034219097703100686
+  },
+  {
+   "contrast": "9L vs 9P",
+   "arm": "9L",
+   "ref": "9P",
+   "set": "replication",
+   "step": "family",
+   "scope": "pooled",
+   "n": 53,
+   "d": 0.028007075471698114,
+   "ci95": [
+    0.007959905660377358,
+    0.04834905660377359
+   ],
+   "ci90": [
+    0.011202830188679245,
+    0.0451061320754717
+   ],
+   "p": 0.00944990550094499,
+   "p_holm": 0.03779962200377996,
+   "label": "helps, possibly through length or query-term overlap",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.035334410816893404
+  },
+  {
+   "contrast": "9A vs 9K",
+   "arm": "9A",
+   "ref": "9K",
+   "set": "main",
+   "step": "reported",
+   "scope": "pooled",
+   "n": 168,
+   "d": 0.004929315476190476,
+   "ci95": [
+    -0.004663584183673469,
+    0.014416254783163262
+   ],
+   "ci90": [
+    -0.0030957695578231292,
+    0.012821534863945579
+   ],
+   "p": 0.3109668903310967,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.013758329532835347
+  },
+  {
+   "contrast": "9 vs 9A",
+   "arm": "9",
+   "ref": "9A",
+   "set": "main",
+   "step": "reported",
+   "scope": "pooled",
+   "n": 168,
+   "d": 0.014336203231292517,
+   "ci95": [
+    0.004597151360544217,
+    0.024553571428571428
+   ],
+   "ci90": [
+    0.006164965986394557,
+    0.02270673894557823
+   ],
+   "p": 0.004909950900490995,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.014662465404414064
+  },
+  {
+   "contrast": "9 vs 9K",
+   "arm": "9",
+   "ref": "9K",
+   "set": "main",
+   "step": "reported",
+   "scope": "same-sentence subset",
+   "n": 95,
+   "d": 0.018092105263157895,
+   "ci95": [
+    0.00625,
+    0.030263157894736843
+   ],
+   "ci90": [
+    0.00805921052631579,
+    0.028289473684210528
+   ],
+   "p": 0.0045899541004589955,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.018051531291077953
+  },
+  {
+   "contrast": "9G vs original",
+   "arm": "9G",
+   "ref": "original",
+   "set": "main",
+   "step": "reported",
+   "scope": "pooled",
+   "n": 147,
+   "d": 0.006647837706511176,
+   "ci95": [
+    -0.003082482993197279,
+    0.01685191933916424
+   ],
+   "ci90": [
+    -0.0015366861030126338,
+    0.015151239067055395
+   ],
+   "p": 0.19461805381946182,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.01464438485454992
+  },
+  {
+   "contrast": "9K vs 9G",
+   "arm": "9K",
+   "ref": "9G",
+   "set": "main",
+   "step": "reported",
+   "scope": "pooled",
+   "n": 145,
+   "d": 0.010086206896551726,
+   "ci95": [
+    0.0010328663793103465,
+    0.01895012315270936
+   ],
+   "ci90": [
+    0.0023706896551724138,
+    0.017574507389162556
+   ],
+   "p": 0.03630963690363096,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.013513304733352898
+  },
+  {
+   "contrast": "12K vs original",
+   "arm": "12K",
+   "ref": "original",
+   "set": "main",
+   "step": "reported",
+   "scope": "new queries",
+   "n": 77,
+   "d": 0.01200139146567718,
+   "ci95": [
+    -0.0036525974025974025,
+    0.02829386015769943
+   ],
+   "ci90": [
+    -0.0012175324675324675,
+    0.02562760899814469
+   ],
+   "p": 0.15636843631563685,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.02365431238855579
+  },
+  {
+   "contrast": "P12K vs original",
+   "arm": "P12K",
+   "ref": "original",
+   "set": "main",
+   "step": "reported",
+   "scope": "new queries",
+   "n": 46,
+   "d": 0.008831521739130434,
+   "ci95": [
+    -0.005434782608695652,
+    0.024116847826086956
+   ],
+   "ci90": [
+    -0.0030570652173913045,
+    0.021399456521739132
+   ],
+   "p": 0.2675073249267507,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.021656425730099668
+  },
+  {
+   "contrast": "12K vs 12",
+   "arm": "12K",
+   "ref": "12",
+   "set": "main",
+   "step": "reported",
+   "scope": "new queries",
+   "n": 67,
+   "d": -0.02751865671641791,
+   "ci95": [
+    -0.04664179104477612,
+    -0.009794776119402986
+   ],
+   "ci90": [
+    -0.04337686567164179,
+    -0.012593283582089552
+   ],
+   "p": 0.0037099629003709963,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.026711355754674915
+  },
+  {
+   "contrast": "12 vs P12",
+   "arm": "12",
+   "ref": "P12",
+   "set": "main",
+   "step": "reported",
+   "scope": "new queries",
+   "n": 74,
+   "d": 0.0357746138996139,
+   "ci95": [
+    0.019424921573359073,
+    0.05321096766409264
+   ],
+   "ci90": [
+    0.021924770752895756,
+    0.05034387065637066
+   ],
+   "p": 2.999970000299997e-05,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.024989396439071054
+  },
+  {
+   "contrast": "12K vs original",
+   "arm": "12K",
+   "ref": "original",
+   "set": "main",
+   "step": "reported",
+   "scope": "pooled",
+   "n": 109,
+   "d": 0.011775065530799475,
+   "ci95": [
+    -0.0020068807339449542,
+    0.02582374262778505
+   ],
+   "ci90": [
+    0.0003071756225425949,
+    0.023307462319790254
+   ],
+   "p": 0.1025989740102599,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.020446399882287674
+  },
+  {
+   "contrast": "P12K vs original",
+   "arm": "P12K",
+   "ref": "original",
+   "set": "main",
+   "step": "reported",
+   "scope": "pooled",
+   "n": 69,
+   "d": 0.005434782608695652,
+   "ci95": [
+    -0.006340579710144928,
+    0.017663043478260868
+   ],
+   "ci90": [
+    -0.004313858695652164,
+    0.015398550724637682
+   ],
+   "p": 0.3980060199398006,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.0174172024872968
+  },
+  {
+   "contrast": "12K vs 12",
+   "arm": "12K",
+   "ref": "12",
+   "set": "main",
+   "step": "reported",
+   "scope": "pooled",
+   "n": 95,
+   "d": -0.029769736842105262,
+   "ci95": [
+    -0.04687911184210526,
+    -0.013651315789473685
+   ],
+   "ci90": [
+    -0.04407894736842105,
+    -0.01644736842105263
+   ],
+   "p": 0.00032999670003299966,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.02390612796764991
+  },
+  {
+   "contrast": "12 vs P12",
+   "arm": "12",
+   "ref": "P12",
+   "set": "main",
+   "step": "reported",
+   "scope": "pooled",
+   "n": 107,
+   "d": 0.03535964619492657,
+   "ci95": [
+    0.01985981308411215,
+    0.05133980724299065
+   ],
+   "ci90": [
+    0.022321428571428572,
+    0.04881612983978638
+   ],
+   "p": 3.999960000399996e-05,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.023011151943382494
+  },
+  {
+   "contrast": "9A vs 9K",
+   "arm": "9A",
+   "ref": "9K",
+   "set": "replication",
+   "step": "reported",
+   "scope": "pooled",
+   "n": 52,
+   "d": 0.006911057692307692,
+   "ci95": [
+    -0.006009615384615385,
+    0.021334134615384616
+   ],
+   "ci90": [
+    -0.004206730769230769,
+    0.018629807692307692
+   ],
+   "p": 0.35479645203547966,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.020168886942135193
+  },
+  {
+   "contrast": "9 vs 9A",
+   "arm": "9",
+   "ref": "9A",
+   "set": "replication",
+   "step": "reported",
+   "scope": "pooled",
+   "n": 52,
+   "d": 0.024939903846153848,
+   "ci95": [
+    0.005408653846153846,
+    0.04657451923076923
+   ],
+   "ci90": [
+    0.008413461538461538,
+    0.04266826923076923
+   ],
+   "p": 0.01879981200187998,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.030543055532022696
+  },
+  {
+   "contrast": "9 vs 9K",
+   "arm": "9",
+   "ref": "9K",
+   "set": "replication",
+   "step": "reported",
+   "scope": "same-sentence subset",
+   "n": 29,
+   "d": 0.05603448275862069,
+   "ci95": [
+    0.029094827586206896,
+    0.08890086206896551
+   ],
+   "ci90": [
+    0.032327586206896554,
+    0.08297413793103449
+   ],
+   "p": 0.00011999880001199988,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.04466333445561744
+  },
+  {
+   "contrast": "9G vs original",
+   "arm": "9G",
+   "ref": "original",
+   "set": "replication",
+   "step": "reported",
+   "scope": "pooled",
+   "n": 41,
+   "d": -0.010289634146341464,
+   "ci95": [
+    -0.02934451219512195,
+    0.008765243902439025
+   ],
+   "ci90": [
+    -0.026295731707317072,
+    0.005716463414634146
+   ],
+   "p": 0.32546674533254666,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.02843121116810882
+  },
+  {
+   "contrast": "9K vs 9G",
+   "arm": "9K",
+   "ref": "9G",
+   "set": "replication",
+   "step": "reported",
+   "scope": "pooled",
+   "n": 41,
+   "d": 0.020960365853658538,
+   "ci95": [
+    0.0007621951219512195,
+    0.04420731707317073
+   ],
+   "ci90": [
+    0.004192073170731708,
+    0.040015243902439025
+   ],
+   "p": 0.058279417205827945,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.03135257213728314
+  },
+  {
+   "contrast": "9K vs 9",
+   "arm": "9K",
+   "ref": "9",
+   "set": "replication",
+   "step": "reported",
+   "scope": "pooled",
+   "n": 52,
+   "d": -0.031850961538461536,
+   "ci95": [
+    -0.0546875,
+    -0.011117788461538462
+   ],
+   "ci90": [
+    -0.05108173076923077,
+    -0.014423076923076924
+   ],
+   "p": 0.004319956800431996,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.032302800964440735
+  },
+  {
+   "contrast": "9L vs 9",
+   "arm": "9L",
+   "ref": "9",
+   "set": "replication",
+   "step": "reported",
+   "scope": "pooled",
+   "n": 52,
+   "d": -0.028846153846153848,
+   "ci95": [
+    -0.05108173076923077,
+    -0.008713942307692308
+   ],
+   "ci90": [
+    -0.047190504807692296,
+    -0.01201923076923077
+   ],
+   "p": 0.008199918000819992,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.031429776765429365
+  },
+  {
+   "contrast": "9K vs original",
+   "arm": "9K",
+   "ref": "original",
+   "set": "main",
+   "step": "amendment 3 sensitivity",
+   "scope": "pooled, no flagged 9K query (Holm re-run with the other tests)",
+   "n": 168,
+   "d": 0.015824298469387755,
+   "ci95": [
+    0.00623139880952381,
+    0.025762980973639448
+   ],
+   "ci90": [
+    0.007746067176870748,
+    0.02418154761904762
+   ],
+   "p": 0.0017999820001799983,
+   "p_holm": 0.005839941600583994,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.01720093203194674
+  },
+  {
+   "contrast": "9K vs 9P",
+   "arm": "9K",
+   "ref": "9P",
+   "set": "main",
+   "step": "amendment 3 sensitivity",
+   "scope": "pooled, no flagged 9K query (Holm re-run with the other tests)",
+   "n": 166,
+   "d": 0.01782128514056225,
+   "ci95": [
+    0.007140055758749283,
+    0.028507108792312105
+   ],
+   "ci90": [
+    0.008910194348823867,
+    0.02687087636259323
+   ],
+   "p": 0.0014599854001459986,
+   "p_holm": 0.005839941600583994,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.018760877760590416
+  },
+  {
+   "contrast": "9L vs original",
+   "arm": "9L",
+   "ref": "original",
+   "set": "main",
+   "step": "amendment 3 sensitivity",
+   "scope": "pooled, without the 11 flagged 9L queries",
+   "n": 158,
+   "d": 0.009408905967450271,
+   "ci95": [
+    -0.0010899355786618426,
+    0.020075511415009035
+   ],
+   "ci90": [
+    0.0007063743218806506,
+    0.018408114828209764
+   ],
+   "p": 0.08453915460845392,
+   "p_holm": 0.08453915460845392,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.018461705956543832
+  },
+  {
+   "contrast": "9L vs 9P",
+   "arm": "9L",
+   "ref": "9P",
+   "set": "main",
+   "step": "amendment 3 sensitivity",
+   "scope": "pooled, without the 11 flagged 9L queries",
+   "n": 156,
+   "d": 0.01205261752136752,
+   "ci95": [
+    0.000834668803418803,
+    0.02287075988247862
+   ],
+   "ci90": [
+    0.002704326923076923,
+    0.02123397435897436
+   ],
+   "p": 0.03587964120358796,
+   "p_holm": 0.07175928240717593,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.019547155881245677
+  },
+  {
+   "contrast": "9L vs 9",
+   "arm": "9L",
+   "ref": "9",
+   "set": "main",
+   "step": "amendment 3 sensitivity",
+   "scope": "retention, without the 11 flagged 9L queries",
+   "n": 158,
+   "d": -0.027901785714285712,
+   "ci95": [
+    -0.04104070128842676,
+    -0.015440989489150094
+   ],
+   "ci90": [
+    -0.03877995027124773,
+    -0.01750395569620253
+   ],
+   "p": 1.999980000199998e-05,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.0186745365006243
+  },
+  {
+   "contrast": "9G vs original",
+   "arm": "9G",
+   "ref": "original",
+   "set": "main",
+   "step": "amendment 3 sensitivity",
+   "scope": "pooled, without the flagged 9G queries",
+   "n": 144,
+   "d": 0.006569320436507937,
+   "ci95": [
+    -0.0035807291666666665,
+    0.016710069444444444
+   ],
+   "ci90": [
+    -0.0020027281746031744,
+    0.015082465277777778
+   ],
+   "p": 0.2111078889211108,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.014921539434616993
+  },
+  {
+   "contrast": "9K vs 9G",
+   "arm": "9K",
+   "ref": "9G",
+   "set": "main",
+   "step": "amendment 3 sensitivity",
+   "scope": "pooled, without the flagged 9K and 9G queries",
+   "n": 142,
+   "d": 0.010409330985915495,
+   "ci95": [
+    0.0012764084507042256,
+    0.0197466046277666
+   ],
+   "ci90": [
+    0.002625125754527163,
+    0.01819416498993963
+   ],
+   "p": 0.032539674603253965,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.013742742004949404
+  },
+  {
+   "contrast": "9L vs 9",
+   "arm": "9L",
+   "ref": "9",
+   "set": "main",
+   "step": "amendment 3 sensitivity",
+   "scope": "identical prompts: flagged 9L versions byte-identical to arm 9's (noise floor)",
+   "n": 7,
+   "d": -0.011160714285714286,
+   "ci95": null,
+   "ci90": null,
+   "p": 0.125,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": null
+  },
+  {
+   "contrast": "9 vs original",
+   "arm": "9",
+   "ref": "original",
+   "set": "main",
+   "step": "added analysis",
+   "scope": "new queries without geo-test-325 (shares pages with an E1 query)",
+   "n": 114,
+   "d": 0.039101660401002505,
+   "ci95": [
+    0.023436031484962407,
+    0.05554902882205514
+   ],
+   "ci90": [
+    0.025904605263157895,
+    0.052984022556390974
+   ],
+   "p": 9.99990000099999e-06,
+   "p_holm": null,
+   "label": "reported without a verdict",
+   "single_model": false,
+   "cross_run": false,
+   "mde": 0.023858810513680048
+  }
+ ]
+}

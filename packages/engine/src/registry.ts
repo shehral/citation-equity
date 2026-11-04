@@ -91,14 +91,15 @@ const META: Record<CheckId, CheckMeta> = {
     category: 'clarity',
     inFoundationDesign: false,
     description:
-      'The key words of the page\'s questions appear in the title, the first heading or the first paragraph (a question section above them does not push them down); the score is the share found, averaged over questions. The questions are the ones you typed or imported, else the page\'s title and topic questions, never a section\'s. Common verbs such as "work" and "use" do not count. It names missing words as advice and never adds them for you.',
+      'The key words of the page\'s questions appear in the title, the first heading or the first paragraph (a question section above them does not push them down); the result is the share found, averaged over questions. The questions are the ones you typed or imported, else the page\'s title and topic questions, never a section\'s. Common verbs such as "work" and "use" do not count. It names missing words as advice and never adds them for you.',
   },
 };
 
 /**
- * Checks that are unscored notes: our own test (E1, or E3 for the checks it asked again) found no
- * effect larger than δ, so E1's rule table makes them weight 0 in every preset. They are still analyzed and still suggest; a custom weight the
- * author sets still counts them.
+ * Research API, part of `scoreChecks` (a weighted checklist mean for researchers; the app and the
+ * CLI never show it): the checks our own test (E1, or E3 for the checks it asked again) found no
+ * effect larger than δ for, which E1's rule table puts at weight 0 in every preset. Every check is
+ * still analyzed and still suggests.
  */
 export const UNSCORED_CHECKS: CheckId[] = CHECK_IDS.filter(
   (id) => EVIDENCE[id].e1.label === 'no-effect',
@@ -106,7 +107,7 @@ export const UNSCORED_CHECKS: CheckId[] = CHECK_IDS.filter(
 
 const isScored = (id: CheckId) => !UNSCORED_CHECKS.includes(id);
 
-/** Weight of a check in the `evidence` preset, by its evidence grade. */
+/** Research API: the weight of a check in the `evidence` preset, by its evidence grade. */
 export const GRADE_WEIGHTS: Record<EvidenceGrade, number> = {
   strong: 1,
   moderate: 0.7,
@@ -118,16 +119,22 @@ const presetFrom = (weightOf: (id: CheckId) => number): Weights =>
   Object.fromEntries(CHECK_IDS.map((id) => [id, weightOf(id)])) as Weights;
 
 /**
+ * Research API, the weights `scoreChecks` takes: a weighted checklist mean for researchers; the
+ * app and the CLI never show it.
  * `foundation`: the foundation design's checks at equal weight, the added checks at half weight.
  * `evidence`: each check weighted by its grade.
- * An unscored check is 0 in both.
+ * A check in UNSCORED_CHECKS is 0 in both.
  */
 export const PRESET_WEIGHTS: Record<PresetId, Weights> = {
   foundation: presetFrom((id) => (!isScored(id) ? 0 : META[id].inFoundationDesign ? 1 : 0.5)),
   evidence: presetFrom((id) => (!isScored(id) ? 0 : GRADE_WEIGHTS[EVIDENCE[id].grade])),
 };
 
-/** The check registry, in CHECK_IDS order. */
+/**
+ * The check registry, in CHECK_IDS order. `scored` and `defaultWeights` are research API (the
+ * presets above, for `scoreChecks`): a weighted checklist mean for researchers; the app and the
+ * CLI never show it.
+ */
 export const CHECK_DEFINITIONS: CheckDefinition[] = CHECK_IDS.map((id) => ({
   id,
   ...META[id],

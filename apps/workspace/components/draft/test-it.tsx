@@ -22,15 +22,18 @@ import {
   classifyBenchError,
   draftTitle,
   hasModel,
+  type LoadedPack,
   type LocalBenchResult,
   localSettings,
   parsePackFile,
   type ReportView,
+  type RunBaseline,
   runLocalBench,
   type SampleBench,
   sampleBench,
 } from '@/lib/bench';
 import { REPO_URL } from '@/lib/links';
+import { reportLocalModel, setLocalModel } from '@/lib/local-model';
 import type { Sample } from '@/lib/samples';
 import { cn } from '@/lib/utils';
 import { ModelMissingNote, OllamaInstructions, UnreachableNote } from './ollama-help';
@@ -43,10 +46,12 @@ interface TestItProps {
   /** The draft's title when it has no H1 (the sample title, or "My draft"). */
   fallbackTitle?: string;
   /**
-   * Told the result of each "Connect local AI": the model when it is ready, else null. Reader
-   * questions and Suggest wording reuse it instead of probing on their own.
+   * For the author's own post: a pack loaded earlier, to start from. The panel lives on its own
+   * page, so the author loads a pack, leaves to edit, and comes back to run against that text.
    */
-  onLocalModel?(model: string | null): void;
+  initialPack?: LoadedPack | null;
+  /** Told each pack the author loads for their own post, or null when a bad file drops it. */
+  onPackChange?(loaded: LoadedPack | null): void;
 }
 
 /** The one chance caveat next to the test numbers. */
@@ -57,14 +62,17 @@ export const CONNECT_NOTE = 'Sends your text only to the AI on this computer.';
 
 /**
  * Test it: for an example, its recorded before/after run in two plain numbers (details folded
- * away); for the author's own post, a test pack to load. A local run, and the connection that
- * Reader questions and Suggest wording use, happen only after the author clicks Connect local AI.
+ * away); for the author's own post, a test pack to load. A local run happens only after the
+ * author clicks Connect local AI; what that click finds is the page's one connection
+ * (lib/local-model), so the draft's Suggest wording and the question editor's local AI unlock
+ * with it.
  */
 export function TestIt({
   sample,
   markdown,
   fallbackTitle = 'My draft',
-  onLocalModel,
+  initialPack = null,
+  onPackChange,
 }: TestItProps) {
   const bench = useMemo(() => sampleBench(sample), [sample]);
   const baseline = useMemo(
@@ -89,14 +97,14 @@ export function TestIt({
             baseline={baseline}
             markdown={markdown}
             fallbackTitle={sample.title}
-            onLocalModel={onLocalModel}
           />
         </>
       ) : (
         <OwnPostTest
           markdown={markdown}
           fallbackTitle={fallbackTitle}
-          onLocalModel={onLocalModel}
+          initialPack={initialPack}
+          onPackChange={onPackChange}
         />
       )}
     </div>
@@ -436,28 +444,19 @@ type LocalState =
   /** `markdown` is the text that was run, which the editor may have moved past since. */
   | { kind: 'done'; result: LocalBenchResult; markdown: string };
 
-interface Baseline {
-  /** The column label, e.g. "Sample before". */
-  label: string;
-  title: string;
-  markdown: string;
-}
-
 function LocalRunner({
   pack,
   settings,
   baseline,
   markdown,
   fallbackTitle,
-  onLocalModel,
 }: {
   /** Null until the author loads a pack (own post): Connect still works, a run does not. */
   pack: Pack | null;
   settings: BenchSettings;
-  baseline: Baseline | null;
+  baseline: RunBaseline | null;
   markdown: string;
   fallbackTitle: string;
-  onLocalModel?(model: string | null): void;
 }) {
   const [state, setState] = useState<LocalState>({ kind: 'idle' });
   /** Bumped by every action, so a late answer from an earlier one is dropped. */
@@ -499,7 +498,9 @@ function LocalRunner({
     }
     if (id !== op.current) return;
     const ready = found.reachable && hasModel(found.models, model);
-    onLocalModel?.(ready ? model : null);
+    // The page's one connection learns what this check found, failures too.
+    if (ready) setLocalModel(model);
+    else reportLocalModel(found.reachable ? 'model-missing' : 'unreachable', model);
     if (!found.reachable) setState({ kind: 'unreachable' });
     else if (!ready) setState({ kind: 'model-missing' });
     else setState({ kind: 'ready' });
@@ -614,7 +615,7 @@ function LocalRunner({
 
       {state.kind === 'done' && pack && baseline && (
         <section aria-label="Your run on this machine" className="space-y-3 rounded-md border p-3">
-          <h4 className="font-medium">Your run: {baseline.label.toLowerCase()} vs your text</h4>
+          <h3 className="font-medium">Your run: {baseline.label.toLowerCase()} vs your text</h3>
           <Headline before={state.result.before} after={state.result.current} />
           <p className="text-ink-soft text-xs">{CHANCE_NOTE}</p>
           <details>
@@ -697,17 +698,22 @@ const PACK_DOCS_URL = `${REPO_URL}/blob/main/docs/cli.md#make-a-test-pack`;
 function OwnPostTest({
   markdown,
   fallbackTitle,
-  onLocalModel,
+  initialPack,
+  onPackChange,
 }: {
   markdown: string;
   fallbackTitle: string;
-  onLocalModel?(model: string | null): void;
+  initialPack: LoadedPack | null;
+  onPackChange?(loaded: LoadedPack | null): void;
 }) {
   const id = useId();
-  const [loaded, setLoaded] = useState<{ name: string; pack: Pack; baseline: Baseline } | null>(
-    null,
-  );
+  const [loaded, setLoadedState] = useState<LoadedPack | null>(initialPack);
   const [error, setError] = useState<string | null>(null);
+
+  function setLoaded(next: LoadedPack | null) {
+    setLoadedState(next);
+    onPackChange?.(next);
+  }
 
   async function read(e: ChangeEvent<HTMLInputElement>) {
     const input = e.currentTarget;
@@ -780,7 +786,6 @@ function OwnPostTest({
         baseline={loaded?.baseline ?? null}
         markdown={markdown}
         fallbackTitle={fallbackTitle}
-        onLocalModel={onLocalModel}
       />
     </>
   );

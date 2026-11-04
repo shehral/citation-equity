@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { check, contentTerms } from '../../src/checks/question-coverage';
-import { analyze, EVIDENCE, gather, parseDraft, questionCoverage } from '../../src/index';
+import {
+  analyze,
+  EVIDENCE,
+  gather,
+  pageQuestions,
+  parseDraft,
+  questionCoverage,
+} from '../../src/index';
 import espresso from '../fixtures/checks/question-coverage/espresso.md?raw';
 
 const run = (md: string, questions?: string[]) =>
@@ -11,12 +18,15 @@ const SHOT = 'How long should an espresso shot take?';
 const WATER = 'What water temperature is best?';
 
 describe('question-coverage', () => {
-  it('does not apply without target questions', () => {
+  it("does not apply without target questions; through analyze it measures the page's own", () => {
     expect(run(espresso).applicable).toBe(false);
     expect(run(espresso, []).applicable).toBe(false);
     expect(run(espresso, ['  ', '']).applicable).toBe(false);
+    const page = pageQuestions(espresso).map((q) => q.text);
+    expect(page.length).toBeGreaterThan(0);
     const viaAnalyze = analyze(espresso).checks.find((c) => c.checkId === 'question-coverage');
-    expect(viaAnalyze).toMatchObject({ applicable: false, score: 0, suggestions: [] });
+    expect(viaAnalyze).toEqual(run(espresso, page));
+    expect(viaAnalyze?.metrics.questions).toBe(page.length);
   });
 
   it('covers a question whose matching section opens with a direct answer', () => {

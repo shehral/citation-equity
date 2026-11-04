@@ -11,9 +11,9 @@ import {
   EVIDENCE,
   formatE1,
   formatE1Effect,
+  noEffectNote,
   OWN_TEST_RESULTS,
   type OwnTest,
-  unscoredNote,
 } from '../src/index';
 
 // Each check's outcome in our own test, copied here by hand so a change to the registry has to be
@@ -171,13 +171,15 @@ describe('E1 labels in the evidence registry', () => {
     });
   });
 
-  it('says why an unscored note is not scored, with the test that found it', () => {
-    expect(unscoredNote(EVIDENCE['question-headings'].e1)).toBe(
-      'Not scored in Standard or By evidence: our own test (E3) found no effect larger than 0.03 (d -0.016, 90% CI [-0.028, -0.004], n 57, Holm p 0.164).',
+  it('says which of our tests found no effect, with its numbers, and nothing about a score', () => {
+    expect(noEffectNote(EVIDENCE['question-headings'].e1)).toBe(
+      'Our own test (E3) found no effect larger than 0.03 (d -0.016, 90% CI [-0.028, -0.004], n 57, Holm p 0.164).',
     );
-    expect(unscoredNote(EVIDENCE.lists.e1)).toBe(
-      'Not scored in Standard or By evidence: our own test (E1) found no effect larger than 0.03 (d -0.007, 90% CI [-0.027, +0.013], n 33).',
+    expect(noEffectNote(EVIDENCE.lists.e1)).toBe(
+      'Our own test (E1) found no effect larger than 0.03 (d -0.007, 90% CI [-0.027, +0.013], n 33).',
     );
+    for (const id of CHECK_IDS.filter((c) => EVIDENCE[c].e1.label === 'no-effect'))
+      expect(noEffectNote(EVIDENCE[id].e1), id).not.toMatch(/Not scored|Standard|By evidence/);
   });
 
   it('records the combined result of applying every fix together', () => {

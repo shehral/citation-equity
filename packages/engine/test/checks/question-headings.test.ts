@@ -8,9 +8,9 @@ const run = (md: string) => check(gather(parseDraft(md)));
 const slice = (md: string, r: { start: number; end: number }) => md.slice(r.start, r.end);
 
 describe('question-headings', () => {
-  it('still suggests, its heading edit included, and says every suggestion is not scored and why', () => {
+  it('still suggests, its heading edit included, and says what our own test found on every suggestion', () => {
     const note =
-      'Not scored in Standard or By evidence: our own test (E3) found no effect larger than 0.03 (d -0.016, 90% CI [-0.028, -0.004], n 57, Holm p 0.164).';
+      'Our own test (E3) found no effect larger than 0.03 (d -0.016, 90% CI [-0.028, -0.004], n 57, Holm p 0.164).';
     const md = '# Espresso\n\n## How to fix bitter espresso\n\nText.\n\n## Grind size\n\nText.\n';
     const r = run(md);
     expect(r.suggestions.length).toBe(2);

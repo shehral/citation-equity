@@ -196,10 +196,10 @@ function KindGroup({
   return (
     <section aria-label={card.title} className="rounded-lg border bg-surface p-4 shadow-card">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <h3 className="mr-auto flex items-center gap-2 font-semibold">
+        <h4 className="mr-auto flex items-center gap-2 font-semibold">
           <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
           {card.title}
-        </h3>
+        </h4>
       </div>
       <SitesTable rows={domains} total={total} />
       <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 border-t pt-3 text-sm">
@@ -280,7 +280,7 @@ export function CitedView() {
 
   return (
     <>
-      <p className="mt-3 text-lg text-muted-foreground leading-relaxed">
+      <p className="mt-3 text-ink-soft leading-relaxed">
         AI answers also cite forums, Wikipedia, videos and reviews. See who gets cited for your
         questions, and how to show up there honestly.
       </p>
@@ -341,9 +341,9 @@ export function CitedView() {
       </div>
 
       <section aria-labelledby={resultsId} className="mt-12">
-        <h2 id={resultsId} className="font-medium font-serif text-2xl">
+        <h3 id={resultsId} className="font-medium font-serif text-xl">
           Who gets cited
-        </h2>
+        </h3>
         {report.answers === 0 ? (
           stored ? (
             <div className="mt-3 rounded-lg border bg-surface p-4 shadow-card">
@@ -380,11 +380,11 @@ export function CitedView() {
                 aria-label="Your site"
                 className="rounded-lg border border-brand/40 bg-surface p-4 shadow-card"
               >
-                <h3 className="flex items-center gap-2 font-semibold">
+                <h4 className="flex items-center gap-2 font-semibold">
                   <PenLine className="size-4 text-brand" aria-hidden="true" />
                   Your site
                   <YouChip />
-                </h3>
+                </h4>
                 <SitesTable
                   own
                   rows={[

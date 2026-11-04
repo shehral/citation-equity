@@ -5,12 +5,19 @@ import { fileURLToPath } from 'node:url';
 import {
   type AnalysisResult,
   analyze,
+  BLOCKER_IDS,
   CHECK_DEFINITIONS,
-  E1_DELTA,
   generateQuestions,
-  pageQuestions,
-  parseDraft,
+  NOTE_CHECKS,
+  namedWords,
+  QUESTION_LABELS,
+  type QuestionLineLabels,
+  type QuestionRow,
+  questionKey,
   READINESS_NOTE,
+  TEST_LABEL_TEXT,
+  TEST_LABELS,
+  type TestLabel,
 } from '@citation-equity/engine';
 import { Command, CommanderError, InvalidArgumentError, Option } from 'commander';
 import { AdapterUnavailableError, ModelMissingError } from '../adapters/errors';
@@ -56,7 +63,7 @@ export function createProgram(io: CliIo): Command {
 
   program
     .command('analyze')
-    .description('Score a draft under both presets and list its checks and suggestions.')
+    .description('Which reader questions a draft covers, and its writing notes.')
     .argument('<file>', 'Markdown or HTML draft')
     .addOption(
       new Option('--format <format>', 'input format (default: from the file extension)').choices([
@@ -67,7 +74,7 @@ export function createProgram(io: CliIo): Command {
     .option('--json', 'print the full analysis as JSON')
     .option(
       '--questions <file>',
-      "target questions, one per line (# starts a comment; default: the draft's own question headings)",
+      "your readers' questions, one per line (# starts a comment; default: questions made from the page's title and topic)",
     )
     .action(
       async (file: string, o: { format?: 'md' | 'html'; json?: boolean; questions?: string }) => {
@@ -75,42 +82,30 @@ export function createProgram(io: CliIo): Command {
         const format = (o.format ? o.format === 'html' : /\.html?$/i.test(file))
           ? 'html'
           : 'markdown';
-        // Without a file, the draft's own question headings are scored; template rewrites are
-        // only suggested, since the author has not accepted them.
-        const generated = o.questions ? [] : generateQuestions(parseDraft(source, format).markdown);
         const questions = o.questions
           ? (await readText(o.questions))
               .split('\n')
               .map((l) => l.trim())
               .filter((l) => l !== '' && !l.startsWith('#'))
-          : generated.filter((q) => q.source === 'draft-heading').map((q) => q.text);
-        const suggested = generated.filter((q) => q.source !== 'draft-heading').map((q) => q.text);
-        // Questions in a file are the author's own: reader-words measures exactly those. Without
-        // one it measures the page's title and topic questions.
-        const result = analyze(source, {
-          format,
-          questions,
-          ...(o.questions ? { authorQuestions: questions } : {}),
-        });
+          : [];
+        // Questions in a file are the readers' own: both question checks and the report measure
+        // exactly those. Without one they measure the page's own title and topic questions.
+        const result = analyze(source, { format, questions });
         if (o.json) {
           out(`${JSON.stringify(result, null, 2)}\n`);
           return;
         }
-        const from = o.questions
-          ? `from ${basename(o.questions)}`
-          : "the draft's own question headings; pass --questions to use your own";
-        const listed = questions.length > 0 ? questions.map((q) => `- ${q}`) : ['- none'];
-        const more =
-          suggested.length > 0
-            ? `\nSuggested from the draft's title and headings (not scored; add the ones you want to a --questions file):\n${suggested.map((q) => `- ${q}`).join('\n')}\n`
-            : '';
-        const page = o.questions ? [] : pageQuestions(parseDraft(source, format).markdown);
-        const pageLines =
-          page.length > 0
-            ? `\nReader's words up top measures the page's own questions (from its title and topic):\n${page.map((q) => `- ${q.text}`).join('\n')}\n`
-            : '';
+        // Questions made from the draft are only suggested, since the author has not chosen them.
+        const measured = new Set(result.questions.rows.map((r) => questionKey(r.question)));
+        const suggested = generateQuestions(result.markdown)
+          .map((q) => q.text)
+          .filter((q) => !measured.has(questionKey(q)));
         out(
-          `Target questions (${from}):\n${listed.join('\n')}\n${more}${pageLines}\n${formatAnalysis(result, format)}`,
+          formatAnalysis(result, {
+            format,
+            questionsFile: o.questions ? basename(o.questions) : undefined,
+            suggested,
+          }),
         );
       },
     );
@@ -428,35 +423,96 @@ function lineAt(markdown: string, offset: number): number {
   return line;
 }
 
-function formatAnalysis(result: AnalysisResult, format: 'markdown' | 'html' = 'markdown'): string {
+/** What each question input's label line says the labels are for. */
+const INPUT_NOTE = {
+  reader: "your readers' own questions",
+  page: 'questions made from the page',
+} as const;
+
+/** A label as the CLI words it: the screens' text, lowercased to sit mid-line. */
+const labelText = (label: TestLabel) => TEST_LABEL_TEXT[label].toLowerCase();
+
+/**
+ * A question input's two line labels as the label line words them: one label when the lines
+ * agree, else each line's ("words up top not tested; answered helped in our test").
+ */
+export function questionLabelWords({ words, answer }: QuestionLineLabels): string {
+  return words === answer
+    ? labelText(words)
+    : `words up top ${labelText(words)}; answered ${labelText(answer)}`;
+}
+
+/** The questions block: the count, its question input's label, then each question's lines. */
+function formatQuestions(result: AnalysisResult, questionsFile: string | undefined): string[] {
+  const { from, rows, covered } = result.questions;
+  // A questions file holds the readers' own questions; otherwise they are made from the page.
+  const input = from === 'yours' ? 'reader' : 'page';
+  const source =
+    from === 'yours' && questionsFile !== undefined
+      ? `from ${questionsFile}`
+      : "from the page's title and topic; pass --questions to use your readers'";
+  return [
+    `Questions covered: ${covered} of ${rows.length} (${source})`,
+    `Label: ${questionLabelWords(QUESTION_LABELS[input])} (${INPUT_NOTE[input]})`,
+    ...rows.flatMap(formatQuestionRow),
+  ];
+}
+
+/** One question: line (a) unless it has no key words to look for, then line (b). */
+function formatQuestionRow(row: QuestionRow): string[] {
+  const lines = [`- ${printable(row.question)}`];
+  if (row.words !== null) {
+    // At most MAX_NAMED words, as many as the reader-words advice names, so the line never
+    // reads as a list to paste in.
+    const { missing } = row.words;
+    const named = namedWords(missing, (w) => `"${printable(w)}"`);
+    lines.push(`    words up top: ${missing.length === 0 ? 'yes' : `missing ${named}`}`);
+  }
+  const { covered, message } = row.answer;
+  lines.push(`    answered: ${covered ? 'yes' : `no. ${message ?? ''}`}`);
+  return lines;
+}
+
+/** The nine writing notes, in registry order, each with what our own tests found and its grade. */
+function formatNotes(): string[] {
+  const defs = new Map(CHECK_DEFINITIONS.map((d) => [d.id, d]));
+  const rows = NOTE_CHECKS.map((id) => ({
+    id,
+    label: labelText(TEST_LABELS[id]),
+    grade: defs.get(id)?.evidence.grade ?? '',
+    title: defs.get(id)?.title ?? '',
+  }));
+  const idWidth = Math.max(5, ...rows.map((r) => r.id.length));
+  const labelWidth = Math.max(5, ...rows.map((r) => r.label.length));
+  const line = (id: string, label: string, grade: string, title: string) =>
+    `${id.padEnd(idWidth)}  ${label.padEnd(labelWidth)}  ${grade.padEnd(8)}  ${title}`;
+  return [
+    'Writing notes (each label says what our own tests found)',
+    line('Check', 'Label', 'Grade', 'Title'),
+    ...rows.map((r) => line(r.id, r.label, r.grade, r.title)),
+  ];
+}
+
+function formatAnalysis(
+  result: AnalysisResult,
+  opts: { format: 'markdown' | 'html'; questionsFile?: string; suggested: string[] },
+): string {
+  const { format } = opts;
   const lines: string[] = [];
   if (result.wordCount === 0) {
     lines.push('No content yet');
   } else {
-    const score = (s: number | null) =>
-      s === null ? 'not scored (no check applies)' : `${s} / 100`;
-    lines.push(`Foundation score: ${score(result.scores.foundation)}`);
-    lines.push(`Evidence score: ${score(result.scores.evidence)}`);
+    lines.push(...formatQuestions(result, opts.questionsFile));
+  }
+  if (opts.suggested.length > 0) {
+    lines.push('');
+    lines.push(
+      "Suggested from the draft's title and headings (add the ones you want to a --questions file):",
+    );
+    for (const q of opts.suggested) lines.push(`- ${printable(q)}`);
   }
   lines.push('');
-  const defs = new Map(CHECK_DEFINITIONS.map((d) => [d.id, d]));
-  const idWidth = Math.max(5, ...result.checks.map((c) => c.checkId.length));
-  lines.push(`${'Check'.padEnd(idWidth)}  ${'Grade'.padEnd(8)}  Score  Title`);
-  for (const c of result.checks) {
-    const def = defs.get(c.checkId);
-    const score = c.applicable ? String(Math.round(c.score * 100)) : 'n/a';
-    lines.push(
-      `${c.checkId.padEnd(idWidth)}  ${(def?.evidence.grade ?? '').padEnd(8)}  ${score.padStart(5)}  ${def?.title ?? ''}`,
-    );
-  }
-  const unscored = CHECK_DEFINITIONS.filter((d) => !d.scored).map(
-    (d) => `${d.id} (${d.evidence.e1.test})`,
-  );
-  if (unscored.length > 0) {
-    lines.push(
-      `Not scored: ${unscored.join(', ')}; our own tests found no effect larger than ${E1_DELTA}.`,
-    );
-  }
+  lines.push(...formatNotes());
   const suggestions = result.checks.flatMap((c) => c.suggestions);
   lines.push('');
   lines.push(
@@ -474,18 +530,20 @@ function formatAnalysis(result: AnalysisResult, format: 'markdown' | 'html' = 'm
         ? `"${excerpt(s.before)}" -> "${excerpt(s.after)}"`
         : `"${excerpt(s.before)}"`;
     lines.push(`      ${at}: ${change}`);
-    const finding = findings.find(
+    const near = findings.filter(
       (f) =>
         f.checkId === s.checkId && f.range.start <= s.range.end && s.range.start <= f.range.end,
     );
-    // Shown unless the title or rationale already says it.
-    if (finding && finding.message !== s.title && !s.rationale.includes(finding.message)) {
-      lines.push(`      ${printable(finding.message)}`);
-    }
+    // Shown unless the title or rationale already says it. Findings can share a range (every
+    // reader-words finding sits at the top), so a suggestion that quotes one of them is its own.
+    const said = near.some((f) => f.message === s.title || s.rationale.includes(f.message));
+    if (near.length > 0 && !said) lines.push(`      ${printable(near[0].message)}`);
     lines.push(`      ${s.rationale}`);
   }
   lines.push('');
-  lines.push('Grades say how well published studies support each check; see docs/evidence.md.');
+  lines.push(
+    'Grades say how well published studies support each check; labels say what our own tests found. See docs/evidence.md.',
+  );
   return `${lines.join('\n')}\n`;
 }
 
@@ -567,6 +625,16 @@ function formatSite(r: SiteReport): string {
     ? `found${r.sitemaps.length > 0 ? `; sitemaps: ${r.sitemaps.map(printable).join(', ')}` : ''}`
     : 'not found or not readable (see crawler-access below)';
   lines.push(`robots.txt: ${robots}`);
+  // A blocker is a blocker item that fails (one that warns or needs checking is not), in
+  // BLOCKER_IDS order.
+  const blockers = BLOCKER_IDS.flatMap((id) =>
+    r.readiness.items.filter((i) => i.id === id && i.status === 'fail'),
+  );
+  lines.push(
+    blockers.length === 0
+      ? 'Blockers: none found'
+      : `Blockers: ${blockers.map((i) => `${i.id} (${printable(i.detail)})`).join('; ')}`,
+  );
   lines.push('');
   const uaWidth = Math.max(7, ...r.crawlers.map((c) => c.userAgent.length));
   const opWidth = Math.max(8, ...r.crawlers.map((c) => c.operator.length));

@@ -12,14 +12,32 @@ import { cn } from '@/lib/utils';
 import { RESEARCH_HREF } from '@/lib/views';
 import type { RowStatus, SiteRow } from './site-check';
 
-const STATUS: Record<RowStatus, { label: string; icon: LucideIcon; className: string }> = {
-  pass: { label: 'Pass', icon: CircleCheck, className: 'bg-done-soft text-done' },
-  warn: { label: 'Warning', icon: TriangleAlert, className: 'bg-stale-soft text-stale' },
-  fail: { label: 'Fix', icon: CircleX, className: 'border border-destructive/40 text-destructive' },
-  live: {
-    label: 'Not checked',
-    icon: CircleDashed,
-    className: 'border border-border text-muted-foreground',
+/** Which group a row is shown in: a blocker item, or one of the other page notes. */
+export type RowKind = 'blocker' | 'note';
+
+type Pill = { label: string; icon: LucideIcon; className: string };
+
+const DESTRUCTIVE = 'border border-destructive/40 text-destructive';
+const STALE = 'bg-stale-soft text-stale';
+const DONE = 'bg-done-soft text-done';
+const MUTED = 'border border-border text-muted-foreground';
+
+/**
+ * Each status's pill, by group. A blocker item says whether it keeps the page out of AI answers;
+ * a page note keeps the plain verdict.
+ */
+const PILLS: Record<RowKind, Record<RowStatus, Pill>> = {
+  blocker: {
+    fail: { label: 'Blocker', icon: CircleX, className: DESTRUCTIVE },
+    warn: { label: 'Check', icon: TriangleAlert, className: STALE },
+    pass: { label: 'Clear', icon: CircleCheck, className: DONE },
+    live: { label: 'Needs live site', icon: CircleDashed, className: MUTED },
+  },
+  note: {
+    pass: { label: 'Pass', icon: CircleCheck, className: DONE },
+    warn: { label: 'Warning', icon: TriangleAlert, className: STALE },
+    fail: { label: 'Fix', icon: CircleX, className: DESTRUCTIVE },
+    live: { label: 'Not checked', icon: CircleDashed, className: MUTED },
   },
 };
 
@@ -36,10 +54,12 @@ export function Chevron() {
   );
 }
 
-export function StatusChip({ status }: { status: RowStatus }) {
-  const { label, icon: Icon, className } = STATUS[status];
+/** A row's status pill; `data-pill` (the status) marks it, so a check can read the pill alone. */
+export function StatusChip({ status, kind }: { status: RowStatus; kind: RowKind }) {
+  const { label, icon: Icon, className } = PILLS[kind][status];
   return (
     <span
+      data-pill={status}
       className={cn(
         'inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-medium text-xs',
         className,
@@ -52,7 +72,7 @@ export function StatusChip({ status }: { status: RowStatus }) {
 }
 
 /** One compact result row: status, name and finding; Why it matters on tap, with Learn more. */
-export function SiteRowItem({ row, id }: { row: SiteRow; id?: string }) {
+export function SiteRowItem({ row, kind, id }: { row: SiteRow; kind: RowKind; id?: string }) {
   const nameId = useId();
   return (
     <li id={id} aria-labelledby={nameId} className="scroll-mt-24 py-3">
@@ -60,7 +80,7 @@ export function SiteRowItem({ row, id }: { row: SiteRow; id?: string }) {
         <span id={nameId} className="mr-auto font-medium">
           {row.name}
         </span>
-        <StatusChip status={row.status} />
+        <StatusChip status={row.status} kind={kind} />
       </div>
       <p className="mt-1 break-words text-ink-soft text-sm">{row.result}</p>
       <details className="group mt-1 text-sm">

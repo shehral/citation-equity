@@ -1,7 +1,7 @@
 import { measuredNote } from '../e1';
 import { EVIDENCE } from '../evidence';
 import type { Artifacts, Paragraph } from '../gather';
-import { questionKey } from '../import-queries';
+import { uniqueQuestions } from '../import-queries';
 import { pageQuestionsOf } from '../questions';
 import { suggestionId } from '../text';
 import type { CheckResult, Finding, Suggestion } from '../types';
@@ -12,6 +12,18 @@ import { type CheckFn, notApplicable } from './types';
 
 /** The most missing words one piece of advice names, so it never reads as a list to paste in. */
 export const MAX_NAMED = 3;
+
+/**
+ * The first MAX_NAMED of `words`, each through `quote` (double quotes by default), then how many
+ * more: `"grinders", "tampers", "scales" and 2 more`. Empty for no words.
+ */
+export function namedWords(
+  words: string[],
+  quote: (word: string) => string = (w) => `"${w}"`,
+): string {
+  const named = words.slice(0, MAX_NAMED).map(quote).join(', ');
+  return words.length > MAX_NAMED ? `${named} and ${words.length - MAX_NAMED} more` : named;
+}
 
 /**
  * The text a reader (and an answer engine) meets first. Our own test (E1, arm 12) worked the
@@ -62,26 +74,29 @@ export interface ReaderWords {
 }
 
 /**
+ * Reads the top of the draft once, and gives the measure for one question as `uniqueQuestions`
+ * gives it: its key words up top, or null when it has no key words to look for (null means
+ * only that). `readerWords` and the question report both measure through it.
+ */
+export function wordsUpTop(a: Artifacts): (question: string) => ReaderWords | null {
+  const present = allTerms(topText(a));
+  return (question) => {
+    const words = keyWords(question).filter((k) => !WEAK.has(k.term));
+    if (words.length === 0) return null;
+    const missing = words.filter((k) => !present.has(k.term)).map((k) => k.word);
+    return { question, found: words.length - missing.length, total: words.length, missing };
+  };
+}
+
+/**
  * Each non-blank question with key words (trimmed, in order, a repeat counted once, ignoring
- * case, spacing and a closing "?"), with its words up top.
+ * case, spacing and a closing "?": see `uniqueQuestions`), with its words up top.
  */
 export function readerWords(a: Artifacts, questions: string[]): ReaderWords[] {
-  const present = allTerms(topText(a));
-  const seen = new Set<string>();
-  return questions
-    .map((q) => q.trim())
-    .filter((q) => {
-      const key = questionKey(q);
-      if (key === '' || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .flatMap((question) => {
-      const words = keyWords(question).filter((k) => !WEAK.has(k.term));
-      if (words.length === 0) return [];
-      const missing = words.filter((k) => !present.has(k.term)).map((k) => k.word);
-      return [{ question, found: words.length - missing.length, total: words.length, missing }];
-    });
+  const measure = wordsUpTop(a);
+  return uniqueQuestions(questions)
+    .map(measure)
+    .filter((row) => row !== null);
 }
 
 const quoted = (words: string[]) => words.map((w) => `"${w}"`).join(', ');
@@ -93,9 +108,10 @@ const RATIONALE = `Do not force in words that do not fit: a rewrite that stuffed
 /**
  * For each reader question, the share of its key words found at the top of the page (the
  * title, the first heading and the first paragraph, see `topText`); the score is the mean over questions. Advice only: it names up to 3
- * missing words per question and never writes them in. The questions are the author's own when
- * there are any, else the page's title and topic questions (never a section's, so adding a
- * section never lowers the score); without either, the check does not apply.
+ * missing words per question and never writes them in. The questions are the context's (from
+ * `analyze`, the given questions, else the page's), or without a context the page's title and
+ * topic questions (never a section's, so adding a section never turns a line from met to
+ * missing); without any, the check does not apply.
  */
 export const check: CheckFn = (a, ctx): CheckResult => {
   const questions = ctx?.readerQuestions ?? pageQuestionsOf(a).map((q) => q.text);

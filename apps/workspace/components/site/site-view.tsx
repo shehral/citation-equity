@@ -1,6 +1,7 @@
 'use client';
 
-import { ClipboardPaste, FileText, Terminal } from 'lucide-react';
+import { BLOCKER_IDS } from '@citation-equity/engine';
+import { ChevronRight, ClipboardPaste, FileText, Terminal } from 'lucide-react';
 import {
   type ReactNode,
   useDeferredValue,
@@ -10,14 +11,26 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
+import { LabelChip } from '@/components/check-chip';
 import { CE_SITE_EXAMPLE } from '@/lib/cli-examples';
 import { EXAMPLE_SITE_INPUT, isExampleSite } from '@/lib/examples';
+import { labelTooltip } from '@/lib/glossary';
 import { getPastedSite, type SiteInput, setPastedSite } from '@/lib/pasted';
 import { getSummary, type SiteSummary, setSummary, subscribe } from '@/lib/store';
 import { useScrollToHash } from '@/lib/use-scroll-to-hash';
 import { cn } from '@/lib/utils';
 import { FIRST_ISSUE_ID } from '@/lib/views';
-import { checkPastedSite, liveSiteLine, ROWS, type SiteCheck, siteSummaryLine } from './site-check';
+import {
+  blockerName,
+  blockersLine,
+  checkPastedSite,
+  groupRows,
+  lastCheckLine,
+  liveSiteLine,
+  type SiteCheck,
+  type SiteRow,
+  siteSummaryOf,
+} from './site-check';
 import { Chevron, disclosureSummary, SiteRowItem } from './site-row';
 
 const field =
@@ -64,17 +77,20 @@ function PasteBox({
   );
 }
 
-/** Before any paste: the seven checks as names with grey dots. */
+/** The three blockers by name, then the page notes as one item. */
+const WHAT_IT_CHECKS = [...BLOCKER_IDS.map(blockerName), 'Four page notes'];
+
+/** Before any paste: what the check covers, with grey dots. */
 function WhatItChecks() {
   return (
     <ul
       aria-label="What it checks"
       className="mt-6 grid gap-x-6 gap-y-2 text-ink-soft text-sm sm:grid-cols-2"
     >
-      {ROWS.map((r) => (
-        <li key={r.id} className="flex items-center gap-2">
+      {WHAT_IT_CHECKS.map((name) => (
+        <li key={name} className="flex items-center gap-2">
           <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-border-strong" />
-          {r.name}
+          {name}
         </li>
       ))}
     </ul>
@@ -91,18 +107,20 @@ function ExampleChip() {
 
 /**
  * After a reload: the stored summary, since the pasted HTML was never stored. It carries the
- * first-issue anchor when the check failed, so the home's Next up still lands somewhere real.
+ * first-issue anchor when a blocker is stored, so the home's link to it still lands somewhere
+ * real.
  */
 function LastCheck({ summary }: { summary: SiteSummary }) {
-  useScrollToHash(FIRST_ISSUE_ID, summary.fail > 0);
+  const blocked = summary.blockers.length > 0;
+  useScrollToHash(FIRST_ISSUE_ID, blocked);
   return (
     <section
-      id={summary.fail > 0 ? FIRST_ISSUE_ID : undefined}
+      id={blocked ? FIRST_ISSUE_ID : undefined}
       aria-label="Last check"
       className={cn(card, 'scroll-mt-24 py-4')}
     >
       <p className="flex flex-wrap items-center gap-2 font-medium">
-        {siteSummaryLine(summary)}
+        {lastCheckLine(summary.blockers)}
         {summary.example && <ExampleChip />}
       </p>
       <p className="mt-1 text-ink-soft text-sm">Paste again to see details.</p>
@@ -135,28 +153,69 @@ function LiveSiteRow({ check }: { check: SiteCheck }) {
   );
 }
 
+/**
+ * The page notes, collapsed: none keeps a page out of AI answers, and our tests did not cover
+ * them. Each keeps its plain verdict and Why it matters.
+ */
+function OtherNotes({ rows }: { rows: SiteRow[] }) {
+  return (
+    <details className="group/notes border-border border-t">
+      <summary className={cn(disclosureSummary, 'w-full gap-2 py-3')}>
+        <ChevronRight
+          className="size-4 shrink-0 text-ink-faint transition-transform duration-150 group-open/notes:rotate-90 motion-reduce:transition-none"
+          aria-hidden="true"
+        />
+        <span>Other page notes ({rows.length})</span>
+        <LabelChip
+          label="not-tested"
+          tooltip={labelTooltip('not-tested', { readiness: true })}
+          className="ml-auto"
+        />
+      </summary>
+      <ul aria-label="Other page notes" className="divide-y divide-border pl-6">
+        {rows.map((row) => (
+          <SiteRowItem key={row.id} row={row} kind="note" />
+        ))}
+      </ul>
+    </details>
+  );
+}
+
 function Results({ check, example }: { check: SiteCheck; example: boolean }) {
-  // The home's Next up links to the first failing row (/site/#first-issue).
-  const firstFail = check.rows.find((r) => r.status === 'fail')?.id;
-  useScrollToHash(FIRST_ISSUE_ID, firstFail !== undefined);
+  const blockersId = useId();
+  const { blockers: blockerRows, notes } = groupRows(check.rows);
+  // The stored summary's blockers, so the headline and the anchor read what the home reads. The
+  // home links to the first one (/site/#first-issue), the one its banner names; a Check row never
+  // takes it.
+  const { blockers } = siteSummaryOf(check);
+  const firstBlocker = blockers[0];
+  useScrollToHash(FIRST_ISSUE_ID, firstBlocker !== undefined);
   return (
     <section aria-label="Results" className={card}>
       <p
         role="status"
-        className="flex flex-wrap items-center gap-2 border-border border-b py-4 font-medium font-serif text-xl"
+        className="flex flex-wrap items-center gap-2 pt-4 pb-3 font-medium font-serif text-xl"
       >
-        {siteSummaryLine(check.summary)}
+        {blockersLine(blockers)}
         {example && <ExampleChip />}
       </p>
-      <ul className="divide-y divide-border">
-        {check.rows.map((row) => (
+      <h2
+        id={blockersId}
+        className="pb-2 font-semibold text-ink-soft text-xs uppercase leading-none tracking-wider"
+      >
+        Blockers
+      </h2>
+      <ul aria-labelledby={blockersId} className="divide-y divide-border border-border border-t">
+        {blockerRows.map((row) => (
           <SiteRowItem
             key={row.id}
             row={row}
-            id={row.id === firstFail ? FIRST_ISSUE_ID : undefined}
+            kind="blocker"
+            id={row.id === firstBlocker ? FIRST_ISSUE_ID : undefined}
           />
         ))}
       </ul>
+      <OtherNotes rows={notes} />
       <LiveSiteRow check={check} />
     </section>
   );
@@ -196,14 +255,15 @@ export function SiteView() {
 
   useEffect(() => {
     if (!check) return;
+    const next = siteSummaryOf(check);
     const prev = getSummary('site');
     const same =
       prev !== null &&
       prev.example === example &&
-      (Object.keys(check.summary) as (keyof typeof check.summary)[]).every(
-        (k) => prev[k] === check.summary[k],
-      );
-    if (!same) setSummary('site', { ...check.summary, example, at: new Date().toISOString() });
+      prev.needsLiveSite === next.needsLiveSite &&
+      prev.blockers.join() === next.blockers.join() &&
+      prev.checks.join() === next.checks.join();
+    if (!same) setSummary('site', { ...next, example, at: new Date().toISOString() });
   }, [check, example]);
 
   return (

@@ -1,8 +1,10 @@
-// What the author pasted into Your site and Who gets cited, kept in this page's memory only.
-// It is never written to browser storage, so a full reload forgets it (the views then show the
-// stored summary with "Paste again to see details"), but moving between views inside the app
-// keeps it, since a module outlives the components that mount and unmount on each view.
+// What the author pasted into Your site and Who gets cited, and the test packs loaded on Results,
+// kept in this page's memory only. None of it is written to browser storage, so a full reload
+// forgets it (the views then show the stored summary with "Paste again to see details"), but
+// moving between views inside the app keeps it, since a module outlives the components that
+// mount and unmount on each view.
 
+import type { LoadedPack } from './bench';
 import { onClearAll } from './store';
 
 export interface SiteInput {
@@ -24,6 +26,8 @@ export interface CitedInput {
 
 let site: SiteInput | null = null;
 let cited: CitedInput | null = null;
+/** By draft key: the author loads a pack, leaves to edit, and comes back to run against it. */
+const packs = new Map<string, LoadedPack>();
 
 /** The site view's pasted input, or null when nothing was pasted on this page. */
 export const getPastedSite = (): SiteInput | null => site;
@@ -40,7 +44,7 @@ export function setPastedCited(input: CitedInput): void {
 }
 
 /**
- * Puts `question` in a box of Who gets cited ("Ask an AI" on Your questions), so the answer can
+ * Puts `question` in a box of Who gets cited (Ask AI on the home's list), so the answer can
  * be pasted next to it: into the last box when it is empty, else a new box. Nothing changes when
  * a box already holds the question.
  */
@@ -60,10 +64,20 @@ export function addCitedQuestion(question: string): void {
   cited = { ...current, entries: [...current.entries, { key: next, question, answer: '' }] };
 }
 
-/** Forgets both, so the views fall back to the stored summary (or to the example). */
+/** The test pack loaded for a draft (by its key) on this page, or null. */
+export const getLoadedPack = (draftKey: string): LoadedPack | null => packs.get(draftKey) ?? null;
+
+/** Keeps the pack loaded for a draft, or forgets it (null, as when a bad file replaced it). */
+export function setLoadedPack(draftKey: string, loaded: LoadedPack | null): void {
+  if (loaded) packs.set(draftKey, loaded);
+  else packs.delete(draftKey);
+}
+
+/** Forgets all of it, so the views fall back to the stored summary (or to the example). */
 export function clearPasted(): void {
   site = null;
   cited = null;
+  packs.clear();
 }
 
 onClearAll(clearPasted);

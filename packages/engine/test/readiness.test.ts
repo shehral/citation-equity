@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import evidenceDoc from '../../../docs/evidence.md?raw';
 import {
   analyzeReadiness,
+  BLOCKER_IDS,
   type EvidenceGrade,
+  isBlocker,
   READINESS_EVIDENCE,
   READINESS_IDS,
+  READINESS_NOTE,
   type ReadinessId,
   type ReadinessResult,
 } from '../src/index';
@@ -333,6 +336,30 @@ describe('analyzeReadiness', () => {
   });
 });
 
+describe('blockers', () => {
+  it('names the three items that can keep a page out of AI answers; the rest are notes', () => {
+    expect(BLOCKER_IDS).toEqual(['crawler-access', 'indexing-directives', 'renders-without-js']);
+    expect(READINESS_IDS.filter(isBlocker)).toEqual([
+      'indexing-directives',
+      'crawler-access',
+      'renders-without-js',
+    ]);
+    expect(READINESS_IDS.filter((id) => !isBlocker(id))).toEqual([
+      'byline',
+      'dates',
+      'structured-data',
+      'canonical',
+    ]);
+  });
+
+  it('says so in the note shown with readiness, without any score', () => {
+    expect(READINESS_NOTE).toBe(
+      'Blockers can keep a page out of AI answers; the other items are notes.',
+    );
+    expect(READINESS_NOTE).not.toMatch(/score/i);
+  });
+});
+
 describe('READINESS_EVIDENCE', () => {
   it('has one entry per item with one of the four grades and linked https sources', () => {
     expect(Object.keys(READINESS_EVIDENCE)).toEqual([...READINESS_IDS]);
@@ -360,9 +387,18 @@ describe('docs/evidence.md, Site readiness', () => {
   const next = DOC.indexOf('\n## ', start + 1);
   const section = DOC.slice(start, next === -1 ? undefined : next);
 
-  it('has a Site readiness section that says it is not part of the AI-ready score', () => {
+  it('speaks of blockers and notes as the engine splits them, and of no score', () => {
     expect(start).toBeGreaterThan(-1);
-    expect(section).toMatch(/not part of the AI-ready score/i);
+    const intro = section.slice(0, section.indexOf('\n### '));
+    expect(intro).toContain(READINESS_NOTE);
+    /** The item ids in backticks on the intro's `- **<name>**` line. */
+    const listed = (name: string) => {
+      const line = intro.split('\n').find((l) => l.startsWith(`- **${name}**`)) ?? '';
+      return [...line.matchAll(/`([a-z-]+)`/g)].map((m) => m[1]);
+    };
+    expect(listed('Blockers')).toEqual(BLOCKER_IDS);
+    expect(listed('Notes')).toEqual(READINESS_IDS.filter((id) => !isBlocker(id)));
+    expect(section).not.toMatch(/score/i);
   });
 
   it('states the same grade as the registry for every item', () => {

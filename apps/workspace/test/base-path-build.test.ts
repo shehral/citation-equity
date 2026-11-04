@@ -1,28 +1,34 @@
 // @vitest-environment node
 // Builds the static export the way the GitHub Pages workflow does
 // (NEXT_PUBLIC_BASE_PATH=/citation-equity) and checks that every asset and
-// page link in the HTML sits under the base path. The build goes to its own
-// folder (NEXT_DIST_DIR, inside .next/) so it never replaces out/, which the
-// root Playwright project serves at /.
+// page link in the HTML sits under the base path. The export goes where
+// `pnpm build:pages` writes it (NEXT_DIST_DIR, inside .next/), so it never
+// replaces out/, which the root Playwright project serves at /.
+//
+// With `output: 'export'` and a custom distDir, Next.js still builds in .next/
+// and empties it first (all but its cache), so any build, this one included,
+// deletes an earlier export under .next/. Writing to the Pages e2e folder
+// leaves a fresh Pages export there after `pnpm test`, instead of none.
 import { execFile } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { PAGES_BASE_PATH, PAGES_DIST_DIR } from '../e2e-server';
 
 const APP = fileURLToPath(new URL('..', import.meta.url));
-const DIST = '.next/base-path-check';
+const DIST = PAGES_DIST_DIR;
 const OUT = join(APP, DIST);
-const BASE = '/citation-equity';
+const BASE = PAGES_BASE_PATH;
 const PAGES = [
   'index.html',
   'draft/index.html',
   'site/index.html',
   'cited/index.html',
-  'questions/index.html',
   'research/index.html',
   // Redirects from the old routes.
+  'questions/index.html',
   'evidence/index.html',
   'off-page/index.html',
   'about/index.html',
@@ -87,7 +93,7 @@ describe(`static export with NEXT_PUBLIC_BASE_PATH=${BASE}`, () => {
   it('links the header tabs and footer to the base-path pages, with trailing slashes', () => {
     const html = readFileSync(join(OUT, 'research/index.html'), 'utf8');
     const links = sameSite(urls(html));
-    for (const route of ['/', '/draft/', '/site/', '/cited/', '/questions/', '/research/']) {
+    for (const route of ['/', '/draft/', '/site/', '/cited/', '/research/']) {
       expect(links).toContain(`${BASE}${route}`);
     }
   });
@@ -97,6 +103,7 @@ describe(`static export with NEXT_PUBLIC_BASE_PATH=${BASE}`, () => {
       readFileSync(join(OUT, page), 'utf8').match(
         /This page moved\.\s*(?:<!-- -->)?\s*<a[^>]*href="([^"]*)"/,
       )?.[1];
+    expect(fallback('questions/index.html')).toBe(`${BASE}/`);
     expect(fallback('off-page/index.html')).toBe(`${BASE}/cited/`);
     expect(fallback('evidence/index.html')).toBe(`${BASE}/research/`);
     expect(fallback('about/index.html')).toBe(`${BASE}/#about`);
@@ -138,8 +145,15 @@ describe('values shared between server and client components', () => {
 
   it('prerenders /site with its input first', () => {
     const html = readFileSync(join(OUT, 'site/index.html'), 'utf8');
-    expect(html).toContain('Can AI read your page?');
+    expect(html).toContain('Can engines reach it?');
     expect(html).toContain('Page HTML');
+  });
+
+  it('describes the site by its first step, the readers’ questions', () => {
+    const html = readFileSync(join(OUT, 'index.html'), 'utf8').replaceAll('&#x27;', "'");
+    expect(html).toContain(
+      `<meta name="description" content="Start from your readers' questions, see which ones your draft covers, and check that AI search can reach your page. Stays in your browser."/>`,
+    );
   });
 
   it('inlines the theme script itself in <head>', () => {

@@ -12,12 +12,12 @@ import type { ViewId } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { VIEW_HREF } from '@/lib/views';
 
-/** The views, named by what they hold. The home's tiles cover the first three. */
-export const VIEW_TABS: { view: Exclude<ViewId, 'home'>; label: string; icon: LucideIcon }[] = [
+/** The views, named by what they hold, in the order of the flow: the home is Your questions. */
+export const VIEW_TABS: { view: ViewId; label: string; icon: LucideIcon }[] = [
+  { view: 'home', label: 'Your questions', icon: MessageCircleQuestionMark },
   { view: 'draft', label: 'Your draft', icon: PenLine },
   { view: 'site', label: 'Your site', icon: FileCode },
-  { view: 'cited', label: 'Who gets cited', icon: MessagesSquare },
-  { view: 'questions', label: 'Your questions', icon: MessageCircleQuestionMark },
+  { view: 'cited', label: 'Results', icon: MessagesSquare },
 ];
 
 /** The header's view tabs. Below 640px each tab shows its icon; the label stays for screen readers. */

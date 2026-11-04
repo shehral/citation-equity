@@ -1,10 +1,12 @@
 // Plain module (no 'use client'): the /site check on pasted HTML and robots.txt, as data. The
-// view renders it, and the home's "Try it with an example" can store the same summary from it.
-// Everything runs in the browser; nothing is fetched.
+// view renders it, and the home's "Try it with an example" can store the same summary from it
+// (siteSummaryOf). Everything runs in the browser; nothing is fetched.
 import { type CrawlerVerdict, crawlerAccessStatus, crawlerVerdicts } from '@citation-equity/bench';
 import {
   analyzeReadiness,
+  BLOCKER_IDS,
   type Evidence,
+  isBlocker,
   type ReadinessId,
   type ReadinessItem,
   rendersWithoutJs,
@@ -30,7 +32,15 @@ export interface SiteRow {
   evidence: Evidence;
 }
 
-export type SiteCounts = Omit<SiteSummary, 'example' | 'at'>;
+/** The rows by status, for the view; the stored summary keeps the blockers instead. */
+export interface SiteCounts {
+  pass: number;
+  warn: number;
+  fail: number;
+  /** Rows in the check, including those that need the live site. */
+  total: number;
+  needsLiveSite: number;
+}
 
 export interface SiteCheck {
   rows: SiteRow[];
@@ -218,13 +228,45 @@ export function checkPastedSite(input: { html: string; robotsTxt?: string }): Si
   };
 }
 
-/** "5 of 7 pass, 1 warning, 1 to fix": only a pass counts as passing. */
-export function siteSummaryLine(s: Pick<SiteCounts, 'pass' | 'warn' | 'fail' | 'total'>): string {
-  const parts = [`${s.pass} of ${s.total} pass`];
-  if (s.warn > 0) parts.push(plural(s.warn, 'warning', 'warnings'));
-  if (s.fail > 0) parts.push(`${s.fail} to fix`);
-  return parts.join(', ');
+/**
+ * What the store keeps of a check: the blocker items that fail (the blockers) and those that warn
+ * (worth a look), in BLOCKER_IDS order. Page notes never count, and a row left for the live site
+ * is neither.
+ */
+export function siteSummaryOf(check: SiteCheck): Omit<SiteSummary, 'example' | 'at'> {
+  const status = new Map(check.rows.map((r) => [r.id, r.status]));
+  const withStatus = (s: RowStatus) => BLOCKER_IDS.filter((id) => status.get(id) === s);
+  return {
+    blockers: withStatus('fail'),
+    checks: withStatus('warn'),
+    needsLiveSite: check.summary.needsLiveSite,
+  };
 }
+
+/**
+ * The rows as the view groups them: the blocker items first, in BLOCKER_IDS order, then the other
+ * page notes in the check's row order. Each row appears once, unchanged.
+ */
+export function groupRows(rows: readonly SiteRow[]): { blockers: SiteRow[]; notes: SiteRow[] } {
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return {
+    blockers: BLOCKER_IDS.flatMap((id) => byId.get(id) ?? []),
+    notes: rows.filter((r) => !isBlocker(r.id)),
+  };
+}
+
+/** A blocker's plain name, as its row shows it. */
+export const blockerName = (id: ReadinessId): string => ROWS.find((r) => r.id === id)?.name ?? id;
+
+/** The result headline: "No blockers found", "1 blocker", "2 blockers". */
+export const blockersLine = (blockers: readonly ReadinessId[]): string =>
+  blockers.length === 0 ? 'No blockers found' : plural(blockers.length, 'blocker', 'blockers');
+
+/** After a reload, with only the summary: "1 blocker: AI crawlers allowed". */
+export const lastCheckLine = (blockers: readonly ReadinessId[]): string =>
+  blockers.length === 0
+    ? blockersLine(blockers)
+    : `${blockersLine(blockers)}: ${blockers.map(blockerName).join(', ')}`;
 
 /** "2 checks need your live site". */
 export function liveSiteLine(s: Pick<SiteCounts, 'needsLiveSite'>): string {

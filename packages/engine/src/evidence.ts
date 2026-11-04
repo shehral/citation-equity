@@ -107,7 +107,7 @@ const REVIEW: Record<CheckId, Evidence> = {
     sources: [
       cite(
         WORKS.zhang2026,
-        'Across 602 prompts on ChatGPT, Google AI Overview/Gemini and Perplexity, cited pages in Q&A format had a mean influence score of 0.0947 versus 0.1005 for other pages (5.74% lower). Observational: it shows an association, not a cause.',
+        "Across 602 prompts on ChatGPT, Google AI Overview/Gemini and Perplexity, cited pages in Q&A format had a mean influence (the study's measure of how much a cited page shaped the answer) of 0.0947 versus 0.1005 for other pages (5.74% lower). Observational: it shows an association, not a cause.",
       ),
       FORMATTING_NULL,
       STRUCTURE_SURVEY,
@@ -144,7 +144,7 @@ const REVIEW: Record<CheckId, Evidence> = {
       ),
       cite(
         WORKS.zhang2026,
-        'Cited pages that contain numbers or statistics had a 61.55% higher mean influence score on AI answers than pages without. Observational.',
+        'Cited pages that contain numbers or statistics had a 61.55% higher mean influence on AI answers than pages without. Observational.',
       ),
       cite(
         WORKS.martinez2026,
@@ -155,7 +155,7 @@ const REVIEW: Record<CheckId, Evidence> = {
   tables: {
     grade: 'untested',
     summary:
-      'No study we opened tests tables on their own. Comparison content, which tables often carry, was linked to more citations and more use in answers, while formatting-only changes showed little effect, so use a table to present a real comparison rather than to raise a score.',
+      'No study we opened tests tables on their own. Comparison content, which tables often carry, was linked to more citations and more use in answers, while formatting-only changes showed little effect, so use a table to present a real comparison rather than for the format alone.',
     sources: [
       cite(
         WORKS.vishwakarma2026,
@@ -163,7 +163,7 @@ const REVIEW: Record<CheckId, Evidence> = {
       ),
       cite(
         WORKS.zhang2026,
-        'Cited pages with comparison content had a 55.28% higher mean influence score. Observational; the paper reports no result for tables.',
+        'Cited pages with comparison content had a 55.28% higher mean influence on AI answers. Observational; the paper reports no result for tables.',
       ),
       STRUCTURE_SURVEY,
     ],
@@ -267,7 +267,7 @@ const REVIEW: Record<CheckId, Evidence> = {
       ),
       cite(
         WORKS.zhang2026,
-        'Cited pages with comparison content had a 55.28% higher mean influence score (0.1389 versus 0.0894), and comparison was the second most influential semantic role. Observational: the authors list "adding comparison sections will increase future absorption" as not established.',
+        'Cited pages with comparison content had a 55.28% higher mean influence on AI answers (0.1389 versus 0.0894), and comparison was the second most influential semantic role. Observational: the authors list "adding comparison sections will increase future absorption" as not established.',
       ),
       cite(
         WORKS.martinez2026,

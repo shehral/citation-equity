@@ -1,0 +1,134 @@
+{
+  "default_temperature": 0.5,
+  "default_seed": 1,
+  "sent_temperature": 0.5,
+  "prompts": [
+    {
+      "keywords": ["espresso machines"],
+      "max": 1,
+      "prompt": "These are search keywords for one website. List up to 1 questions its readers might ask an AI assistant that these keywords point to.\nWrite one per line, as plain questions that end with a question mark, and write nothing else.\n\nKeywords:\n- espresso machines"
+    },
+    {
+      "keywords": ["weight loss pills"],
+      "max": 1,
+      "prompt": "These are search keywords for one website. List up to 1 questions its readers might ask an AI assistant that these keywords point to.\nWrite one per line, as plain questions that end with a question mark, and write nothing else.\n\nKeywords:\n- weight loss pills"
+    },
+    {
+      "keywords": ["  padded  keyword "],
+      "max": 1,
+      "prompt": "These are search keywords for one website. List up to 1 questions its readers might ask an AI assistant that these keywords point to.\nWrite one per line, as plain questions that end with a question mark, and write nothing else.\n\nKeywords:\n- padded  keyword"
+    },
+    {
+      "keywords": ["best running shoes 2026"],
+      "max": 1,
+      "prompt": "These are search keywords for one website. List up to 1 questions its readers might ask an AI assistant that these keywords point to.\nWrite one per line, as plain questions that end with a question mark, and write nothing else.\n\nKeywords:\n- best running shoes 2026"
+    },
+    {
+      "keywords": ["café crème"],
+      "max": 1,
+      "prompt": "These are search keywords for one website. List up to 1 questions its readers might ask an AI assistant that these keywords point to.\nWrite one per line, as plain questions that end with a question mark, and write nothing else.\n\nKeywords:\n- café crème"
+    },
+    {
+      "keywords": ["don't stop"],
+      "max": 1,
+      "prompt": "These are search keywords for one website. List up to 1 questions its readers might ask an AI assistant that these keywords point to.\nWrite one per line, as plain questions that end with a question mark, and write nothing else.\n\nKeywords:\n- don't stop"
+    },
+    {
+      "keywords": ["k-pop idols"],
+      "max": 1,
+      "prompt": "These are search keywords for one website. List up to 1 questions its readers might ask an AI assistant that these keywords point to.\nWrite one per line, as plain questions that end with a question mark, and write nothing else.\n\nKeywords:\n- k-pop idols"
+    },
+    {
+      "keywords": ["what is espresso"],
+      "max": 1,
+      "prompt": "These are search keywords for one website. List up to 1 questions its readers might ask an AI assistant that these keywords point to.\nWrite one per line, as plain questions that end with a question mark, and write nothing else.\n\nKeywords:\n- what is espresso"
+    },
+    {
+      "keywords": ["vitamin d"],
+      "max": 1,
+      "prompt": "These are search keywords for one website. List up to 1 questions its readers might ask an AI assistant that these keywords point to.\nWrite one per line, as plain questions that end with a question mark, and write nothing else.\n\nKeywords:\n- vitamin d"
+    }
+  ],
+  "parses": [
+    {
+      "answer": "What are espresso machines?\nHow do I clean one?",
+      "max": 1,
+      "questions": ["What are espresso machines?"]
+    },
+    {
+      "answer": "1. What are weight loss pills?\n2. Are they safe?",
+      "max": 1,
+      "questions": ["What are weight loss pills?"]
+    },
+    {
+      "answer": "- **How do I descale an espresso machine?**",
+      "max": 1,
+      "questions": ["How do I descale an espresso machine?"]
+    },
+    {
+      "answer": "\"Which espresso machine is best?\"",
+      "max": 1,
+      "questions": ["Which espresso machine is best?"]
+    },
+    {
+      "answer": "“Is decaf espresso real?”",
+      "max": 1,
+      "questions": ["Is decaf espresso real?"]
+    },
+    {
+      "answer": "Here are some questions:\n\n* What is crema?",
+      "max": 1,
+      "questions": ["What is crema?"]
+    },
+    {
+      "answer": "No question here.\nStill none",
+      "max": 1,
+      "questions": []
+    },
+    {
+      "answer": "   2) Why is espresso bitter?   \n",
+      "max": 1,
+      "questions": ["Why is espresso bitter?"]
+    },
+    {
+      "answer": "• Can I use any coffee?",
+      "max": 1,
+      "questions": ["Can I use any coffee?"]
+    },
+    {
+      "answer": "What is espresso\nWhat is crema ?",
+      "max": 1,
+      "questions": ["What is crema ?"]
+    },
+    {
+      "answer": "**Bold** but not a question?",
+      "max": 1,
+      "questions": ["**Bold** but not a question?"]
+    },
+    {
+      "answer": "10. Ten?\n",
+      "max": 1,
+      "questions": ["Ten?"]
+    },
+    {
+      "answer": "What is a ristretto?\r\nWhat else?",
+      "max": 1,
+      "questions": ["What is a ristretto?"]
+    },
+    {
+      "answer": "",
+      "max": 1,
+      "questions": []
+    },
+    {
+      "answer": "1.What is lungo?\n1. What is a doppio?",
+      "max": 1,
+      "questions": ["1.What is lungo?"]
+    },
+    {
+      "answer": " - What is a cortado? ",
+      "max": 1,
+      "questions": ["What is a cortado?"]
+    }
+  ]
+}

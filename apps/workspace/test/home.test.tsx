@@ -1,10 +1,12 @@
-import { act, cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Home } from '@/components/home/home';
 import { resetLanding } from '@/components/home/landing';
-import { nextUp } from '@/components/home/next-up';
+import { selectDraftSlot } from '@/lib/draft-summary';
 import { EXAMPLE_SLUG } from '@/lib/examples';
+import { MY_DRAFT_SLUG } from '@/lib/samples';
+import { loadQuestions, saveDraft, saveQuestions } from '@/lib/storage';
 import {
   type CitedSummary,
   clearAll,
@@ -26,17 +28,15 @@ vi.mock('next/navigation', () => ({
 const AT = '2026-10-24T10:00:00.000Z';
 const DRAFT: DraftSummary = {
   slot: 'my-post',
-  score: 41,
-  baseline: { standard: 35, evidence: 37 },
-  openStartHere: 2,
+  covered: 1,
+  total: 4,
+  fromPage: false,
   example: false,
   at: AT,
 };
 const SITE: SiteSummary = {
-  pass: 5,
-  warn: 1,
-  fail: 1,
-  total: 7,
+  blockers: ['crawler-access'],
+  checks: [],
   needsLiveSite: 1,
   example: false,
   at: AT,
@@ -49,10 +49,32 @@ const CITED: CitedSummary = {
   example: false,
   at: AT,
 };
+/** The espresso example's four questions, in its pack's order. */
+const EXAMPLE_QUESTIONS = [
+  'Why does my espresso taste bitter?',
+  'How do I fix bitter espresso?',
+  'What water temperature should I use for espresso?',
+  'How long should an espresso shot take?',
+];
+const MY_TEXT = '# Espresso notes\n\nSome notes on pulling espresso at home.\n';
 
 /** A link's route. Under Vitest next/link drops the trailing slash that the static build keeps. */
 const route = (a: Element) => (a.getAttribute('href') ?? '').replace(/(.)\/(#|$)/, '$1$2');
-const tile = (name: string) => screen.getByRole('region', { name });
+const card = (name: string) =>
+  within(screen.getByRole('region', { name: 'Next steps' })).getByRole('region', { name });
+const banner = () => screen.queryByRole('region', { name: 'Blocker' });
+const box = () => screen.getByRole('textbox', { name: "Your readers' questions" });
+const type = (value: string) => fireEvent.change(box(), { target: { value } });
+const list = () => screen.getByRole('list', { name: 'Your questions, ranked' });
+const rows = () =>
+  within(list())
+    .getAllByRole('listitem')
+    .filter((li) => li.parentElement === list());
+const texts = () => rows().map((li) => li.querySelector('[data-question]')?.textContent);
+const tick = (text: string) => screen.getByRole('checkbox', { name: text }) as HTMLInputElement;
+const ticked = () => rows().map((li) => (li.querySelector('input') as HTMLInputElement).checked);
+const strip = () => screen.queryByText('This is the example.');
+const tryIt = () => screen.queryByRole('button', { name: 'Try it with an example' });
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -67,26 +89,62 @@ afterEach(() => {
 });
 
 describe('first visit', () => {
-  it('shows the headline, one Try it button and three tiles marked Not checked', () => {
+  it('asks what readers will ask, offers the example and shows three steps not checked', () => {
     render(<Home />);
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toContain(
-      'Get quoted by AI search.',
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'What will your readers ask?',
     );
+    expect(
+      screen.getByText(
+        'Start from their questions. Then check your draft answers them and AI search can reach it.',
+      ),
+    ).toBeTruthy();
     expect(screen.getAllByRole('button', { name: 'Try it with an example' })).toHaveLength(1);
-    const tiles = [
-      ['Your draft', 'Is my post easy for AI to quote?', 'Paste a post', '/draft'],
-      ['Your site', 'Can AI read my published page?', 'Check a page', '/site'],
-      ['Who gets cited', 'Who does AI cite for my questions?', 'Paste an answer', '/cited'],
-    ];
-    for (const [name, question, cta, href] of tiles) {
-      const t = within(tile(name));
-      expect(t.getByText(question)).toBeTruthy();
-      expect(t.getByText('Not checked')).toBeTruthy();
-      expect(route(t.getByRole('link', { name: new RegExp(`^${cta}`) }))).toBe(href);
+    expect(screen.getByText('or type your own below')).toBeTruthy();
+    expect(strip()).toBeNull();
+    expect(banner()).toBeNull();
+    for (const name of ['Your draft', 'Your site', 'Results']) {
+      expect(within(card(name)).getByText('Not checked')).toBeTruthy();
     }
-    // Next up appears only once something is checked; no combined score anywhere.
-    expect(screen.queryByRole('region', { name: 'Next up' })).toBeNull();
-    expect(document.body.textContent).not.toMatch(/GEO|\u2014/);
+    expect(screen.getByText('No questions yet. Type one above, or try the example.')).toBeTruthy();
+    // No score, no tiles out of 100 and no Next up.
+    expect(document.body.textContent).not.toMatch(/Next up|\/ 100|score|GEO|—/i);
+  });
+
+  it('puts the input card, then the step cards, then the list (the phone order)', () => {
+    render(<Home />);
+    const order = [
+      screen.getByRole('heading', { level: 1 }),
+      screen.getByRole('region', { name: "Your readers' questions" }),
+      screen.getByRole('region', { name: 'Next steps' }),
+      screen.getByRole('heading', { name: 'Your questions' }),
+    ];
+    for (const [a, b] of order.slice(0, -1).map((el, i) => [el, order[i + 1]] as const)) {
+      expect(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+
+  it('keeps the step cards beside the list from lg, scrolling inside the column when it is taller than the screen', () => {
+    render(<Home />);
+    const column = screen.getByRole('region', { name: 'Next steps' }).parentElement as HTMLElement;
+    for (const cls of [
+      'lg:sticky',
+      'lg:top-20',
+      'lg:max-h-[calc(100dvh-6rem)]',
+      'lg:overflow-y-auto',
+    ])
+      expect(column.classList.contains(cls), cls).toBe(true);
+    // Sticky on every screen height: the column scrolls instead of being cut off.
+    expect(column.className).not.toMatch(/min-height/);
+    // The scroll box clips at its padding, so the cards' focus ring keeps room inside it.
+    for (const cls of ['lg:p-1', 'lg:-m-1']) expect(column.classList.contains(cls), cls).toBe(true);
+  });
+
+  it('hides Try it once a question is typed', () => {
+    render(<Home />);
+    type('Why does my espresso taste bitter?');
+    expect(tryIt()).toBeNull();
+    expect(screen.queryByText('or type your own below')).toBeNull();
   });
 
   it('does not redirect when there is no last view', () => {
@@ -96,119 +154,289 @@ describe('first visit', () => {
 });
 
 describe('Try it with an example', () => {
-  it('fills all three tiles with Example labels and honest statuses', async () => {
+  it('opens the example: the strip, the banner, three Example cards and its questions ticked', async () => {
     render(<Home />);
     await userEvent.click(screen.getByRole('button', { name: 'Try it with an example' }));
 
     expect(getActiveSlot()).toBe(EXAMPLE_SLUG);
-    expect(screen.queryByRole('button', { name: 'Try it with an example' })).toBeNull();
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toContain(
-      'Why does my espresso taste bitter?',
+    expect(nav.push).not.toHaveBeenCalled();
+    expect(tryIt()).toBeNull();
+    // The H1 stays, and takes the focus from the button that went away.
+    const h1 = screen.getByRole('heading', { level: 1 });
+    expect(h1.textContent).toBe('What will your readers ask?');
+    expect(document.activeElement).toBe(h1);
+    expect(screen.getByText('Example loaded.').getAttribute('role')).toBe('status');
+    expect(strip()?.parentElement?.textContent).toBe(
+      'This is the example. Type your own questions to replace it.',
     );
-    expect(screen.getByRole('status').textContent).toContain('Example loaded in all three checks.');
-    for (const name of ['Your draft', 'Your site', 'Who gets cited']) {
-      const t = within(tile(name));
-      expect(t.getByText('Example')).toBeTruthy();
-      expect(t.queryByText('Not checked')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Start fresh' })).toBeTruthy();
+
+    const b = within(banner() as HTMLElement);
+    expect(b.getByText('A blocker on the example page')).toBeTruthy();
+    expect(b.getByText('Its robots.txt blocks a crawler AI search needs.')).toBeTruthy();
+    expect(route(b.getByRole('link', { name: 'See blockers' }))).toBe('/site#first-issue');
+
+    for (const name of ['Your draft', 'Your site', 'Results']) {
+      expect(within(card(name)).getByText('Example')).toBeTruthy();
     }
-    // The espresso example has open Start here fixes, a failing site row and 1 of 3 answers.
-    const draft = within(tile('Your draft'));
-    expect(draft.getByText('Needs attention')).toBeTruthy();
-    expect(tile('Your draft').textContent).toMatch(/\d+ \/ 100/);
-    expect(draft.getByText('Start with 3 quick wins')).toBeTruthy();
-    const site = within(tile('Your site'));
-    expect(site.getByText('Needs attention')).toBeTruthy();
-    expect(tile('Your site').textContent).toContain('5 of 7 pass');
-    expect(site.getByText('1 fail, 1 warning')).toBeTruthy();
-    expect(site.getByText('1 more needs your live site')).toBeTruthy();
-    const cited = within(tile('Who gets cited'));
-    expect(cited.getByText('Checked')).toBeTruthy();
-    expect(tile('Who gets cited').textContent).toContain('1 of 3 answers cite you');
-    expect(cited.getByText('Most cited: Forums, Wikipedia')).toBeTruthy();
+    expect(card('Your draft').textContent).toContain('0 of 4 covered');
+    expect(within(card('Your draft')).getByText('Needs attention')).toBeTruthy();
+    expect(within(card('Your site')).getByText('1 blocker')).toBeTruthy();
+    expect(within(card('Your site')).getByText('AI crawlers allowed')).toBeTruthy();
+    expect(card('Results').textContent).toContain('1 of 3 live answers cite you');
+
+    // The box is empty, so the list is the example draft's own questions, each ticked.
+    expect(texts()).toEqual(EXAMPLE_QUESTIONS);
+    expect(ticked()).toEqual([true, true, true, true]);
+    for (const li of rows()) expect(within(li).getByText('Example')).toBeTruthy();
+    expect(
+      screen.getByText(
+        '4 questions, in your order. Tick the ones this draft should answer, up to 8.',
+      ),
+    ).toBeTruthy();
   });
 
-  it('Use my own post switches the draft tile to My post at once, with no example left', async () => {
+  it('Start fresh selects My post and forgets the example on the home, staying there', async () => {
     render(<Home />);
     await userEvent.click(screen.getByRole('button', { name: 'Try it with an example' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Use my own post' }));
+    // A result of the visitor's own, pasted after the example, stays.
+    act(() => setSummary('cited', CITED));
+    await userEvent.click(screen.getByRole('button', { name: 'Start fresh' }));
+
     expect(getActiveSlot()).toBe(MY_POST_SLOT);
-    expect(nav.push).toHaveBeenCalledWith('/draft/');
-    // My post is empty, so there is nothing to score: the tile is not checked, not the example.
-    const draft = within(tile('Your draft'));
-    expect(draft.getByText('Not checked')).toBeTruthy();
-    expect(draft.queryByText('Example')).toBeNull();
-    expect(screen.getByRole('heading', { level: 1 }).textContent).not.toContain('espresso');
-    expect(screen.queryByRole('button', { name: 'Use my own post' })).toBeNull();
+    expect(nav.push).not.toHaveBeenCalled();
+    expect(getSummary('draft')).toBeNull();
+    expect(getSummary('site')).toBeNull();
+    expect(getSummary('cited')).toEqual(CITED);
+    expect(strip()).toBeNull();
+    expect(banner()).toBeNull();
+    expect(screen.queryByText('Example')).toBeNull();
+    expect(within(card('Your draft')).getByText('Not checked')).toBeTruthy();
+    expect(within(card('Your site')).getByText('Not checked')).toBeTruthy();
+    expect(card('Results').textContent).toContain('1 of 3 live answers cite you');
+    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1 }));
+    // My post has no questions yet.
+    expect(screen.getByText('No questions yet. Type one above.')).toBeTruthy();
   });
 
-  it('Use my own post shows the saved post when there is one', async () => {
-    window.localStorage.setItem(
-      'ce:v1:draft:my-draft',
-      '# My own post\n\nWhy does tea go bitter? Steeping too long pulls out tannins.\n',
-    );
+  it('typing while the example is open starts fresh first, so the example keeps its questions', async () => {
     render(<Home />);
     await userEvent.click(screen.getByRole('button', { name: 'Try it with an example' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Use my own post' }));
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('My post');
-    const draft = within(tile('Your draft'));
-    expect(draft.queryByText('Example')).toBeNull();
-    expect(tile('Your draft').textContent).toMatch(/\d+ \/ 100/);
-    expect(getSummary('draft')).toMatchObject({ slot: MY_POST_SLOT, example: false });
+    type('Why do my shots run fast?\nespresso shot time, 1900');
+
+    expect(getActiveSlot()).toBe(MY_POST_SLOT);
+    expect(strip()).toBeNull();
+    expect(screen.queryByText('Example')).toBeNull();
+    expect(getSummary('site')).toBeNull();
+    expect(getSummary('cited')).toBeNull();
+    // The typed questions list unticked; the example's own list was never touched.
+    expect(texts()).toEqual(['espresso shot time', 'Why do my shots run fast?']);
+    expect(ticked()).toEqual([false, false]);
+    expect(loadQuestions(EXAMPLE_SLUG)).toBeNull();
+
+    fireEvent.click(tick('Why do my shots run fast?'));
+    expect(loadQuestions(MY_DRAFT_SLUG)).toEqual([
+      { text: 'Why do my shots run fast?', source: 'keywords', template: 'as-written' },
+    ]);
+    expect(loadQuestions(EXAMPLE_SLUG)).toBeNull();
   });
 
-  it('works with browser storage blocked: the tiles fill for this page', async () => {
+  it('importing while the example is open starts fresh first too', async () => {
+    const user = userEvent.setup();
+    render(<Home />);
+    await user.click(screen.getByRole('button', { name: 'Try it with an example' }));
+    const file = new File(
+      ['Top queries,Clicks,Impressions,CTR,Position\nespresso grind size,12,2310,0.52%,11.2'],
+      'Queries.csv',
+      { type: 'text/csv' },
+    );
+    await user.upload(screen.getByLabelText('Import CSV'), file);
+    await screen.findByText('Imported 1 query from Queries.csv.');
+    expect(getActiveSlot()).toBe(MY_POST_SLOT);
+    expect(strip()).toBeNull();
+    expect(texts()).toEqual(['espresso grind size']);
+  });
+
+  it("ticking a typed question while the example is open starts fresh first, so it never joins the example's list", () => {
+    render(<Home />);
+    type('Why do my shots run fast?\nHow do I fix bitter espresso?');
+    // The example opened from More > Examples, with the visitor's questions still in the box.
+    act(() => selectDraftSlot(EXAMPLE_SLUG));
+    expect(strip()).not.toBeNull();
+    // On the example's list already, so ticked.
+    expect(ticked()).toEqual([false, true]);
+
+    fireEvent.click(tick('Why do my shots run fast?'));
+    expect(getActiveSlot()).toBe(MY_POST_SLOT);
+    expect(strip()).toBeNull();
+    expect(loadQuestions(MY_DRAFT_SLUG)).toEqual([
+      { text: 'Why do my shots run fast?', source: 'keywords', template: 'as-written' },
+    ]);
+    expect(loadQuestions(EXAMPLE_SLUG)).toBeNull();
+    expect(ticked()).toEqual([true, false]);
+
+    // Unticking one on the example's list starts fresh too, and leaves that list as it was.
+    act(() => selectDraftSlot(EXAMPLE_SLUG));
+    fireEvent.click(tick('How do I fix bitter espresso?'));
+    expect(getActiveSlot()).toBe(MY_POST_SLOT);
+    expect(loadQuestions(EXAMPLE_SLUG)).toBeNull();
+    expect(tick('How do I fix bitter espresso?').checked).toBe(false);
+  });
+
+  it('works with browser storage blocked: the example, typing and ticks last for this page', async () => {
     vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
       throw new DOMException('blocked', 'SecurityError');
     });
     render(<Home />);
     await userEvent.click(screen.getByRole('button', { name: 'Try it with an example' }));
-    expect(within(tile('Your draft')).getByText('Example')).toBeTruthy();
-    expect(tile('Your site').textContent).toContain('5 of 7 pass');
-    expect(tile('Who gets cited').textContent).toContain('1 of 3 answers cite you');
+    expect(within(card('Your draft')).getByText('Example')).toBeTruthy();
+    expect(card('Your draft').textContent).toContain('0 of 4 covered');
+    expect(card('Your site').textContent).toContain('1 blocker');
+    expect(card('Results').textContent).toContain('1 of 3 live answers cite you');
+    expect(ticked()).toEqual([true, true, true, true]);
+
+    type('Why do my shots run fast?');
+    expect(getActiveSlot()).toBe(MY_POST_SLOT);
+    fireEvent.click(tick('Why do my shots run fast?'));
+    expect(tick('Why do my shots run fast?').checked).toBe(true);
+    expect(loadQuestions(MY_DRAFT_SLUG)).toHaveLength(1);
   });
 });
 
-describe('returning user', () => {
-  it('shows stored summaries: +N since you started, Checked or Needs attention, Open links', () => {
+describe('ticks and the draft card', () => {
+  it('ticking adds to the open draft and unticking removes, with the draft card following', () => {
+    saveDraft(MY_DRAFT_SLUG, MY_TEXT);
+    render(<Home />);
+    type('Why does my espresso taste bitter?\nHow do I fix bitter espresso?');
+    expect(ticked()).toEqual([false, false]);
+
+    fireEvent.click(tick('How do I fix bitter espresso?'));
+    expect(ticked()).toEqual([false, true]);
+    expect(getSummary('draft')).toMatchObject({ slot: MY_POST_SLOT, total: 1, fromPage: false });
+    expect(card('Your draft').textContent).toMatch(/\d of 1 covered/);
+
+    fireEvent.click(tick('Why does my espresso taste bitter?'));
+    expect(card('Your draft').textContent).toMatch(/\d of 2 covered/);
+
+    fireEvent.click(tick('How do I fix bitter espresso?'));
+    expect(ticked()).toEqual([true, false]);
+    expect(loadQuestions(MY_DRAFT_SLUG)?.map((q) => q.text)).toEqual([
+      'Why does my espresso taste bitter?',
+    ]);
+    expect(card('Your draft').textContent).toMatch(/\d of 1 covered/);
+  });
+
+  it('a full draft says so under the question, and its box stays unticked', () => {
+    saveQuestions(
+      MY_DRAFT_SLUG,
+      Array.from({ length: 8 }, (_, i) => ({
+        text: `Question ${i + 1}?`,
+        source: 'user' as const,
+      })),
+    );
+    render(<Home />);
+    type('Why does my espresso taste bitter?');
+    fireEvent.click(tick('Why does my espresso taste bitter?'));
+    expect(tick('Why does my espresso taste bitter?').checked).toBe(false);
+    expect(screen.getByText('A draft holds 8 questions. Untick one first.')).toBeTruthy();
+    expect(loadQuestions(MY_DRAFT_SLUG)).toHaveLength(8);
+  });
+});
+
+describe('the list from the open draft', () => {
+  it("shows a draft's own questions, ticked, while the box is empty", () => {
+    saveQuestions(MY_DRAFT_SLUG, [
+      { text: 'Why do my shots run fast?', source: 'user' },
+      { text: 'Is a darker roast more bitter?', source: 'user' },
+    ]);
+    render(<Home />);
+    expect(texts()).toEqual(['Why do my shots run fast?', 'Is a darker roast more bitter?']);
+    expect(ticked()).toEqual([true, true]);
+    expect(screen.queryByText('Example')).toBeNull();
+  });
+
+  it('keeps an unticked row in place, unticked, until the box changes', () => {
+    saveDraft(MY_DRAFT_SLUG, MY_TEXT);
+    saveQuestions(MY_DRAFT_SLUG, [
+      { text: 'Why do my shots run fast?', source: 'user' },
+      { text: 'Is a darker roast more bitter?', source: 'user' },
+    ]);
+    render(<Home />);
+    fireEvent.click(tick('Why do my shots run fast?'));
+    expect(texts()).toEqual(['Why do my shots run fast?', 'Is a darker roast more bitter?']);
+    expect(ticked()).toEqual([false, true]);
+    expect(loadQuestions(MY_DRAFT_SLUG)?.map((q) => q.text)).toEqual([
+      'Is a darker roast more bitter?',
+    ]);
+    expect(getSummary('draft')).toMatchObject({ total: 1 });
+
+    // Ticking it again puts it back.
+    fireEvent.click(tick('Why do my shots run fast?'));
+    expect(ticked()).toEqual([true, true]);
+    fireEvent.click(tick('Why do my shots run fast?'));
+
+    // Typing replaces the list with the box's own; emptying the box shows the draft's again.
+    type('espresso bitter');
+    expect(texts()).toEqual(['espresso bitter']);
+    type('');
+    expect(texts()).toEqual(['Is a darker roast more bitter?']);
+  });
+
+  it("keeps the example's unticked row too, and the draft card follows", async () => {
+    render(<Home />);
+    await userEvent.click(screen.getByRole('button', { name: 'Try it with an example' }));
+    fireEvent.click(tick('How do I fix bitter espresso?'));
+    expect(texts()).toEqual(EXAMPLE_QUESTIONS);
+    expect(ticked()).toEqual([true, false, true, true]);
+    expect(card('Your draft').textContent).toContain('0 of 3 covered');
+  });
+});
+
+describe('the banner and the step cards', () => {
+  it('names two blockers on your own page, and links to the first', () => {
+    setSummary('site', { ...SITE, blockers: ['crawler-access', 'indexing-directives'] });
+    render(<Home />);
+    const b = within(banner() as HTMLElement);
+    expect(b.getByText('2 blockers on your page')).toBeTruthy();
+    expect(route(b.getByRole('link', { name: 'See blockers' }))).toBe('/site#first-issue');
+    expect(within(card('Your site')).getByText('2 blockers')).toBeTruthy();
+  });
+
+  it('shows no banner when the site check found no blocker', () => {
+    setSummary('site', { ...SITE, blockers: [], checks: ['renders-without-js'] });
+    render(<Home />);
+    expect(banner()).toBeNull();
+    expect(within(card('Your site')).getByText('No blockers found')).toBeTruthy();
+    expect(within(card('Your site')).getByText('Checked')).toBeTruthy();
+  });
+
+  it('fills the cards from the stored summaries, without Try it or the strip', () => {
     setSummary('draft', DRAFT);
-    setSummary('site', { ...SITE, warn: 0, fail: 0, pass: 6 });
-    setSummary('cited', { ...CITED, citingYou: 0 });
+    setSummary('site', SITE);
+    setSummary('cited', CITED);
     render(<Home />);
-    expect(screen.queryByRole('button', { name: 'Try it with an example' })).toBeNull();
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('My post');
-    const draft = within(tile('Your draft'));
-    expect(draft.getByText('+6 since you started')).toBeTruthy();
-    expect(draft.queryByText('Example')).toBeNull();
-    expect(route(draft.getByRole('link', { name: /^Open draft/ }))).toBe('/draft');
-    expect(within(tile('Your site')).getByText('Checked')).toBeTruthy();
-    const cited = within(tile('Who gets cited'));
-    expect(cited.getByText('Needs attention')).toBeTruthy();
-    expect(cited.getByText('Not cited yet')).toBeTruthy();
+    expect(tryIt()).toBeNull();
+    expect(strip()).toBeNull();
+    expect(screen.getByText('No questions yet. Type one above.')).toBeTruthy();
+    expect(card('Your draft').textContent).toContain('1 of 4 covered');
+    expect(route(within(card('Your draft')).getByRole('link', { name: /^Open draft/ }))).toBe(
+      '/draft#start-here',
+    );
+    expect(within(card('Your site')).getByText('1 blocker')).toBeTruthy();
+    expect(within(card('Your site')).getByText('1 more needs your live site')).toBeTruthy();
+    expect(card('Results').textContent).toContain('1 of 3 live answers cite you');
+    expect(within(banner() as HTMLElement).getByText('A blocker on your page')).toBeTruthy();
   });
 
-  it('asks for a site instead of saying "Not cited yet" when none was given', () => {
-    const { site: _, ...noSite } = { ...CITED, citingYou: 0 };
-    setSummary('cited', noSite);
+  it('updates when a summary changes while the home is open', () => {
     render(<Home />);
-    const cited = tile('Who gets cited');
-    expect(within(cited).getByText('Add your site to see if you are cited')).toBeTruthy();
-    expect(cited.textContent).not.toContain('Not cited yet');
-    expect(cited.textContent).not.toContain('cite you');
-    expect(within(cited).getByText('Checked')).toBeTruthy();
+    act(() => setSummary('site', SITE));
+    expect(card('Your site').textContent).toContain('1 blocker');
+    expect(banner()).toBeTruthy();
   });
+});
 
-  it('asks for a few more answers when fewer than 3 are pasted', () => {
-    setSummary('cited', { ...CITED, answers: 1, citingYou: 1 });
-    render(<Home />);
-    expect(within(tile('Who gets cited')).getByText('Paste a few more answers')).toBeTruthy();
-  });
-
-  it('shows no delta when the score has not moved since the first check', () => {
-    setSummary('draft', { ...DRAFT, score: 35 });
-    render(<Home />);
-    expect(screen.queryByText(/since you started/)).toBeNull();
-  });
-
+describe('landing', () => {
   it('lands on the last view when it is set and not home', () => {
     setLastView('site');
     render(<Home />);
@@ -217,6 +445,12 @@ describe('returning user', () => {
 
   it('stays on the home when the last view is home', () => {
     setLastView('home');
+    render(<Home />);
+    expect(nav.replace).not.toHaveBeenCalled();
+  });
+
+  it("stays on the home when an older build's last view was Your questions", () => {
+    window.localStorage.setItem('ce:v1:last-view', 'questions');
     render(<Home />);
     expect(nav.replace).not.toHaveBeenCalled();
   });
@@ -230,47 +464,12 @@ describe('returning user', () => {
     expect(nav.replace).toHaveBeenCalledTimes(1);
   });
 
-  it('updates when a summary changes while the home is open', () => {
+  it('keeps a visit that started at /questions/ on the home', () => {
+    setLastView('draft');
+    vi.spyOn(performance, 'getEntriesByType').mockReturnValue([
+      { name: 'http://localhost:3000/questions/' } as PerformanceEntry,
+    ]);
     render(<Home />);
-    act(() => setSummary('site', SITE));
-    expect(tile('Your site').textContent).toContain('5 of 7 pass');
-  });
-});
-
-describe('Next up', () => {
-  it('deep-links to the Start here fixes while any is open', () => {
-    setSummary('draft', DRAFT);
-    setSummary('site', SITE);
-    render(<Home />);
-    const strip = within(screen.getByRole('region', { name: 'Next up' }));
-    expect(strip.getByText('Start with 2 quick wins')).toBeTruthy();
-    expect(route(strip.getByRole('link', { name: 'Open' }))).toBe('/draft#start-here');
-  });
-
-  it('picks one action: open fixes, then a failing site row, then a few more answers', () => {
-    const done = { ...DRAFT, openStartHere: 0 };
-    expect(nextUp({ draft: DRAFT, site: SITE, cited: CITED })?.href).toBe('/draft/#start-here');
-    expect(nextUp({ draft: done, site: SITE, cited: CITED })?.href).toBe('/site/#first-issue');
-    const clean = { ...SITE, fail: 0, warn: 1, pass: 6 };
-    expect(nextUp({ draft: done, site: clean, cited: { ...CITED, answers: 2 } })).toMatchObject({
-      title: 'Paste a few more answers',
-      href: '/cited/',
-    });
-    expect(nextUp({ draft: done, site: clean, cited: null })?.href).toBe('/cited/');
-    expect(nextUp({ draft: done, site: clean, cited: CITED })).toBeNull();
-    expect(nextUp({ draft: null, site: null, cited: null })).toBeNull();
-  });
-
-  it('never calls the example\'s page or draft "your"', () => {
-    const done = { ...DRAFT, openStartHere: 0, example: true };
-    const site = nextUp({ draft: done, site: { ...SITE, example: true }, cited: CITED });
-    expect(site?.detail).toBe('1 check fails on the example page.');
-    expect(`${site?.title} ${site?.detail}`).not.toMatch(/\byour\b/i);
-    expect(nextUp({ draft: { ...DRAFT, example: true }, site: null, cited: null })?.detail).toBe(
-      "The example's top fixes, one at a time.",
-    );
-    expect(nextUp({ draft: { ...done, example: false }, site: SITE, cited: CITED })?.detail).toBe(
-      `${SITE.fail} ${SITE.fail === 1 ? 'check fails' : 'checks fail'} on your page.`,
-    );
+    expect(nav.replace).not.toHaveBeenCalled();
   });
 });

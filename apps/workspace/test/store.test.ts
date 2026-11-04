@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  batch,
   type CitedSummary,
   clearAll,
   clearSummary,
@@ -8,6 +9,7 @@ import {
   getLastView,
   getSummary,
   hasLeftHome,
+  hasStaleSummary,
   MY_POST_SLOT,
   type SiteSummary,
   setActiveSlot,
@@ -19,13 +21,29 @@ import {
 
 const DRAFT: DraftSummary = {
   slot: 'espresso-bitterness',
+  covered: 1,
+  total: 4,
+  fromPage: false,
+  example: true,
+  at: '2026-10-24T10:00:00.000Z',
+};
+const SITE: SiteSummary = {
+  blockers: ['crawler-access'],
+  checks: [],
+  needsLiveSite: 1,
+  example: true,
+  at: '2026-10-24T10:00:00.000Z',
+};
+/** The shapes the score build stored, which no screen may read any more. */
+const OLD_DRAFT = {
+  slot: 'espresso-bitterness',
   score: 41,
   baseline: { standard: 35, evidence: 37 },
   openStartHere: 3,
   example: true,
   at: '2026-10-24T10:00:00.000Z',
 };
-const SITE: SiteSummary = {
+const OLD_SITE = {
   pass: 5,
   warn: 1,
   fail: 1,
@@ -84,7 +102,10 @@ describe('summaries', () => {
 
   it('ignore unreadable or wrongly shaped values', () => {
     window.localStorage.setItem('ce:v1:summary:draft', '{not json');
-    window.localStorage.setItem('ce:v1:summary:site', JSON.stringify({ ...SITE, pass: '5' }));
+    window.localStorage.setItem(
+      'ce:v1:summary:site',
+      JSON.stringify({ ...SITE, blockers: 'crawler-access' }),
+    );
     window.localStorage.setItem(
       'ce:v1:summary:cited',
       JSON.stringify({ ...CITED, topKinds: 'forum' }),
@@ -92,11 +113,56 @@ describe('summaries', () => {
     expect(getSummary('draft')).toBeNull();
     expect(getSummary('site')).toBeNull();
     expect(getSummary('cited')).toBeNull();
-    window.localStorage.setItem(
-      'ce:v1:summary:draft',
-      JSON.stringify({ ...DRAFT, baseline: { standard: 35 } }),
-    );
+    const bad: Record<string, unknown>[] = [
+      { ...DRAFT, covered: '1' },
+      { ...DRAFT, total: -1 },
+      { ...DRAFT, covered: 1.5 },
+      { ...DRAFT, covered: 5 },
+      { ...DRAFT, fromPage: 'no' },
+    ];
+    for (const value of bad) {
+      window.localStorage.setItem('ce:v1:summary:draft', JSON.stringify(value));
+      expect(getSummary('draft'), JSON.stringify(value)).toBeNull();
+    }
+    // Only the three blocker items can be blockers or checks.
+    for (const value of [
+      { ...SITE, blockers: ['canonical'] },
+      { ...SITE, checks: ['byline'] },
+      { ...SITE, checks: undefined },
+      { ...SITE, needsLiveSite: '1' },
+    ]) {
+      window.localStorage.setItem('ce:v1:summary:site', JSON.stringify(value));
+      expect(getSummary('site'), JSON.stringify(value)).toBeNull();
+    }
+  });
+
+  it("read an older build's score summary and pass-count summary as none", () => {
+    window.localStorage.setItem('ce:v1:summary:draft', JSON.stringify(OLD_DRAFT));
+    window.localStorage.setItem('ce:v1:summary:site', JSON.stringify(OLD_SITE));
     expect(getSummary('draft')).toBeNull();
+    expect(getSummary('site')).toBeNull();
+    // Stored but unreadable: what the migration replaces or removes.
+    expect(hasStaleSummary('draft')).toBe(true);
+    expect(hasStaleSummary('site')).toBe(true);
+    expect(hasStaleSummary('cited')).toBe(false);
+    setSummary('draft', DRAFT);
+    expect(hasStaleSummary('draft')).toBe(false);
+  });
+
+  it('accept the new shapes with any blocker and check ids, and no blockers at all', () => {
+    const clean: SiteSummary = { ...SITE, blockers: [], checks: [] };
+    setSummary('site', clean);
+    expect(getSummary('site')).toEqual(clean);
+    const all: SiteSummary = {
+      ...SITE,
+      blockers: ['crawler-access', 'indexing-directives'],
+      checks: ['renders-without-js'],
+    };
+    setSummary('site', all);
+    expect(getSummary('site')).toEqual(all);
+    const none: DraftSummary = { ...DRAFT, covered: 0, total: 0, fromPage: true };
+    setSummary('draft', none);
+    expect(getSummary('draft')).toEqual(none);
   });
 
   it('accept a cited summary with or without its site, but only a string one', () => {
@@ -126,9 +192,9 @@ describe('summaries', () => {
     setSummary('site', SITE);
     const first = getSummary('site');
     expect(getSummary('site')).toBe(first);
-    setSummary('site', { ...SITE, pass: 6 });
+    setSummary('site', { ...SITE, blockers: [] });
     expect(getSummary('site')).not.toBe(first);
-    expect(getSummary('site')?.pass).toBe(6);
+    expect(getSummary('site')?.blockers).toEqual([]);
   });
 });
 
@@ -156,6 +222,11 @@ describe('last view', () => {
 
   it('ignores a stored value that is not a view', () => {
     window.localStorage.setItem('ce:v1:last-view', 'research');
+    expect(getLastView()).toBeNull();
+  });
+
+  it("reads an older build's Your questions view as none, so that visitor stays on the home", () => {
+    window.localStorage.setItem('ce:v1:last-view', 'questions');
     expect(getLastView()).toBeNull();
   });
 
@@ -207,6 +278,38 @@ describe('subscribe', () => {
   });
 });
 
+describe('batch', () => {
+  it('holds notifications and sends one at the end when anything changed', () => {
+    const listener = vi.fn();
+    const off = subscribe(listener);
+    batch(() => {
+      setSummary('draft', DRAFT);
+      setSummary('site', SITE);
+      clearSummary('site');
+      expect(listener).not.toHaveBeenCalled();
+    });
+    expect(listener).toHaveBeenCalledTimes(1);
+    batch(() => {});
+    expect(listener).toHaveBeenCalledTimes(1);
+    off();
+  });
+
+  it('still notifies once when the batch throws', () => {
+    const listener = vi.fn();
+    const off = subscribe(listener);
+    expect(() =>
+      batch(() => {
+        setSummary('draft', DRAFT);
+        throw new Error('boom');
+      }),
+    ).toThrow('boom');
+    expect(listener).toHaveBeenCalledTimes(1);
+    setSummary('site', SITE);
+    expect(listener).toHaveBeenCalledTimes(2);
+    off();
+  });
+});
+
 describe('with localStorage throwing', () => {
   it('reports storage as unavailable', () => {
     expect(storageAvailable()).toBe(true);
@@ -217,6 +320,7 @@ describe('with localStorage throwing', () => {
   it('keeps every value in memory for this page, without throwing', () => {
     blockStorage();
     expect(getSummary('draft')).toBeNull();
+    expect(hasStaleSummary('draft')).toBe(false);
     expect(getActiveSlot()).toBe('my-post');
     expect(getLastView()).toBeNull();
 

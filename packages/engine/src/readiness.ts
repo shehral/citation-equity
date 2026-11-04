@@ -4,11 +4,12 @@ import { hostOf } from './offpage';
 import type { Evidence, SourceRef } from './types';
 
 // Site readiness: facts about the published page and site, not the draft. It is reported on its
-// own and is never part of any GEO Score. Browser-safe: HTML is parsed with rehype (no DOM), and
-// nothing is fetched here; the crawler and rendering items need `ce site <url>`.
+// own, as blockers (BLOCKER_IDS) and notes. Browser-safe: HTML is parsed with rehype (no DOM),
+// and nothing is fetched here; the crawler and rendering items need `ce site <url>`.
 
-/** Said wherever readiness is shown (CLI, workspace): it never feeds a GEO Score. */
-export const READINESS_NOTE = 'Site readiness is reported separately from the GEO Score.';
+/** Said wherever readiness is shown (CLI, workspace): which items are blockers and which notes. */
+export const READINESS_NOTE =
+  'Blockers can keep a page out of AI answers; the other items are notes.';
 
 export type ReadinessStatus = 'pass' | 'warn' | 'fail' | 'unknown';
 export const READINESS_IDS = [
@@ -21,6 +22,23 @@ export const READINESS_IDS = [
   'renders-without-js',
 ] as const;
 export type ReadinessId = (typeof READINESS_IDS)[number];
+
+/**
+ * The items that can keep a page out of AI answers, by the engines' own documentation: a
+ * crawler AI search needs is blocked, the page asks not to be indexed or shown, or its text needs
+ * JavaScript. The other items are notes.
+ */
+export const BLOCKER_IDS: ReadinessId[] = [
+  'crawler-access',
+  'indexing-directives',
+  'renders-without-js',
+];
+
+/** True for a blocker item (see BLOCKER_IDS). */
+export function isBlocker(id: ReadinessId): boolean {
+  return BLOCKER_IDS.includes(id);
+}
+
 export interface ReadinessItem {
   id: ReadinessId;
   title: string;

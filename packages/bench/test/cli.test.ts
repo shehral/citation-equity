@@ -2,11 +2,22 @@ import { mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { CHECK_IDS, generateQuestions } from '@citation-equity/engine';
+import {
+  CHECK_DEFINITIONS,
+  CHECK_IDS,
+  generateQuestions,
+  NOTE_CHECKS,
+  pageQuestions,
+  QUESTION_CHECKS,
+  QUESTION_LABELS,
+  TEST_LABEL_TEXT,
+  TEST_LABELS,
+  type TestLabel,
+} from '@citation-equity/engine';
 import { execa } from 'execa';
 import { afterAll, describe, expect, it } from 'vitest';
 import { type BenchReport, CAVEAT, type Comparison, validatePack } from '../src/index';
-import { isEntryModule, runCli } from '../src/node/cli';
+import { isEntryModule, questionLabelWords, runCli } from '../src/node/cli';
 
 const PKG = fileURLToPath(new URL('..', import.meta.url));
 const fixture = (name: string) => join(PKG, 'test', 'fixtures', name);
@@ -61,14 +72,32 @@ function ollamaFake() {
 const nonEmptyLines = (s: string) => s.split('\n').filter((l) => l.trim() !== '');
 
 describe('ce analyze', () => {
-  it('prints the analysis as JSON with scores when run as a process (tsx, source condition)', async () => {
+  const ROOT = join(PKG, '..', '..');
+  const ESPRESSO = join(ROOT, 'samples', 'espresso-bitterness');
+  /** The espresso sample's four pack questions, one per line, in a file named q.txt. */
+  async function packQuestions() {
+    const pack = validatePack(JSON.parse(await readFile(join(ESPRESSO, 'pack.json'), 'utf8')));
+    const file = join(await tempDir(), 'q.txt');
+    await writeFile(file, `${pack.queries.map((q) => q.query).join('\n')}\n`);
+    return file;
+  }
+  /** The label line as the engine's labels for one question input word it. */
+  const labelLine = (input: 'reader' | 'page', note: string) => {
+    const { words, answer } = QUESTION_LABELS[input];
+    const text = (l: TestLabel) => TEST_LABEL_TEXT[l].toLowerCase();
+    return words === answer
+      ? `Label: ${text(words)} (${note})`
+      : `Label: words up top ${text(words)}; answered ${text(answer)} (${note})`;
+  };
+
+  it('prints the analysis as JSON with the question report when run as a process (tsx, source condition)', async () => {
     const result = await execa(
       'tsx',
       [
         '--conditions=@citation-equity/source',
         'src/node/cli.ts',
         'analyze',
-        'test/fixtures/basic.md',
+        join(ESPRESSO, 'before.md'),
         '--json',
       ],
       { cwd: PKG, preferLocal: true, reject: false },
@@ -76,22 +105,167 @@ describe('ce analyze', () => {
     expect(result.stderr).toBe('');
     expect(result.exitCode).toBe(0);
     const json = JSON.parse(result.stdout);
-    expect(Object.keys(json.scores).sort()).toEqual(['custom', 'evidence', 'foundation']);
+    expect(json.schemaVersion).toBe(2);
+    expect(json).not.toHaveProperty('scores');
+    // Without --questions the report measures the page's own questions.
+    const page = pageQuestions(await readFile(join(ESPRESSO, 'before.md'), 'utf8'));
+    expect(page.length).toBeGreaterThan(0);
+    expect(json.questions.from).toBe('page');
+    expect(json.questions.rows.map((r: { question: string }) => r.question)).toEqual(
+      page.map((q) => q.text),
+    );
     expect(json.checks.map((c: { checkId: string }) => c.checkId)).toEqual([...CHECK_IDS]);
   });
 
-  it('prints both preset scores, a row per check with its grade, and a suggestions section', async () => {
-    const { code, stdout } = await ce(['analyze', fixture('basic.md')]);
+  it('leads with the questions covered, then suggested questions, the writing notes, the suggestions and the closing line', async () => {
+    const { code, stdout } = await ce([
+      'analyze',
+      join(ESPRESSO, 'before.md'),
+      '--questions',
+      await packQuestions(),
+    ]);
     expect(code).toBe(0);
-    expect(stdout).toMatch(/Foundation score: /);
-    expect(stdout).toMatch(/Evidence score: /);
-    for (const id of CHECK_IDS)
-      expect(stdout).toMatch(new RegExp(`^${id} .*(strong|moderate|mixed|untested)`, 'm'));
-    expect(stdout).toMatch(/^Suggestions/m);
-    // An unscored note is still a row, and the output says why it is not scored.
-    expect(stdout).toContain(
-      'Not scored: question-headings (E3), lists (E1), cited-sources (E3), direct-answer-lead (E3); our own tests found no effect larger than 0.03.',
+    const lines = stdout.split('\n');
+    expect(lines.slice(0, 14)).toEqual([
+      'Questions covered: 0 of 4 (from q.txt)',
+      labelLine('reader', "your readers' own questions"),
+      '- Why does my espresso taste bitter?',
+      '    words up top: yes',
+      "    answered: no. The first sentence of the matching section uses 1 of the question's 3 key words.",
+      '- How do I fix bitter espresso?',
+      '    words up top: missing "fix"',
+      "    answered: no. The first sentence of the matching section uses 1 of the question's 3 key words.",
+      '- What water temperature should I use for espresso?',
+      '    words up top: missing "water", "temperature"',
+      '    answered: no. The first sentence of the matching section has 4 words; a direct answer runs 8 to 40.',
+      '- How long should an espresso shot take?',
+      '    words up top: missing "long"',
+      "    answered: no. The first sentence of the matching paragraph uses 1 of the question's 4 key words.",
+    ]);
+    expect(lines[14]).toBe('');
+    expect(lines[15]).toBe(
+      "Suggested from the draft's title and headings (add the ones you want to a --questions file):",
     );
+
+    const notes = lines.indexOf('Writing notes (each label says what our own tests found)');
+    expect(notes).toBeGreaterThan(15);
+    expect(lines.slice(notes + 1, notes + 4)).toEqual([
+      'Check                  Label                  Grade     Title',
+      'standalone-paragraphs  unclear                untested  Standalone paragraphs',
+      'question-headings      no effect in our test  mixed     Question headings',
+    ]);
+    // One row per note check, in registry order, with its label and grade; then a blank line.
+    const rows = lines.slice(notes + 2, notes + 2 + NOTE_CHECKS.length);
+    expect(lines[notes + 2 + NOTE_CHECKS.length]).toBe('');
+    NOTE_CHECKS.forEach((id, i) => {
+      const def = CHECK_DEFINITIONS.find((d) => d.id === id);
+      const label = TEST_LABEL_TEXT[TEST_LABELS[id]].toLowerCase();
+      expect(rows[i]).toMatch(
+        new RegExp(
+          `^${id} +${label} +${def?.evidence.grade} +${def?.title.replace(/[()]/g, '\\$&')}$`,
+        ),
+      );
+    });
+    // The two question checks show only in the questions block.
+    for (const id of QUESTION_CHECKS) expect(stdout).not.toMatch(new RegExp(`^${id} `, 'm'));
+
+    const suggestions = lines.indexOf('Suggestions (29)');
+    expect(suggestions).toBeGreaterThan(notes);
+    expect(lines.slice(suggestions + 1, suggestions + 2)).toEqual([
+      '  [advisory] standalone-paragraphs: Make this paragraph stand on its own',
+    ]);
+    expect(lines).toContain(
+      '  [edit] question-headings: End this heading with "?", or reword it as a question',
+    );
+    expect(nonEmptyLines(stdout).at(-1)).toBe(
+      'Grades say how well published studies support each check; labels say what our own tests found. See docs/evidence.md.',
+    );
+    expect(lines.filter((l) => /score/i.test(l))).toEqual([]);
+  });
+
+  it('prints under a suggestion only its own finding, also when findings share a range', async () => {
+    const { stdout } = await ce([
+      'analyze',
+      join(ESPRESSO, 'before.md'),
+      '--questions',
+      await packQuestions(),
+    ]);
+    const lines = stdout.split('\n');
+    // Every reader-words finding sits at the top of the draft; each suggestion's rationale already
+    // quotes its own, so none is printed on a line of its own.
+    const water = lines.indexOf(
+      '  [advisory] reader-words: Use the words of "What water temperature should I use for espresso?" up top',
+    );
+    expect(water).toBeGreaterThan(0);
+    expect(lines[water + 2]).toMatch(
+      /^ {6}The top of the page holds 1 of the 3 key words of "What water/,
+    );
+    expect(stdout).not.toContain(
+      '\n      The top of the page holds 2 of the 3 key words of "How do I fix bitter espresso?".\n',
+    );
+  });
+
+  it("measures the page's own questions without --questions, and lists every other generated question as a suggestion", async () => {
+    const draft = join(ROOT, 'samples', 'rag-explained', 'before.md');
+    const md = await readFile(draft, 'utf8');
+    const page = pageQuestions(md).map((q) => q.text);
+    const others = generateQuestions(md)
+      .map((q) => q.text)
+      .filter((q) => !page.includes(q));
+    expect(page.length).toBeGreaterThan(0);
+    expect(others.length).toBeGreaterThan(0);
+    const { code, stdout } = await ce(['analyze', draft]);
+    expect(code).toBe(0);
+    const lines = stdout.split('\n');
+    expect(lines[0]).toMatch(
+      new RegExp(
+        `^Questions covered: \\d+ of ${page.length} \\(from the page's title and topic; pass --questions to use your readers'\\)$`,
+      ),
+    );
+    expect(lines[1]).toBe(labelLine('page', 'questions made from the page'));
+    expect(lines.filter((l) => l.startsWith('- ')).slice(0, page.length)).toEqual(
+      page.map((q) => `- ${q}`),
+    );
+    const block = lines.slice(
+      lines.indexOf(
+        "Suggested from the draft's title and headings (add the ones you want to a --questions file):",
+      ) + 1,
+    );
+    expect(block.slice(0, others.length)).toEqual(others.map((q) => `- ${q}`));
+    expect(block[others.length]).toBe('');
+    const json = JSON.parse((await ce(['analyze', draft, '--json'])).stdout);
+    expect(json.questions.from).toBe('page');
+    expect(json.questions.rows.map((r: { question: string }) => r.question)).toEqual(page);
+    // The answer check measures the same page questions, so its advice matches the block above.
+    const coverage = json.checks.find(
+      (c: { checkId: string }) => c.checkId === 'question-coverage',
+    );
+    const answered = json.questions.rows.filter(
+      (r: { answer: { covered: boolean } }) => r.answer.covered,
+    ).length;
+    expect(coverage).toMatchObject({
+      applicable: true,
+      metrics: { questions: page.length, covered: answered },
+    });
+  });
+
+  it('names at most three missing words, and gives a question with no key words only its answer line', async () => {
+    const dir = await tempDir();
+    const questions = join(dir, 'q.txt');
+    await writeFile(
+      questions,
+      'How do grinders, tampers, scales and kettles differ?\nHow does it work?\n',
+    );
+    const { code, stdout } = await ce(['analyze', fixture('basic.md'), '--questions', questions]);
+    expect(code).toBe(0);
+    const lines = stdout.split('\n');
+    const first = lines.indexOf('- How do grinders, tampers, scales and kettles differ?');
+    expect(lines[first + 1]).toBe(
+      '    words up top: missing "grinders", "tampers", "scales" and 2 more',
+    );
+    const second = lines.indexOf('- How does it work?');
+    expect(lines[second + 1]).toMatch(/^ {4}answered: /);
+    expect(lines[second + 2]).not.toMatch(/words up top/);
   });
 
   it('locates each suggestion: its line, the text it is about, and the finding behind it', async () => {
@@ -101,8 +275,7 @@ describe('ce analyze', () => {
       file,
       '# Espresso guide\n\nIntro text about espresso.\n\n## Grind size\n\nGrind finer for a slower shot.\n\n## Water temperature\n\nUse water near 93 degrees.\n',
     );
-    // Without --questions only the draft's own question headings are scored, and these headings
-    // are statements, so a question list is what gives this draft a question-coverage advisory.
+    // A question list is what gives this draft a question-coverage advisory.
     const questions = join(dir, 'q.txt');
     await writeFile(questions, 'How long should a shot of espresso take?\n');
     const { code, stdout } = await ce(['analyze', file, '--questions', questions]);
@@ -120,12 +293,15 @@ describe('ce analyze', () => {
     expect(lines[coverage + 2]).toMatch(/Evidence grade: mixed\.$/);
   });
 
-  it('says "No content yet" for an empty draft', async () => {
+  it('says "No content yet" for an empty draft, with no questions block', async () => {
     const dir = await tempDir();
     await writeFile(join(dir, 'empty.md'), '   \n');
     const { code, stdout } = await ce(['analyze', join(dir, 'empty.md')]);
     expect(code).toBe(0);
-    expect(stdout).toContain('No content yet');
+    expect(stdout.split('\n')[0]).toBe('No content yet');
+    expect(stdout).not.toContain('Questions covered');
+    expect(stdout).not.toMatch(/^Label:/m);
+    expect(stdout).toContain('Suggestions: none');
   });
 
   it('reads HTML when asked', async () => {
@@ -151,38 +327,29 @@ describe('ce analyze', () => {
     );
     const { code, stdout } = await ce(['analyze', fixture('basic.md'), '--questions', file]);
     expect(code).toBe(0);
-    expect(stdout).toContain('Target questions (from q.txt):');
-    expect(stdout).toContain('- Why does espresso taste bitter?');
+    expect(stdout.split('\n')[0]).toBe('Questions covered: 0 of 2 (from q.txt)');
+    expect(stdout).toContain('\n- Why does espresso taste bitter?\n');
+    expect(stdout).toContain('\n- Which bank has the lowest rate?\n');
     expect(stdout).toContain('Answer "Which bank has the lowest rate?" directly');
     const json = JSON.parse(
       (await ce(['analyze', fixture('basic.md'), '--questions', file, '--json'])).stdout,
     );
+    expect(json.schemaVersion).toBe(2);
+    expect(json).not.toHaveProperty('scores');
+    expect(json.questions.from).toBe('yours');
+    expect(json.questions.rows.map((r: { question: string }) => r.question)).toEqual([
+      'Why does espresso taste bitter?',
+      'Which bank has the lowest rate?',
+    ]);
+    // Both question checks measure the file's questions.
+    for (const id of QUESTION_CHECKS) {
+      const check = json.checks.find((c: { checkId: string }) => c.checkId === id);
+      expect(check, id).toMatchObject({ applicable: true, metrics: { questions: 2 } });
+    }
     const coverage = json.checks.find(
       (c: { checkId: string }) => c.checkId === 'question-coverage',
     );
     expect(coverage).toMatchObject({ applicable: true, metrics: { questions: 2, covered: 0 } });
-  });
-
-  it('scores the draft question headings without --questions and only suggests templates', async () => {
-    const dir = await tempDir();
-    const draft = join(dir, 'draft.md');
-    const md = `${await readFile(fixture('basic.md'), 'utf8')}\n## How to dial in a grinder\n\nStart fine.\n`;
-    await writeFile(draft, md);
-    const generated = generateQuestions(md);
-    const own = generated.filter((q) => q.source === 'draft-heading').map((q) => q.text);
-    const templates = generated.filter((q) => q.source === 'template').map((q) => q.text);
-    expect(own.length).toBeGreaterThan(0);
-    expect(templates.length).toBeGreaterThan(0);
-    const { code, stdout } = await ce(['analyze', draft]);
-    expect(code).toBe(0);
-    expect(stdout).toMatch(/Target questions \(the draft's own question headings/);
-    expect(stdout).toMatch(/Suggested from the draft's title and headings \(not scored/);
-    for (const q of [...own, ...templates]) expect(stdout).toContain(`- ${q}`);
-    const json = JSON.parse((await ce(['analyze', draft, '--json'])).stdout);
-    const coverage = json.checks.find(
-      (c: { checkId: string }) => c.checkId === 'question-coverage',
-    );
-    expect(coverage).toMatchObject({ applicable: true, metrics: { questions: own.length } });
   });
 
   it('exits 1 with a message for a missing questions file', async () => {
@@ -200,6 +367,19 @@ describe('ce analyze', () => {
     const { code, stderr } = await ce(['analyze', '/nonexistent/draft.md']);
     expect(code).toBe(1);
     expect(stderr).toMatch(/Cannot read \/nonexistent\/draft\.md/);
+  });
+});
+
+describe('questionLabelWords (the label line of ce analyze)', () => {
+  it('names one label when both lines agree, and each line when they differ', () => {
+    expect(questionLabelWords({ words: 'helped', answer: 'helped' })).toBe('helped in our test');
+    expect(questionLabelWords({ words: 'not-tested', answer: 'not-tested' })).toBe('not tested');
+    expect(questionLabelWords({ words: 'not-tested', answer: 'helped' })).toBe(
+      'words up top not tested; answered helped in our test',
+    );
+    expect(questionLabelWords({ words: 'no-effect', answer: 'may-help-less' })).toBe(
+      'words up top no effect in our test; answered may help less',
+    );
   });
 });
 

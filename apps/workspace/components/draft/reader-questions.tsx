@@ -1,30 +1,22 @@
 'use client';
 
+import { generateQuestions, type SiteQuestion } from '@citation-equity/engine';
+import { ListPlus, Plus, Sparkles, X } from 'lucide-react';
+import Link from 'next/link';
 import {
-  generateQuestions,
-  parseQueriesCsv,
-  type QuestionCoverage,
-  queryNumbers,
-  questionKey,
-  type Range,
-  rankImportedQueries,
-  rankingNote,
-  type TargetQuestion,
-} from '@citation-equity/engine';
-import { ListPlus, LocateFixed, Plus, Sparkles, X } from 'lucide-react';
-import {
-  type ChangeEvent,
   type FormEvent,
   type ReactNode,
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from 'react';
+import { textLink } from '@/components/page-shell';
 import { SearchesBehind } from '@/components/questions/searches-behind';
 import { Button } from '@/components/ui/button';
 import { classifyBenchError } from '@/lib/bench';
-import { CHECK_NAMES } from '@/lib/glossary';
 import { suggestWithLocalModel } from '@/lib/question-helper';
 import {
   editProblem,
@@ -34,29 +26,28 @@ import {
   SOURCE_LABELS,
   type WorkspaceQuestion,
 } from '@/lib/questions';
+import {
+  draftSourceOf,
+  EMPTY_SITE_INPUT,
+  getSiteInput,
+  siteQuestionsOf,
+  subscribeSiteInput,
+} from '@/lib/site-questions';
 import { cn } from '@/lib/utils';
+import { VIEW_HREF } from '@/lib/views';
 import { ModelMissingNote, OllamaInstructions, UnreachableNote } from './ollama-help';
 
 interface ReaderQuestionsProps {
   questions: WorkspaceQuestion[];
   onChange(questions: WorkspaceQuestion[]): void;
-  /** The editor's current text, which "Suggest from my draft" reads. */
+  /** The editor's current text, which From headings and Local AI read. */
   markdown: string;
-  /** The model Connect local AI found (in Test it); null before that click. */
+  /** The model Connect local AI found; null before that click. */
   localModel: string | null;
-  /** Whether the analyzed draft answers each question, and where. */
-  coverage?: QuestionCoverage[];
-  /** Selects a range in the editor. */
-  onShowRange?(range: Range): void;
-  /**
-   * The page's own title and topic questions the reader's-words check measures while the list
-   * holds none of the author's own (typed or imported); shown so every question a card names
-   * is on screen.
-   */
-  pageQuestions?: string[];
 }
 
-const NO_PAGE_QUESTIONS: string[] = [];
+/** How many of the home's questions From your list offers at once. */
+const FROM_LIST_SHOWN = 10;
 
 const field = cn(
   'h-8 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm',
@@ -66,7 +57,7 @@ const field = cn(
 const added = (n: number, from: string) =>
   n === 0 ? `No new questions ${from}.` : `Added ${n} question${n === 1 ? '' : 's'} ${from}.`;
 
-/** What the panel says when the local model fails. */
+/** What the editor says when the local model fails. */
 function localError(err: unknown, model: string): ReactNode {
   const failure = classifyBenchError(err);
   if (failure.kind === 'unavailable') {
@@ -82,21 +73,17 @@ function localError(err: unknown, model: string): ReactNode {
 }
 
 /**
- * Reader questions (the question-coverage check's target questions), up to 8: each with where it
- * came from and whether the draft answers it. The author edits, adds and removes them;
- * suggestions come from the draft's title, headings and first paragraph, from the local model
- * on a click once it is connected, or from real queries in a CSV export.
+ * The question editor: the draft's reader questions, up to 8, which the Questions covered card
+ * measures. The author edits, adds and removes them; more come from the draft's title and
+ * headings, from the local model on a click once it is connected, or from the home's Your
+ * questions list, one per click.
  */
 export function ReaderQuestions({
   questions,
   onChange,
   markdown,
   localModel,
-  coverage = [],
-  onShowRange,
-  pageQuestions = NO_PAGE_QUESTIONS,
 }: ReaderQuestionsProps) {
-  const pageListId = useId();
   const [draft, setDraft] = useState('');
   const [message, setMessage] = useState<ReactNode>(null);
   const [asking, setAsking] = useState(false);
@@ -156,18 +143,13 @@ export function ReaderQuestions({
     setMessage(null);
   }
 
-  function addImported(q: TargetQuestion) {
-    onChange(mergeQuestions(questions, [q]));
-    setMessage(null);
-  }
-
-  function suggestFromDraft() {
+  function fromHeadings() {
     const next = mergeQuestions(questions, generateQuestions(markdown, { max: MAX_QUESTIONS }));
     onChange(next);
     setMessage(added(next.length - questions.length, 'from your draft'));
   }
 
-  async function suggestFromModel(model: string) {
+  async function fromModel(model: string) {
     const id = ++op.current;
     setAsking(true);
     setMessage(null);
@@ -186,9 +168,18 @@ export function ReaderQuestions({
     }
   }
 
-  const answered = new Map(coverage.map((c) => [questionKey(c.question), c]));
+  function fromList(q: SiteQuestion) {
+    if (full) return;
+    onChange(
+      mergeQuestions(questions, [
+        { text: q.text, source: draftSourceOf(q.source), template: q.template },
+      ]),
+    );
+    setMessage(null);
+  }
+
   return (
-    <>
+    <div className="space-y-3 text-sm">
       <p className="text-ink-soft">What should this page answer? Up to {MAX_QUESTIONS}.</p>
 
       {questions.length > 0 ? (
@@ -224,7 +215,6 @@ export function ReaderQuestions({
                 >
                   <X aria-hidden="true" />
                 </Button>
-                <CoverageNote row={answered.get(questionKey(q.text))} onShowRange={onShowRange} />
                 <SearchesBehind question={q.text} localModel={localModel} className="pl-0.5" />
               </li>
             );
@@ -232,23 +222,6 @@ export function ReaderQuestions({
         </ol>
       ) : (
         <p>No questions yet. Add one, or suggest some from your draft.</p>
-      )}
-
-      {pageQuestions.length > 0 && (
-        <div className="space-y-1 rounded-md border bg-muted/40 px-3 py-2 text-sm">
-          <p id={pageListId} className="font-medium">
-            Page questions used for "{CHECK_NAMES['reader-words']}"
-          </p>
-          <ul aria-labelledby={pageListId} className="list-disc space-y-0.5 pl-5">
-            {pageQuestions.map((q) => (
-              <li key={q}>{q}</li>
-            ))}
-          </ul>
-          <p className="text-ink-soft text-xs">
-            Made from your title and topic. Add a question of your own, by typing or importing it,
-            and the check uses yours instead.
-          </p>
-        </div>
       )}
 
       <form onSubmit={add} className="flex items-center gap-2">
@@ -280,194 +253,112 @@ export function ReaderQuestions({
           type="button"
           size="sm"
           variant="outline"
-          onClick={suggestFromDraft}
+          title="Questions your title and headings already ask."
+          onClick={fromHeadings}
           disabled={full}
         >
           <ListPlus aria-hidden="true" />
-          Suggest from my draft
+          From headings
         </Button>
         {localModel !== null && (
           <Button
             type="button"
             size="sm"
             variant="outline"
-            onClick={() => suggestFromModel(localModel)}
+            onClick={() => fromModel(localModel)}
             disabled={full || asking}
           >
             <Sparkles aria-hidden="true" />
-            {asking ? 'Asking...' : 'Suggest more with local AI'}
+            {asking ? 'Asking...' : 'Local AI'}
           </Button>
         )}
       </div>
       {message !== null && (
-        <div role="status" className="space-y-2 text-sm">
+        <div role="status" className="space-y-2">
           {message}
         </div>
       )}
 
-      <ImportQueries questions={questions} full={full} onAdd={addImported} />
-    </>
+      <FromYourList questions={questions} full={full} onAdd={fromList} />
+    </div>
   );
 }
-
-/** Whether the analyzed draft answers a question, with a way to see where. */
-function CoverageNote({
-  row,
-  onShowRange,
-}: {
-  row: QuestionCoverage | undefined;
-  onShowRange?(range: Range): void;
-}) {
-  if (!row) return null;
-  return (
-    <span className="flex w-full items-center gap-2 pl-0.5 text-xs">
-      <span className={row.covered ? 'text-done' : 'text-ink-soft'}>
-        {row.covered ? 'Answered' : 'Not answered yet'}
-      </span>
-      {onShowRange && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="xs"
-          aria-label={`Show in draft: ${row.question}`}
-          onClick={() => onShowRange(row.range)}
-        >
-          <LocateFixed aria-hidden="true" />
-          Show
-        </Button>
-      )}
-    </span>
-  );
-}
-
-/** Imported queries listed at once; the rest are in the file but not shown. */
-const IMPORT_SHOWN = 10;
-
-const queriesCount = (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'query' : 'queries'}`;
 
 /**
- * "Import real queries (CSV)": a Search Console or Bing AI Performance export, read with the
- * File API and parsed in the browser (no request). Lists the top queries with their numbers;
- * each is added as a reader question only on its own click.
+ * From your list: the first FROM_LIST_SHOWN questions of the home's list (typed, pasted,
+ * imported or from the local model there) that this draft does not have yet, each added on its
+ * own click. It follows the home's list as it changes.
  */
-function ImportQueries({
+function FromYourList({
   questions,
   full,
   onAdd,
 }: {
   questions: WorkspaceQuestion[];
   full: boolean;
-  onAdd(q: TargetQuestion): void;
+  onAdd(q: SiteQuestion): void;
 }) {
-  const id = useId();
-  const [result, setResult] = useState<{
-    name: string;
-    ranked: ReturnType<typeof rankImportedQueries>;
-  } | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const headingId = useId();
+  const input = useSyncExternalStore(subscribeSiteInput, getSiteInput, () => EMPTY_SITE_INPUT);
+  const list = useMemo(() => siteQuestionsOf(input), [input]);
+  const offered = list.filter((q) => !hasQuestion(questions, q.text)).slice(0, FROM_LIST_SHOWN);
 
-  async function read(e: ChangeEvent<HTMLInputElement>) {
-    const input = e.currentTarget;
-    const file = input.files?.[0];
-    if (!file) return;
-    try {
-      const ranked = rankImportedQueries(parseQueriesCsv(await file.text()));
-      setResult({ name: file.name, ranked });
-      setError(null);
-    } catch (err) {
-      setResult(null);
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      // Lets the same file be chosen again after an edit.
-      input.value = '';
-    }
-  }
+  // An added question leaves the list, and its button with it: focus goes to the button now in
+  // its place (or the last one), else to the heading (none left, or the draft is now full), so
+  // the keyboard never drops to the page.
+  const listRef = useRef<HTMLUListElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const focusAt = useRef<number | null>(null);
+  // No dependency list: it acts only on the render right after an add, which focusAt marks.
+  useEffect(() => {
+    const at = focusAt.current;
+    if (at === null) return;
+    focusAt.current = null;
+    const buttons = [
+      ...(listRef.current?.querySelectorAll<HTMLButtonElement>('button:enabled') ?? []),
+    ];
+    (buttons[Math.min(at, buttons.length - 1)] ?? headingRef.current)?.focus();
+  });
 
-  const shown = result?.ranked.slice(0, IMPORT_SHOWN) ?? [];
   return (
-    <div className="space-y-2 border-t pt-3">
-      <label htmlFor={`${id}-file`} className="font-medium text-sm">
-        Import from Search Console or Bing (CSV)
-      </label>
-      <p id={`${id}-help`} className="text-ink-soft text-xs">
-        Your real search queries test best: the Queries table from Search Console, or grounding
-        queries from Bing AI Performance.
-      </p>
-      <input
-        id={`${id}-file`}
-        type="file"
-        accept=".csv,text/csv"
-        aria-describedby={`${id}-help`}
-        onChange={read}
-        className={cn(
-          'block w-full rounded-md text-sm outline-none',
-          'focus-visible:ring-[3px] focus-visible:ring-ring',
-          'file:mr-2 file:rounded-md file:border file:bg-background file:px-2 file:py-1 file:text-sm',
-        )}
-      />
-      {error !== null && (
-        <p role="alert" className="text-destructive text-sm">
-          {error}
+    <section aria-labelledby={headingId} className="space-y-2 border-t pt-3">
+      <h4 id={headingId} ref={headingRef} tabIndex={-1} className="font-medium outline-none">
+        From your list
+      </h4>
+      {offered.length === 0 ? (
+        <p className="text-ink-soft">
+          {list.length === 0
+            ? 'Your list is empty.'
+            : 'Every question on your list is on this draft.'}{' '}
+          <Link href={VIEW_HREF.home} prefetch={false} className={textLink}>
+            Your questions
+          </Link>
         </p>
+      ) : (
+        <ul ref={listRef} className="space-y-2">
+          {offered.map((q, i) => (
+            <li key={q.text} className="flex items-start gap-2">
+              <p data-question className="min-w-0 flex-1 break-words pt-1">
+                {q.text}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                aria-label={`Add "${q.text}"`}
+                disabled={full}
+                onClick={() => {
+                  focusAt.current = i;
+                  onAdd(q);
+                }}
+              >
+                <Plus aria-hidden="true" />
+                Add
+              </Button>
+            </li>
+          ))}
+        </ul>
       )}
-      {result !== null && (
-        <section aria-labelledby={`${id}-heading`} className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <h3 id={`${id}-heading`} className="font-medium text-sm">
-              Imported queries
-            </h3>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Close imported queries"
-              onClick={() => setResult(null)}
-            >
-              <X aria-hidden="true" />
-            </Button>
-          </div>
-          <p className="text-ink-soft text-xs">
-            {result.ranked.length === 0
-              ? `No queries in ${result.name}.`
-              : `${queriesCount(result.ranked.length)} from ${result.name}, ${rankingNote(result.ranked.map((r) => r.query))}.${
-                  shown.length < result.ranked.length ? ` Showing the top ${shown.length}.` : ''
-                }`}
-          </p>
-          <ol className="space-y-2">
-            {shown.map(({ query, question }) => {
-              const listed = hasQuestion(questions, question.text);
-              return (
-                <li key={question.text} className="flex items-start gap-2 text-sm">
-                  <div className="min-w-0 flex-1">
-                    <p>{question.text}</p>
-                    <p className="text-ink-soft text-xs">
-                      {SOURCE_LABELS[query.source]}: {queryNumbers(query)}
-                      {questionKey(question.text) === questionKey(query.text)
-                        ? ''
-                        : `. Query: ${query.text}`}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    aria-label={
-                      listed
-                        ? `"${question.text}" is already a reader question`
-                        : `Add "${question.text}" as a reader question`
-                    }
-                    disabled={listed || full}
-                    onClick={() => onAdd(question)}
-                  >
-                    <Plus aria-hidden="true" />
-                    {listed ? 'Added' : 'Add'}
-                  </Button>
-                </li>
-              );
-            })}
-          </ol>
-        </section>
-      )}
-    </div>
+    </section>
   );
 }

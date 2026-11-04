@@ -1,3 +1,5 @@
+import type { QuestionReport } from './question-report';
+
 export type EvidenceGrade = 'strong' | 'moderate' | 'mixed' | 'untested';
 export const CHECK_IDS = [
   'standalone-paragraphs',
@@ -77,8 +79,12 @@ export interface CheckDefinition {
   inFoundationDesign: boolean;
   description: string;
   evidence: CheckEvidence;
-  /** False for an unscored note: weight 0 in every preset, still analyzed and still suggesting. */
+  /**
+   * Research API: false for a check at weight 0 in every preset (still analyzed and still
+   * suggesting). The presets feed `scoreChecks`, which the app and the CLI never show.
+   */
   scored: boolean;
+  /** Research API: the check's weight in each preset. */
   defaultWeights: { foundation: number; evidence: number };
 }
 /** UTF-16 offsets into the Markdown source; end exclusive. */
@@ -110,25 +116,25 @@ export interface CheckResult {
   suggestions: Suggestion[];
   metrics: Record<string, number>;
 }
+/** Research API: a preset of `scoreChecks` weights. */
 export type PresetId = 'foundation' | 'evidence';
+/** Research API: a weight per check, for `scoreChecks`. */
 export type Weights = Record<CheckId, number>;
 export interface AnalysisResult {
-  schemaVersion: 1;
+  schemaVersion: 2;
   engineVersion: string;
   markdown: string;
   wordCount: number;
   checks: CheckResult[];
-  scores: { foundation: number | null; evidence: number | null; custom: number | null };
+  /** Which reader questions the draft covers: words up top and a direct answer, per question. */
+  questions: QuestionReport;
 }
 export interface AnalyzeOptions {
   format?: 'markdown' | 'html';
-  weights?: Weights;
-  /** Target questions readers ask; the question-coverage check reads them all. */
-  questions?: string[];
   /**
-   * The author's own questions, typed or imported (not generated). The reader-words check
-   * measures exactly these when there are any; otherwise the page's own title and topic
-   * questions (`pageQuestions`), never a section's.
+   * The questions readers ask. The two question checks and the question report all measure
+   * these (trimmed, without repeats), or the page's own title and topic questions when there
+   * are none, so every line about a question reads the same set.
    */
-  authorQuestions?: string[];
+  questions?: string[];
 }

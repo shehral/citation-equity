@@ -13,6 +13,7 @@ import {
 import { act, cleanup, fireEvent, render, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestIt } from '@/components/draft/test-it';
+import { getLocalModel, setLocalModel } from '@/lib/local-model';
 import {
   AFTER_MD,
   AFTER_REPORT,
@@ -43,6 +44,8 @@ const unhandled: unknown[] = [];
 const onUnhandled = (reason: unknown) => unhandled.push(reason);
 
 beforeEach(() => {
+  // No connection yet: each case starts from the page's first state.
+  setLocalModel(null);
   probeMock.mockReset();
   runMock.mockReset();
   unhandled.length = 0;
@@ -221,31 +224,24 @@ describe('Test it, local model', () => {
     expect(within(panel()).queryByRole('button', { name: 'Run test' })).toBeNull();
   });
 
-  it('tells the workspace which local model the check found, or that none is ready', async () => {
-    const onLocalModel = vi.fn();
+  it("shares what Connect local AI found with the page's one connection, so the draft's helpers unlock too", async () => {
     probeMock.mockResolvedValue({ reachable: true, models: ['qwen2.5:3b'] });
-    render(
-      <TestIt
-        sample={RECORDED_SAMPLE}
-        markdown={RECORDED_SAMPLE.before}
-        onLocalModel={onLocalModel}
-      />,
-    );
-    expect(onLocalModel).not.toHaveBeenCalled();
+    render(<TestIt sample={RECORDED_SAMPLE} markdown={RECORDED_SAMPLE.before} />);
+    expect(getLocalModel().status).toBe('idle');
     await click('Connect local AI');
-    expect(onLocalModel).toHaveBeenLastCalledWith('qwen2.5:3b');
+    expect(getLocalModel()).toEqual({ status: 'ready', model: 'qwen2.5:3b' });
 
-    probeMock.mockResolvedValue({ reachable: false, models: [] });
-    cleanup();
-    render(
-      <TestIt
-        sample={RECORDED_SAMPLE}
-        markdown={RECORDED_SAMPLE.before}
-        onLocalModel={onLocalModel}
-      />,
-    );
-    await click('Connect local AI');
-    expect(onLocalModel).toHaveBeenLastCalledWith(null);
+    // A failed check says how it failed, so no view still offers a helper that cannot answer.
+    for (const [found, status] of [
+      [{ reachable: true, models: ['llama3.2:3b'] }, 'model-missing'],
+      [{ reachable: false, models: [] }, 'unreachable'],
+    ] as const) {
+      cleanup();
+      probeMock.mockResolvedValue({ ...found, models: [...found.models] });
+      render(<TestIt sample={RECORDED_SAMPLE} markdown={RECORDED_SAMPLE.before} />);
+      await click('Connect local AI');
+      expect(getLocalModel()).toEqual({ status, model: 'qwen2.5:3b' });
+    }
   });
 
   it('shows the ollama pull message when the run rejects with ModelMissingError', async () => {
@@ -303,6 +299,10 @@ describe('Test it, local model', () => {
     expect(currentCall[1].markdown).toBe(AFTER_MD);
     expect(beforeCall[3]).toEqual(BEFORE_REPORT.settings);
     const local = within(panel()).getByRole('region', { name: /Your run on this machine/ });
+    // Under the page's "Test before and after" (an h2), the run is an h3.
+    expect(within(local).getByRole('heading', { level: 3 }).textContent).toBe(
+      'Your run: example before vs your text',
+    );
     expect(
       within(local).getByRole('row', { name: /^Cited among valid answers/ }).textContent,
     ).toContain('+42 points');
@@ -399,11 +399,10 @@ describe('Test it, own post', () => {
   });
 
   it('connects without a pack, for question suggestions and wording', async () => {
-    const onLocalModel = vi.fn();
     probeMock.mockResolvedValue({ reachable: true, models: [DEFAULT_SETTINGS.model] });
-    render(<TestIt sample={null} markdown="# My draft" onLocalModel={onLocalModel} />);
+    render(<TestIt sample={null} markdown="# My draft" />);
     await click('Connect local AI');
-    expect(onLocalModel).toHaveBeenLastCalledWith(DEFAULT_SETTINGS.model);
+    expect(getLocalModel()).toEqual({ status: 'ready', model: DEFAULT_SETTINGS.model });
     expect(panel().textContent).toContain('Load a test pack to run the test.');
     expect(within(panel()).queryByRole('button', { name: 'Run test' })).toBeNull();
   });
@@ -412,5 +411,44 @@ describe('Test it, own post', () => {
     const { pack: _, results: __, ...bare } = RECORDED_SAMPLE;
     render(<TestIt sample={bare} markdown={bare.before} />);
     expect(within(panel()).getByLabelText('Load a test pack')).toBeTruthy();
+  });
+
+  it('hands a loaded pack to its caller, and starts from one it is given back', async () => {
+    probeMock.mockResolvedValue({ reachable: true, models: [DEFAULT_SETTINGS.model] });
+    runMock.mockImplementation(async (_pack, draft) =>
+      draft.id === 'before'
+        ? BEFORE_REPORT
+        : ({ ...AFTER_REPORT, draftId: draft.id } as BenchReport),
+    );
+    const onPackChange = vi.fn();
+    const first = render(
+      <TestIt sample={null} markdown={RECORDED_SAMPLE.before} onPackChange={onPackChange} />,
+    );
+    await loadPack(packFile(JSON.stringify(PACK)));
+    const kept = onPackChange.mock.lastCall?.[0];
+    expect(kept).toMatchObject({
+      name: 'my-pack.json',
+      pack: { packId: PACK.packId },
+      baseline: { markdown: RECORDED_SAMPLE.before },
+    });
+    first.unmount();
+    // The author left to edit and came back: the panel mounts afresh, from the kept pack.
+    render(<TestIt sample={null} markdown={AFTER_MD} initialPack={kept} />);
+    expect(panel().textContent).toContain('Loaded my-pack.json.');
+    await click('Connect local AI');
+    await click('Run test');
+    expect(runMock.mock.calls.map(([, draft]) => draft.markdown)).toEqual([
+      RECORDED_SAMPLE.before,
+      AFTER_MD,
+    ]);
+  });
+
+  it('tells its caller when a file that is not a pack drops the loaded one', async () => {
+    const onPackChange = vi.fn();
+    render(<TestIt sample={null} markdown="# My draft" onPackChange={onPackChange} />);
+    await loadPack(packFile(JSON.stringify(PACK)));
+    await loadPack(packFile('not json'));
+    expect(onPackChange).toHaveBeenLastCalledWith(null);
+    expect(panel().textContent).not.toContain('Loaded my-pack.json');
   });
 });

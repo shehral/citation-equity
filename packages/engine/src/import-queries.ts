@@ -135,6 +135,23 @@ export const questionKey = (text: string): string =>
     .trim();
 
 /**
+ * `questions` trimmed, without blanks and repeats (by `questionKey`), the first wording kept,
+ * in order. The reader-words check and the question report both dedupe through it, so the two
+ * always measure the same list.
+ */
+export function uniqueQuestions(questions: string[]): string[] {
+  const seen = new Set<string>();
+  return questions
+    .map((q) => q.trim())
+    .filter((q) => {
+      const key = questionKey(q);
+      if (key === '' || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+/**
  * The target question a query becomes. A question-like query (ending in "?", or opening with
  * a question word or an auxiliary) keeps its words, with a capital and one "?". A keyword
  * query of up to 3 words that is a single noun phrase becomes "What is <q>?" ("What are" for

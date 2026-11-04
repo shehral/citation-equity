@@ -1,0 +1,47 @@
+{
+  "source": "E1-E3's records: citation-equity-paper results/env/env.json (generated 2026-10-24T20:17:37-07:00) and results/runs/jobs.csv (GPU model of every job, from the nvidia-smi line it printed)",
+  "packages": {
+    "python": "3.12.15",
+    "vllm": "0.31.0",
+    "torch": "2.13.0",
+    "transformers": "5.17.0",
+    "tokenizers": "0.23.2",
+    "huggingface_hub": "1.33.0",
+    "flashinfer-python": "0.7.0.post1",
+    "triton": "3.7.1"
+  },
+  "in_job_logs": { "torch": "2.13.0+cu130", "vllm": "v0.31.0", "node_in_edit_jobs": "v22.11.0" },
+  "models": {
+    "google/gemma-4-12B-it": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+    "Qwen/Qwen3.8-27B": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+    "google/gemma-4-31B-it": "842da3794eaa0b77d5f08bae87a17459d91ff475"
+  },
+  "gpus": {
+    "google/gemma-4-12B-it": ["A100-SXM4-40GB", "A100-SXM4-80GB"],
+    "Qwen/Qwen3.8-27B": ["H200"],
+    "google/gemma-4-31B-it": ["H200"]
+  },
+  "sampling": {
+    "judges": {
+      "temperature": 0.5,
+      "seeds": [1, 2, 3, 4, 5, 6, 7, 8],
+      "max_tokens": 1024,
+      "max_model_len": 32768,
+      "thinking": false,
+      "gpu_memory_utilization": 0.88,
+      "enforce_eager": true,
+      "llm_seed": 1
+    },
+    "editor": {
+      "temperature": 0.0,
+      "seed": 1,
+      "max_tokens": 4096,
+      "max_model_len": 20480,
+      "thinking": false,
+      "gpu_memory_utilization": 0.9,
+      "enforce_eager": true,
+      "max_attempts": 2
+    },
+    "q_L": { "temperature": 0.5, "seed": 1, "max_tokens": 4096, "thinking": false }
+  }
+}

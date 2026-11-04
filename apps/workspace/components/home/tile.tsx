@@ -25,12 +25,15 @@ export interface TileProps {
   href: string;
   /** The tile's one link, at its foot; the whole tile is clickable through it. */
   cta: string;
+  /** The level of the tile's name, one below the heading the tiles sit under. */
+  headingLevel: 2 | 3;
   children: ReactNode;
 }
 
 /**
- * One home tile: name, state, question, body and one link. The link stretches over the tile, so
- * the tile reads as one control while its text stays plain text for screen readers.
+ * One home step card: name, state, question, body and one link. The link stretches over the
+ * card, so it reads as one control while its text stays plain text for screen readers. The
+ * cards stack in one column (beside the questions from lg), so each is as tall as its content.
  */
 export function Tile({
   name,
@@ -40,15 +43,17 @@ export function Tile({
   example,
   href,
   cta,
+  headingLevel,
   children,
 }: TileProps) {
   const nameId = useId();
   const { label, className } = STATE[state];
+  const Name = headingLevel === 2 ? 'h2' : 'h3';
   return (
     <section
       aria-labelledby={nameId}
       className={cn(
-        'relative flex min-h-60 flex-col gap-3.5 rounded-lg border bg-surface p-5 shadow-card',
+        'relative flex flex-col gap-3 rounded-lg border bg-surface p-5 shadow-card',
         'transition-[border-color,box-shadow,translate] duration-150',
         'hover:border-border-strong hover:shadow-pop motion-safe:hover:-translate-y-0.5',
         'has-[a:focus-visible]:ring-[3px] has-[a:focus-visible]:ring-ring',
@@ -58,9 +63,9 @@ export function Tile({
         <span className="grid size-9 shrink-0 place-items-center rounded-md bg-brand-soft text-brand">
           <Icon className="size-[18px]" aria-hidden="true" strokeWidth={1.75} />
         </span>
-        <h2 id={nameId} className="font-semibold text-[15px]">
+        <Name id={nameId} className="font-semibold text-[15px]">
           {name}
-        </h2>
+        </Name>
         <span className="ml-auto flex items-center gap-1.5">
           {example ? (
             <span className="rounded-md bg-sunken px-1.5 py-1 font-medium text-[11px] text-ink-soft uppercase leading-none tracking-wide">
@@ -97,8 +102,9 @@ export function Tile({
 }
 
 /**
- * A big number with its unit, as the tiles show their status. The space between them is real
- * text, so the tile reads "5 of 7 pass" (not "5of 7 pass") to screen readers and in copied text.
+ * A big number with its unit, as the cards show their status. The space between them is real
+ * text, so the card reads "0 of 4 covered" (not "0of 4 covered") to screen readers and in copied
+ * text.
  */
 export function Big({ n, of, children }: { n: number; of: string; children?: ReactNode }) {
   return (
