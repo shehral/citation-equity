@@ -7,6 +7,13 @@ export { RecordedAdapter, RecordingAdapter, recordingKey } from './adapters/reco
 export { CAVEAT, caveatFor, isLocalUrl, LIVE_CAVEAT, REMOTE_CAVEAT } from './caveat';
 export { AI_CRAWLERS, type CrawlerInfo, type CrawlerPurpose } from './crawlers';
 export {
+  LOSES_AT_SHARE,
+  type LosesAt,
+  losesAtText,
+  type StageFunnel,
+  stageFunnel,
+} from './funnel';
+export {
   chanceLevel,
   meanInterval,
   minSignFlipP,
