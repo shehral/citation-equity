@@ -24,6 +24,7 @@ import {
 import Link from 'next/link';
 import { useDeferredValue, useEffect, useId, useMemo, useState, useSyncExternalStore } from 'react';
 import { SizeChip } from '@/components/cited/size-chip';
+import { SizeMixCard } from '@/components/cited/size-mix';
 import { type CitedEntry, citedReport, citedSummary } from '@/components/cited/tally';
 import { textLink } from '@/components/page-shell';
 import { Button } from '@/components/ui/button';
@@ -433,6 +434,8 @@ export function CitedView() {
           </div>
         )}
       </section>
+
+      {report.answers > 0 && <SizeMixCard domains={report.groups.flatMap((g) => g.domains)} />}
 
       <p className="mt-10 text-muted-foreground text-sm">
         <Link href={`${RESEARCH_HREF}#off-page`} prefetch={false} className={textLink}>
