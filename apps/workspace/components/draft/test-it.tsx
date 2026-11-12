@@ -37,6 +37,7 @@ import { reportLocalModel, setLocalModel } from '@/lib/local-model';
 import type { Sample } from '@/lib/samples';
 import { cn } from '@/lib/utils';
 import { ModelMissingNote, OllamaInstructions, UnreachableNote } from './ollama-help';
+import { WhereItLoses } from './where-it-loses';
 
 interface TestItProps {
   /** The loaded sample; null (or a sample without a pack) is a custom draft. */
@@ -156,6 +157,7 @@ function RecordedRun({ sample, bench }: { sample: Sample; bench: SampleBench }) 
         <>
           <p className="text-ink-soft">Sample result, before and after the edits:</p>
           <Headline before={before} after={after} />
+          <WhereItLoses report={after} who="the example after its edits" />
           <p className="text-ink-soft text-xs">{CHANCE_NOTE}</p>
           <details className="space-y-3">
             <summary className="cursor-pointer rounded-sm text-ink-soft text-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring">
@@ -617,6 +619,7 @@ function LocalRunner({
         <section aria-label="Your run on this machine" className="space-y-3 rounded-md border p-3">
           <h3 className="font-medium">Your run: {baseline.label.toLowerCase()} vs your text</h3>
           <Headline before={state.result.before} after={state.result.current} />
+          <WhereItLoses report={state.result.current} who="your text" />
           <p className="text-ink-soft text-xs">{CHANCE_NOTE}</p>
           <details>
             <summary className="cursor-pointer rounded-sm text-ink-soft text-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring">

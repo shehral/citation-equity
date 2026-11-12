@@ -7,6 +7,13 @@ export { RecordedAdapter, RecordingAdapter, recordingKey } from './adapters/reco
 export { CAVEAT, caveatFor, isLocalUrl, LIVE_CAVEAT, REMOTE_CAVEAT } from './caveat';
 export { AI_CRAWLERS, type CrawlerInfo, type CrawlerPurpose } from './crawlers';
 export {
+  LOSES_AT_SHARE,
+  type LosesAt,
+  losesAtText,
+  type StageFunnel,
+  stageFunnel,
+} from './funnel';
+export {
   chanceLevel,
   meanInterval,
   minSignFlipP,
@@ -15,9 +22,29 @@ export {
   t975,
   wilson,
 } from './metrics';
+export {
+  HIDDEN_NAME,
+  hideBrands,
+  NAME_CONDITIONS,
+  type NameCondition,
+  type NamePage,
+  type NamePair,
+  type NameRates,
+  nameConditionSources,
+  nameContentSplit,
+  swapBrands,
+  swappedUrl,
+} from './name-test';
 export { PackError, validatePack } from './pack';
 export { competitorProfile, countStatistics, type DocProfile, profileDocument } from './profile';
-export { buildPrompt, type ParsedAnswer, parseAnswer, stripReasoning } from './prompt';
+export {
+  buildPrompt,
+  type ParsedAnswer,
+  type PromptOptions,
+  parseAnswer,
+  type SourceLabels,
+  stripReasoning,
+} from './prompt';
 export {
   fanOutPrompt,
   fanOutQuestions,

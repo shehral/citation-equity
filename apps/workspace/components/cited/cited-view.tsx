@@ -1,6 +1,11 @@
 'use client';
 
-import { type CitedDomain, OFFPAGE_ADVICE, type SourceKind } from '@citation-equity/engine';
+import {
+  type CitedDomain,
+  OFFPAGE_ADVICE,
+  type RankList,
+  type SourceKind,
+} from '@citation-equity/engine';
 import {
   BookOpen,
   Globe,
@@ -18,6 +23,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useDeferredValue, useEffect, useId, useMemo, useState, useSyncExternalStore } from 'react';
+import { SizeChip } from '@/components/cited/size-chip';
+import { SizeMixCard } from '@/components/cited/size-mix';
 import { type CitedEntry, citedReport, citedSummary } from '@/components/cited/tally';
 import { textLink } from '@/components/page-shell';
 import { Button } from '@/components/ui/button';
@@ -29,6 +36,7 @@ import {
   setPastedCited,
 } from '@/lib/pasted';
 import { type CitedSummary, getSummary, setSummary, subscribe } from '@/lib/store';
+import { getTrancoList, subscribeTrancoList } from '@/lib/tranco-list';
 import { cn } from '@/lib/utils';
 import { RESEARCH_HREF } from '@/lib/views';
 
@@ -141,10 +149,13 @@ function SitesTable({
   rows,
   total,
   own,
+  list = null,
 }: {
   rows: Pick<CitedDomain, 'domain' | 'citations' | 'questions'>[];
   total: number;
   own?: boolean;
+  /** The loaded Tranco list, for each site's size chip. */
+  list?: RankList | null;
 }) {
   return (
     <table className="mt-3 w-full text-left text-sm">
@@ -158,7 +169,10 @@ function SitesTable({
         {rows.map((d) => (
           <tr key={d.domain} className="border-t align-top first:border-t-0">
             <th scope="row" className="py-2 pr-3 text-left font-normal">
-              <span className="block break-words font-mono text-[13px]">{d.domain}</span>
+              <span className="block break-words font-mono text-[13px]">
+                {d.domain}
+                <SizeChip domain={d.domain} list={list} />
+              </span>
               {d.questions.length > 0 && (
                 <ul className="mt-0.5 space-y-0.5 text-muted-foreground text-xs">
                   {d.questions.map((q) => (
@@ -186,10 +200,12 @@ function KindGroup({
   kind,
   domains,
   total,
+  list,
 }: {
   kind: SourceKind;
   domains: CitedDomain[];
   total: number;
+  list: RankList | null;
 }) {
   const card = OFFPAGE_ADVICE[kind];
   const Icon = KIND_ICON[kind];
@@ -201,7 +217,7 @@ function KindGroup({
           {card.title}
         </h4>
       </div>
-      <SitesTable rows={domains} total={total} />
+      <SitesTable rows={domains} total={total} list={list} />
       <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 border-t pt-3 text-sm">
         <dt className="font-semibold">Do</dt>
         <dd>{card.short.do}</dd>
@@ -249,6 +265,11 @@ export function CitedView() {
   const stored = useSyncExternalStore(
     subscribe,
     () => getSummary('cited'),
+    () => null,
+  );
+  const list = useSyncExternalStore(
+    subscribeTrancoList,
+    () => getTrancoList()?.list ?? null,
     () => null,
   );
   const input = pasted ?? (stored?.example ? EXAMPLE_CITED_INPUT : EMPTY);
@@ -387,6 +408,7 @@ export function CitedView() {
                 </h4>
                 <SitesTable
                   own
+                  list={list}
                   rows={[
                     { domain: report.ownDomain, citations: report.ownCitations, questions: [] },
                   ]}
@@ -400,12 +422,20 @@ export function CitedView() {
               </p>
             ) : (
               report.groups.map((g) => (
-                <KindGroup key={g.kind} kind={g.kind} domains={g.domains} total={report.answers} />
+                <KindGroup
+                  key={g.kind}
+                  kind={g.kind}
+                  domains={g.domains}
+                  total={report.answers}
+                  list={list}
+                />
               ))
             )}
           </div>
         )}
       </section>
+
+      {report.answers > 0 && <SizeMixCard domains={report.groups.flatMap((g) => g.domains)} />}
 
       <p className="mt-10 text-muted-foreground text-sm">
         <Link href={`${RESEARCH_HREF}#off-page`} prefetch={false} className={textLink}>

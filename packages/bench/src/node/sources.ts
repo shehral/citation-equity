@@ -6,7 +6,13 @@ import {
   groupByKind,
   OFFPAGE_ADVICE,
   OFFPAGE_NOTE,
+  parseTrancoList,
+  type RankList,
+  SITE_SIZE_TEXT,
+  siteSize,
+  sizeMix,
   tallyCitedSources,
+  trancoIdFromFileName,
   urlsFromText,
 } from '@citation-equity/engine';
 import { type Command, Option } from 'commander';
@@ -74,6 +80,7 @@ interface SourcesOptions {
   live?: string;
   pasted?: string;
   own?: string;
+  tranco?: string;
 }
 
 export function registerSources(program: Command, io: CliIo): void {
@@ -94,6 +101,10 @@ export function registerSources(program: Command, io: CliIo): void {
     .option(
       '--own <domain>',
       "your site, counted apart (default with --live: the report's target URL)",
+    )
+    .option(
+      '--tranco <list.csv>',
+      'a Tranco list you downloaded from tranco-list.eu, to label each cited site big, mid or small',
     )
     .action(async (o: SourcesOptions) => sources(o, io));
 }
@@ -146,6 +157,9 @@ async function sources(o: SourcesOptions, io: CliIo): Promise<void> {
   } else {
     throw new Error('Give --live <report.json> (from ce live) or --pasted <answers.txt>.');
   }
+  const list: RankList | null = o.tranco
+    ? parseTrancoList(await readText(o.tranco), trancoIdFromFileName(basename(o.tranco)))
+    : null;
   const ownDomain = own === undefined ? '' : domainOf(own);
   const { domains, ownCitations } = tallyCitedSources(answers, ownDomain || undefined);
   const n = answers.length;
@@ -163,6 +177,7 @@ async function sources(o: SourcesOptions, io: CliIo): Promise<void> {
   } else {
     lines.push(`Your site (${ownDomain}): not cited in any of ${n} answer${n === 1 ? '' : 's'}.`);
   }
+  if (list) lines.push(...sizeLines(domains, list, basename(o.tranco ?? '')));
   lines.push('');
 
   const groups = groupByKind(domains);
@@ -171,7 +186,8 @@ async function sources(o: SourcesOptions, io: CliIo): Promise<void> {
   for (const g of groups) {
     lines.push(`${OFFPAGE_ADVICE[g.kind].title} (${g.kind})`);
     for (const d of g.domains) {
-      lines.push(`  ${d.domain.padEnd(width)}  ${of(d.citations)}`);
+      const size = list ? `  ${SITE_SIZE_TEXT[siteSize(d.domain, list).size]}` : '';
+      lines.push(`  ${d.domain.padEnd(width)}  ${of(d.citations)}${size}`);
       for (const q of d.questions) lines.push(`      ${q}`);
     }
     lines.push('');
@@ -193,4 +209,28 @@ async function sources(o: SourcesOptions, io: CliIo): Promise<void> {
   }
   lines.push(caveat);
   io.stdout(`${lines.join('\n')}\n`);
+}
+
+/**
+ * With --tranco: how the cited sites' citations split by size (big, mid and small sites, with
+ * Wikipedia and hosting platforms counted apart), as Who gets cited shows it in the app.
+ */
+function sizeLines(
+  domains: { domain: string; citations: number }[],
+  list: RankList,
+  fileName: string,
+): string[] {
+  const { bySize, sized } = sizeMix(domains, list);
+  const name = `Tranco list ${list.id || fileName}, top ${list.depth.toLocaleString('en-US')} sites`;
+  const out = [
+    sized === 0
+      ? `Site sizes (${name}): no cited site is ranked big, mid or small.`
+      : `Site sizes (${name}): small sites got ${bySize.small.citations} of ${sized} citations (big ${bySize.big.citations}, mid ${bySize.mid.citations}).`,
+  ];
+  const apart = [
+    bySize.wikipedia.citations > 0 ? `Wikipedia ${bySize.wikipedia.citations}` : '',
+    bySize.platform.citations > 0 ? `hosting platforms ${bySize.platform.citations}` : '',
+  ].filter(Boolean);
+  if (apart.length > 0) out.push(`Counted apart: ${apart.join(', ')}.`);
+  return out;
 }
