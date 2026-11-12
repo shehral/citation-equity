@@ -147,8 +147,10 @@ export {
   SITE_SIZES,
   type SiteSize,
   type SiteSizeLabel,
+  type SizeMix,
   SMALL_MIN_RANK,
   siteSize,
+  sizeMix,
   sizeOfRank,
 } from './site-size';
 export type { Sentence } from './text';

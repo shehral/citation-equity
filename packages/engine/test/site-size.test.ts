@@ -10,6 +10,7 @@ import {
   SITE_SIZES,
   SMALL_MIN_RANK,
   siteSize,
+  sizeMix,
   sizeOfRank,
 } from '../src/index';
 
@@ -149,5 +150,38 @@ describe('siteSize', () => {
 
   it('has a plain name for every size', () => {
     expect(Object.keys(SITE_SIZE_TEXT).sort()).toEqual([...SITE_SIZES].sort());
+  });
+});
+
+describe('sizeMix', () => {
+  const rows = [
+    { domain: 'quora.com', citations: 3 },
+    { domain: 'regionalnews.com', citations: 1 },
+    { domain: 'hivecraft-notes.example', citations: 2 },
+    { domain: 'blog.hivecraft-notes.example', citations: 1 },
+    { domain: 'en.wikipedia.org', citations: 4 },
+    { domain: 'someone.medium.com', citations: 1 },
+  ];
+
+  it('counts sites and citations by size, and the small share of sized citations', () => {
+    const mix = sizeMix(rows, FULL);
+    expect(mix.bySize.big).toEqual({ sites: 1, citations: 3 });
+    expect(mix.bySize.mid).toEqual({ sites: 1, citations: 1 });
+    // Two hosts of one domain are one site, with their citations added.
+    expect(mix.bySize.small).toEqual({ sites: 1, citations: 3 });
+    expect(mix.bySize.wikipedia).toEqual({ sites: 1, citations: 4 });
+    expect(mix.bySize.platform).toEqual({ sites: 1, citations: 1 });
+    expect(mix.sized).toBe(7);
+    expect(mix.smallShare).toBeCloseTo(3 / 7, 10);
+    expect(mix.listId).toBe('TEST');
+  });
+
+  it('has no share without a list, and no share when nothing is sized', () => {
+    const none = sizeMix(rows);
+    expect(none.sized).toBe(0);
+    expect(none.smallShare).toBeNull();
+    expect(none.listId).toBeNull();
+    expect(none.bySize.unknown.citations).toBe(7);
+    expect(sizeMix([], FULL).smallShare).toBeNull();
   });
 });

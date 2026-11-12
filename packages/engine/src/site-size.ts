@@ -275,3 +275,48 @@ export function siteSize(urlOrHost: string, list?: RankList | null): SiteSizeLab
     institutional,
   };
 }
+
+export interface SizeMix {
+  /** Per size: the cited sites (registrable domains) and the citations they got. */
+  bySize: Record<SiteSize, { sites: number; citations: number }>;
+  /** Citations of big, mid and small sites: the ones a size comparison can use. */
+  sized: number;
+  /** The small sites' share of `sized`; null when nothing is sized. */
+  smallShare: number | null;
+  /** The list the sizes come from; null when none was loaded. */
+  listId: string | null;
+}
+
+/**
+ * The size mix of the sites the answers cite, from `tallyCitedSources` rows (the author's own site
+ * is already left out there). Hosts of one registrable domain count as one site, and their
+ * citations add up. `smallShare` answers "do small sites win these questions at all?": the share
+ * of the big, mid and small sites' citations that went to small ones. Platforms, Wikipedia and
+ * unknown sizes are counted but stay out of the share.
+ */
+export function sizeMix(
+  domains: readonly { domain: string; citations: number }[],
+  list?: RankList | null,
+): SizeMix {
+  const bySize = Object.fromEntries(
+    SITE_SIZES.map((s) => [s, { sites: 0, citations: 0 }]),
+  ) as Record<SiteSize, { sites: number; citations: number }>;
+  const seen = new Set<string>();
+  for (const { domain, citations } of domains) {
+    const label = siteSize(domain, list);
+    const cell = bySize[label.size];
+    const key = label.domain || domain;
+    if (!seen.has(key)) {
+      seen.add(key);
+      cell.sites++;
+    }
+    cell.citations += citations;
+  }
+  const sized = bySize.big.citations + bySize.mid.citations + bySize.small.citations;
+  return {
+    bySize,
+    sized,
+    smallShare: sized === 0 ? null : bySize.small.citations / sized,
+    listId: list ? list.id : null,
+  };
+}
