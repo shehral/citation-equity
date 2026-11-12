@@ -60,7 +60,7 @@ A test pack is the set of questions and competitor pages the citation test runs 
 | `ce signals bing <export.csv> [--json]` | Citations from a Bing AI Performance export. |
 | `ce questions --from-search-console <q.csv> \| --from-bing <b.csv> \| --keywords <list> \| --generate <draft.md> [--fanout] [--local-model] [--model <name>]` | Reader questions from real queries, your keywords or a draft. |
 | `ce live --engine gemini --questions <q.txt> --url <page> [--runs 8] [--model <name>] [--out results]` | Does Gemini with Google Search cite your page. |
-| `ce sources --live <report.json> \| --pasted <answers.txt> [--own example.com]` | Which sites AI answers cite, grouped by type. |
+| `ce sources --live <report.json> \| --pasted <answers.txt> [--own example.com] [--tranco list.csv]` | Which sites AI answers cite, grouped by type. |
 
 Exit codes: 0 on success, 1 for a usage or input error, 2 when the model server cannot be reached, the model is not available, or a required API key is not set.
 
@@ -106,7 +106,7 @@ Microsoft and Google do not publish the column names of these exports, so the re
 
 **`ce live`** asks Gemini with Google Search each question `--runs` times through the API and records whether its sources include your page, following Google's redirect link for each source to learn where it points. It needs `GEMINI_API_KEY`, which is never logged or saved. It measures one engine through its API, which can differ from what people see in the consumer app.
 
-**`ce sources`** reads a `ce live` report, or answers you copied from ChatGPT, Perplexity, Gemini or Copilot (each starting with a line `Q: <question>`), and groups the cited sites by type with what you can do about each. It reads local files only. `--own` names your site so it is counted apart.
+**`ce sources`** reads a `ce live` report, or answers you copied from ChatGPT, Perplexity, Gemini or Copilot (each starting with a line `Q: <question>`), and groups the cited sites by type with what you can do about each. It reads local files only. `--own` names your site so it is counted apart. `--tranco` takes a Tranco list you downloaded from [tranco-list.eu](https://tranco-list.eu) (its CSV, unzipped) and labels each cited site big (the top 10,000), mid (the rest of the top million) or small (not on the list), with Wikipedia and blogs on hosting platforms counted apart, then says how many citations went to small sites. Use a list from around when the answers were given.
 
 ## What the command line sends
 
