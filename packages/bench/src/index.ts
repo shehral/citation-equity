@@ -22,6 +22,19 @@ export {
   t975,
   wilson,
 } from './metrics';
+export {
+  HIDDEN_NAME,
+  hideBrands,
+  NAME_CONDITIONS,
+  type NameCondition,
+  type NamePage,
+  type NamePair,
+  type NameRates,
+  nameConditionSources,
+  nameContentSplit,
+  swapBrands,
+  swappedUrl,
+} from './name-test';
 export { PackError, validatePack } from './pack';
 export { competitorProfile, countStatistics, type DocProfile, profileDocument } from './profile';
 export {
