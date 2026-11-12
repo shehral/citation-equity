@@ -24,7 +24,14 @@ export {
 } from './metrics';
 export { PackError, validatePack } from './pack';
 export { competitorProfile, countStatistics, type DocProfile, profileDocument } from './profile';
-export { buildPrompt, type ParsedAnswer, parseAnswer, stripReasoning } from './prompt';
+export {
+  buildPrompt,
+  type ParsedAnswer,
+  type PromptOptions,
+  parseAnswer,
+  type SourceLabels,
+  stripReasoning,
+} from './prompt';
 export {
   fanOutPrompt,
   fanOutQuestions,

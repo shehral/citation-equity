@@ -7,6 +7,8 @@
 // Deviation (bench schemaVersion 2): after the sources the prompt adds REMINDER, which is not in GEO.
 // GEO's instruction stays verbatim at the top. In the first recorded runs, 9 of 32 answers in one
 // condition carried no [n] at all and one answer was in French (GEO lists several languages).
+// Addition (not in GEO): `labels: 'shown'` puts a `URL:` line under each source heading, for name
+// tests; the default layout is unchanged.
 import type { PackDocument } from './types';
 
 const QUERY_PROMPT = `Write an accurate and concise answer for the given user question, using _only_ the provided summarized web search results. The answer should be correct, high-quality, and written by an expert using an unbiased and journalistic tone. The user's language of choice such as English, Français, Español, Deutsch, or 日本語 should be used. The answer should be informative, interesting, and engaging. The answer's logic and reasoning should be rigorous and defensible. Every sentence in the answer should be _immediately followed_ by an in-line citation to the search result(s). The cited search result(s) should fully support _all_ the information in the sentence. Search results need to be cited using [index]. When citing several search results, use [1][2][3] format rather than [1, 2, 3]. You can use multiple search results to respond comprehensively while avoiding irrelevant search results.
@@ -21,12 +23,31 @@ Search Results:
 export const REMINDER =
   'Answer the question above using only these sources. Write in English. End every sentence with its citation, for example [1][2].';
 
+/**
+ * How the sources show their site. `hidden` (the bench's default, and GEO's layout) gives title
+ * and text only. `shown` adds a `URL:` line under each source heading for a source that has a
+ * `url`, as live AI search shows where a page comes from: the shown condition of a name test,
+ * where the same text is shown with and without its site (see name-test.ts).
+ */
+export type SourceLabels = 'hidden' | 'shown';
+
+export interface PromptOptions {
+  /** 'hidden' when omitted: the prompt is then exactly the one every recorded run used. */
+  labels?: SourceLabels;
+}
+
 /** The GEO answer prompt with `sources` numbered [1]..[n] in the order given, ending with REMINDER. */
-export function buildPrompt(query: string, sources: PackDocument[]): string {
+export function buildPrompt(
+  query: string,
+  sources: PackDocument[],
+  options: PromptOptions = {},
+): string {
+  const shown = options.labels === 'shown';
   const sourceText = sources
     .map((s, i) => {
       const body = s.title.trim() ? `${s.title.trim()}\n${s.text}` : s.text;
-      return `### Source [${i + 1}]:\n${body}\n`;
+      const url = shown && s.url?.trim() ? `URL: ${s.url.trim()}\n` : '';
+      return `### Source [${i + 1}]:\n${url}${body}\n`;
     })
     .join('\n\n');
   // One pass with a function replacement: `$` in page text is never read as a replacement pattern,

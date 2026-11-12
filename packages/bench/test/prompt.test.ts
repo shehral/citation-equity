@@ -132,3 +132,33 @@ describe('stripReasoning', () => {
     expect(stripReasoning(plain)).toBe(plain);
   });
 });
+
+describe('buildPrompt, source labels', () => {
+  const withUrl = (docId: string, title: string, text: string, url?: string): PackDocument => ({
+    ...doc(docId, title, text),
+    ...(url === undefined ? {} : { url }),
+  });
+  const sources = [
+    withUrl('a', 'Wintering hives', 'Bees cluster.', 'https://hivecraft-notes.example/winter'),
+    withUrl('b', 'How do bees stay warm?', 'They shiver.', ' https://askanything.example/q/bees '),
+    withUrl('c', 'No link', 'Nothing to show.'),
+  ];
+
+  it('hides every site by default, exactly as the recorded runs did', () => {
+    const plain = buildPrompt('How do bees stay warm?', sources);
+    expect(plain).not.toContain('URL:');
+    expect(plain).not.toContain('hivecraft-notes.example');
+    expect(buildPrompt('How do bees stay warm?', sources, { labels: 'hidden' })).toBe(plain);
+    expect(buildPrompt('How do bees stay warm?', sources, {})).toBe(plain);
+  });
+
+  it('shows each source URL under its heading when asked, and nothing for a source without one', () => {
+    const shown = buildPrompt('How do bees stay warm?', sources, { labels: 'shown' });
+    expect(shown).toContain(
+      '### Source [1]:\nURL: https://hivecraft-notes.example/winter\nWintering hives\nBees cluster.',
+    );
+    expect(shown).toContain('### Source [2]:\nURL: https://askanything.example/q/bees\n');
+    expect(shown).toContain('### Source [3]:\nNo link\nNothing to show.');
+    expect(shown.match(/URL: /g)).toHaveLength(2);
+  });
+});
