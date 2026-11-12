@@ -135,6 +135,22 @@ export {
   siteQuestionNumbers,
   siteQuestions,
 } from './site-questions';
+export {
+  BIG_MAX_RANK,
+  HOSTING_PLATFORMS,
+  type HostingPlatform,
+  isInstitutional,
+  platformOf,
+  type RankList,
+  registrableDomain,
+  SITE_SIZE_TEXT,
+  SITE_SIZES,
+  type SiteSize,
+  type SiteSizeLabel,
+  SMALL_MIN_RANK,
+  siteSize,
+  sizeOfRank,
+} from './site-size';
 export type { Sentence } from './text';
 export { countWords, splitSentences, suggestionId } from './text';
 export * from './types';
