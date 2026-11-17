@@ -15,7 +15,7 @@ import { RESEARCH_HREF } from '@/lib/views';
 
 /** The credit, word for word. It appears here and nowhere else in the app. */
 export const CREDIT =
-  'Original design by Prof. Akram Bayat. Built by Mohammad Ali Shehral and Ishan Gupta, Northeastern University, San Jose.';
+  'Original design by Prof. Akram Bayat. Built by Mohammad Ali Shehral, Northeastern University, San Jose.';
 
 interface AboutDialogProps {
   open: boolean;

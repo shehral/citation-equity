@@ -277,7 +277,7 @@ test('old routes redirect: /off-page to /cited, /evidence to /research, /about t
   await expect(about).toBeVisible();
   await expectAt(page, '/');
   await expect(about).toContainText(
-    'Original design by Prof. Akram Bayat. Built by Mohammad Ali Shehral and Ishan Gupta, Northeastern University, San Jose.',
+    'Original design by Prof. Akram Bayat. Built by Mohammad Ali Shehral, Northeastern University, San Jose.',
   );
 });
 

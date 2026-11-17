@@ -100,4 +100,4 @@ MIT ([LICENSE](LICENSE)). Adapted code and data, with their licenses: [NOTICE](N
 
 ## Credits
 
-Original design by Prof. Akram Bayat. Built by Mohammad Ali Shehral and Ishan Gupta, Northeastern University, Khoury College of Computer Sciences, San Jose. How this build maps onto her three-module design: [docs/architecture.md](docs/architecture.md#the-original-design).
+Original design by Prof. Akram Bayat. Built by Mohammad Ali Shehral, Northeastern University, Khoury College of Computer Sciences, San Jose. How this build maps onto her three-module design: [docs/architecture.md](docs/architecture.md#the-original-design).

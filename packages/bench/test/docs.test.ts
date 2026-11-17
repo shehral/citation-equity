@@ -378,7 +378,7 @@ describe('README', () => {
     const credits = md.slice(md.lastIndexOf('## Credits'));
     expect(credits).toContain('Original design by Prof. Akram Bayat.');
     expect(credits).toContain(
-      'Built by Mohammad Ali Shehral and Ishan Gupta, Northeastern University, Khoury College of Computer Sciences, San Jose.',
+      'Built by Mohammad Ali Shehral, Northeastern University, Khoury College of Computer Sciences, San Jose.',
     );
     // Her name appears once, in the credits.
     expect(md.match(/Bayat/g)).toHaveLength(1);

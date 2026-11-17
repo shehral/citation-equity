@@ -154,7 +154,7 @@ describe('About dialog', () => {
   it('holds the exact credit sentence and nothing else about attribution', async () => {
     renderShell('/');
     // Attribution appears nowhere in the shell while the dialog is closed.
-    expect(document.body.textContent).not.toMatch(/Bayat|Shehral|Gupta|Northeastern/);
+    expect(document.body.textContent).not.toMatch(/Bayat|Shehral|Northeastern/);
 
     await userEvent.click(
       within(screen.getByRole('contentinfo')).getByRole('button', { name: 'About' }),
@@ -162,12 +162,12 @@ describe('About dialog', () => {
     const dialog = await screen.findByRole('dialog', { name: 'About' });
     const text = dialog.textContent ?? '';
     expect(CREDIT).toBe(
-      'Original design by Prof. Akram Bayat. Built by Mohammad Ali Shehral and Ishan Gupta, Northeastern University, San Jose.',
+      'Original design by Prof. Akram Bayat. Built by Mohammad Ali Shehral, Northeastern University, San Jose.',
     );
     expect(text.split(CREDIT)).toHaveLength(2);
     const rest = text.replace(CREDIT, '');
     expect(rest).not.toMatch(
-      /Bayat|Shehral|Gupta|Northeastern|San Jose|SPARK|Khoury|principal investigator|design by|built by|FootnoteOne/i,
+      /Bayat|Shehral|Northeastern|San Jose|SPARK|Khoury|principal investigator|design by|built by|FootnoteOne/i,
     );
     expect(text).not.toContain('—');
     expect(text).not.toMatch(/\bGEO\b/);
